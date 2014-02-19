@@ -16,14 +16,20 @@
 /* Libc includes */
 #include <stddef.h>
 
+#include <simics.h>
 
-unsigned int frame_index = 0;
-char (*frames)[PAGE_SIZE] = (char (*)[PAGE_SIZE]) USER_MEM_START;
+
+typedef char frame_t[PAGE_SIZE];
+const frame_t *frames = (const frame_t *)NULL;
+
+unsigned int frame_index = USER_MEM_START/sizeof(frame_t);
+
 
 void *alloc_frame(void)
 {
   void *base;
   base = (void *)&frames[frame_index];
+  lprintf("allocating frame %p", base);
   ++frame_index;
   return base;
 }
