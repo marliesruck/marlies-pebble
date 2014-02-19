@@ -22,16 +22,34 @@
 #define PG_TBL_AVAIL    0xE00   /* Available for programmer use */
 
 /* Page directory attribute flags */
-#define PG_TBL_PRESENT  0x001   /* Set indicates valid */
-#define PG_TBL_WRITABLE 0x002   /* Set indicates writable */
-#define PG_TBL_USER     0x004   /* Set indicates user accessible */
-#define PG_TBL_WRTHRU   0x008   /* Set enables write-through caching */
-#define PG_TBL_NOCACHE  0x010   /* Set disables caching */
-#define PG_TBL_ACCESSED 0x020   /* Set by HW when the page is accessed */
-#define PG_TBL_DIRTY    0x040   /* Invalid -- leave unset */
-#define PG_TBL_SIZE     0x080   /* Should be unset */
-#define PG_TBL_GLOBAL   0x100   /* Invalid -- leave unset */
-#define PG_TBL_AVAIL    0xE00   /* Available for programmer use */
+#define PG_DIR_PRESENT  0x001   /* Set indicates valid */
+#define PG_DIR_WRITABLE 0x002   /* Set indicates writable */
+#define PG_DIR_USER     0x004   /* Set indicates user accessible */
+#define PG_DIR_WRTHRU   0x008   /* Set enables write-through caching */
+#define PG_DIR_NOCACHE  0x010   /* Set disables caching */
+#define PG_DIR_ACCESSED 0x020   /* Set by HW when the page is accessed */
+#define PG_DIR_DIRTY    0x040   /* Invalid -- leave unset */
+#define PG_DIR_SIZE     0x080   /* Should be unset */
+#define PG_DIR_GLOBAL   0x100   /* Invalid -- leave unset */
+#define PG_DIR_AVAIL    0xE00   /* Available for programmer use */
+
+/* Page table indexing */
+#define PG_TBL_MASK    0x003FF000 /* [21,12] bits */
+#define PG_TBL_INDEX(addr) (PG_TBL_MASK & ((pde_t) (addr))) 
+
+/* Page directory indexing */
+#define PG_DIR_MASK    0xFFC00000 /* [31,22] bits */
+#define PG_DIR_INDEX(addr) (PG_DIR_MASK & ((unsigned int) (addr))) 
+
+/* Page directory entry unpacking */
+#define PT_MASK       0xFFFFF000
+#define GET_PT(pde)  ((pte_t *)(PT_MASK & (pde)))
+
+/* Pack PDE */
+#define PACK_PDE(addr,flags)  ((pde_t)(addr) | flags)
+
+/* Pack PTE */
+#define PACK_PTE(addr,flags)  ((pte_t)(addr) | flags)
 
 typedef unsigned int pde_t;
 typedef unsigned int pte_t;
