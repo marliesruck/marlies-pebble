@@ -11,7 +11,7 @@
 #include <pg_table.h>
 
 
-void *vm_alloc(pte_t *pd, void *addr, size_t len);
+void *vm_alloc(pte_t *pd, void *addr, size_t len, unsigned int attrs);
 void vm_free(pte_t *pd, void *addr);
 
 

@@ -1,4 +1,4 @@
-/** @file pg_table.c
+/** @file frame_alloc.h
  *
  *  @brief Delcares the frame allocator API.
  *

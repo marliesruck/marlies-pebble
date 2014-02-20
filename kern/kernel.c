@@ -79,19 +79,16 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 
   /* Just some testing stuff */
   lprintf("Start testing...");
-  MAGIC_BREAK;
 
   pde_t pde = get_pde(pd, NULL);
   lprintf("NULL's PDE: 0x%08X", pde);
-  pte_t pte = get_pte(pd, NULL);
+  pte_t pte;
+  get_pte(pd, NULL, &pte);
   lprintf("NULL's PTE: 0x%08X", pte);
 
-  lprintf("pd = %p", pd);
-  MAGIC_BREAK;
-  
   pde = get_pde(pd, pd);
   lprintf("pd's PDE: 0x%08X", pde);
-  pte = get_pte(pd, pd);
+  get_pte(pd, pd, &pte);
   lprintf("pd's PTE: 0x%08X", pte);
 
   lprintf("current PTs = %p", pg_tables);
@@ -104,14 +101,85 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   lprintf("PD[5] = 0x%08X", pg_directory[5]);
   lprintf("PD[6] = 0x%08X", pg_directory[6]);
 
-  lprintf("get_pde(0) = 0x%08X", get_pde(pg_directory, &pg_tables[0]));
-  lprintf("get_pde(1) = 0x%08X", get_pde(pg_directory, &pg_tables[1]));
-  lprintf("get_pde(2) = 0x%08X", get_pde(pg_directory, &pg_tables[2]));
-  lprintf("get_pde(3) = 0x%08X", get_pde(pg_directory, &pg_tables[3]));
-  lprintf("get_pde(4) = 0x%08X", get_pde(pg_directory, &pg_tables[4]));
-  lprintf("get_pde(5) = 0x%08X", get_pde(pg_directory, &pg_tables[5]));
-  lprintf("get_pde(6) = 0x%X", get_pde(pg_directory, pg_tables[6]));
+  void *addr = NULL;
+  lprintf("get_pde(%p) = 0x%08X", addr, get_pde(pg_directory, addr));
+  addr = (void *)(1 * PAGE_SIZE * PG_TBL_ENTRIES);
+  lprintf("get_pde(%p) = 0x%08X", addr, get_pde(pg_directory, addr));
+  addr = (void *)(2 * PAGE_SIZE * PG_TBL_ENTRIES);
+  lprintf("get_pde(%p) = 0x%08X", addr, get_pde(pg_directory, addr));
+  addr = (void *)(3 * PAGE_SIZE * PG_TBL_ENTRIES);
+  lprintf("get_pde(%p) = 0x%08X", addr, get_pde(pg_directory, addr));
+  addr = (void *)(4 * PAGE_SIZE * PG_TBL_ENTRIES);
+  lprintf("get_pde(%p) = 0x%08X", addr, get_pde(pg_directory, addr));
+  addr = (void *)(5 * PAGE_SIZE * PG_TBL_ENTRIES);
+  lprintf("get_pde(%p) = 0x%08X", addr, get_pde(pg_directory, addr));
+  addr = (void *)(6 * PAGE_SIZE * PG_TBL_ENTRIES);
+  lprintf("get_pde(%p) = 0x%08X", addr, get_pde(pg_directory, addr));
   
+  addr = NULL;
+  get_pte(pg_directory, addr, &pte);
+  lprintf("get_pte(%p) = 0x%08X", addr, pte);
+  addr = (void *)(1 * PAGE_SIZE * PG_TBL_ENTRIES);
+  get_pte(pg_directory, addr, &pte);
+  lprintf("get_pte(%p) = 0x%08X", addr, pte);
+  addr = (void *)(2 * PAGE_SIZE * PG_TBL_ENTRIES);
+  get_pte(pg_directory, addr, &pte);
+  lprintf("get_pte(%p) = 0x%08X", addr, pte);
+  addr = (void *)(3 * PAGE_SIZE * PG_TBL_ENTRIES);
+  get_pte(pg_directory, addr, &pte);
+  lprintf("get_pte(%p) = 0x%08X", addr, pte);
+  addr = (void *)(4 * PAGE_SIZE * PG_TBL_ENTRIES);
+  get_pte(pg_directory, addr, &pte);
+  lprintf("get_pte(%p) = 0x%08X", addr, pte);
+  addr = (void *)(5 * PAGE_SIZE * PG_TBL_ENTRIES);
+  get_pte(pg_directory, addr, &pte);
+  lprintf("get_pte(%p) = 0x%08X", addr, pte);
+  addr = (void *)(6 * PAGE_SIZE * PG_TBL_ENTRIES);
+  get_pte(pg_directory, addr, &pte);
+  lprintf("get_pte(%p) = 0x%08X", addr, pte);
+  
+#include <vm.h>
+  char *blah = (void *)0x01CFFFFF;
+  size_t size = 0x2405;
+
+  lprintf(" ");
+  if (get_pte(pg_directory, blah, &pte))
+    lprintf("ENTRY FOR %p NOT PRESNET!!", blah);
+  else lprintf("get_pte(%p) = 0x%08X", blah, pte);
+  lprintf(" ");
+
+  lprintf("Allocating...");
+  lprintf("  done! got %p", vm_alloc(pg_directory, blah, size,
+                            PG_TBL_PRESENT|PG_TBL_WRITABLE|PG_TBL_USER));
+  int i;
+  for (i = 0; i < size; ++i) {
+    blah[i] = i;
+  }
+
+  lprintf(" ");
+  if (get_pte(pg_directory, blah, &pte))
+    lprintf("ENTRY FOR %p NOT PRESNET!!", blah);
+  else lprintf("get_pte(%p) = 0x%08X", blah, pte);
+  lprintf(" ");
+  lprintf("--------------------------------------------------");
+  lprintf(" ");
+  addr = (void *)USER_MEM_START;
+  if (get_pte(pg_directory, addr, &pte))
+    lprintf("ENTRY FOR %p NOT PRESNET!!", addr);
+  else lprintf("get_pte(%p) = 0x%08X", addr, pte);
+  lprintf(" ");
+
+  lprintf("Allocating...");
+  lprintf("  done! got %p", vm_alloc(pg_directory, addr, size,
+                            PG_TBL_PRESENT|PG_TBL_WRITABLE|PG_TBL_USER));
+  
+
+  lprintf(" ");
+  if (get_pte(pg_directory, addr, &pte))
+    lprintf("ENTRY FOR %p NOT PRESNET!!", addr);
+  else lprintf("get_pte(%p) = 0x%08X", addr, pte);
+  lprintf(" ");
+
   lprintf( "Hello from a brand new kernel!" );
 
   while (1) {

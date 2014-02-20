@@ -8,32 +8,65 @@
 
 #include <simics.h>
 
+/* VM includes */
 #include <vm.h>
 
+/* Pebbles includes */
+#include <frame_alloc.h>
+
+/* Libc includes */
 #include <stddef.h>
 
 #define PAGE_MASK 0xFFFFF000
 #define PAGE_ALIGN(addr) (void *)(((unsigned int) (addr)) & PAGE_MASK)
 
-void *vm_alloc(pte_t *pd, void *addr, size_t len)
+void *vm_alloc(pte_t *pd, void *va_start, size_t len, unsigned int attr)
 {
-  void *pg_start;
-  unsigned int num_pages;
+  void *actual_start, *va_limit;
+  unsigned int actual_len, num_pages;
+  void *frame, *addr;
+  pte_t pte;
+  int i;
 
-  lprintf("vm_alloc(pd=%p, addr=%p, len=%d)", pd, addr, len);
+  actual_start = PAGE_ALIGN(va_start);
+  va_limit = (void *)((unsigned int) va_start + len);
+  actual_len = (unsigned int) va_limit - (unsigned int) actual_start;
+  num_pages = (actual_len + PAGE_SIZE - 1)/PAGE_SIZE;
 
-  pg_start = PAGE_ALIGN(addr);
-  lprintf("  aligned = %p", pg_start);
-  num_pages = ((unsigned int) addr + len);
-  lprintf("  last = 0x%08X", num_pages);
-  num_pages /= PAGE_SIZE;
-  lprintf("  num_pages = %u", num_pages);
+  /* Check that the requested memory is available */
+  for (i = 0; i < num_pages; ++i)
+  {
+    addr = (char *)va_start + i*PAGE_SIZE;
 
-  return NULL;
+    lprintf("checking for %p", addr);
+    /* If the PDE isn't valid, make it so */
+    if (get_pte(pd, addr, &pte)) {
+      lprintf("NOT FOUND!  backing");
+      frame = alloc_frame();
+      set_pde(pd, addr, frame, PG_TBL_PRESENT|PG_TBL_WRITABLE);
+    }
+
+    /* If the PTE is already in use, return an error */
+    else if (pte & PG_TBL_PRESENT)
+      return NULL;
+  }
+
+  lprintf("k, all good");
+
+  /* Allocate frames for the requested memory */
+  for (i = 0; i < num_pages; ++i) {
+    frame = alloc_frame();
+    if (set_pte(pd, (char *)va_start + i*PAGE_SIZE, frame, attr))
+      return NULL;
+  }
+
+  /* Return the ACTUAL start of the allocation */
+  return actual_start;
 }
 
-void vm_free(pte_t *pd, void *addr)
+void vm_free(pte_t *pd, void *va_start)
 {
+  /* Oh, uh yeah... we just freed it. */
   return;
 }
 

@@ -1,4 +1,4 @@
-/** @file pg_table.c
+/** @file pg_table.h
  *
  *  @brief Delcares the page table API.
  *
@@ -9,32 +9,25 @@
 #define __PG_TABLE_H__
 
 #include <common_kern.h>
-#include <syscall.h>
+#include <x86/page.h>
 
 
-/* Page table attribute flags */
-#define PG_TBL_PRESENT  0x001   /* Set indicates valid */
-#define PG_TBL_WRITABLE 0x002   /* Set indicates writable */
-#define PG_TBL_USER     0x004   /* Set indicates user accessible */
+/* Page table attribute flags
+ *
+ * We might have also declared page *directory* flags, but opted not to
+ * because our page directory is self-referential.  Therefore, it is also
+ * treated as a page table.
+ */
+#define PG_TBL_PRESENT  0x001   /* Set indicates entry is valid */
+#define PG_TBL_WRITABLE 0x002   /* Set allows writing */
+#define PG_TBL_USER     0x004   /* Set allows user access */
 #define PG_TBL_WRTHRU   0x008   /* Set enables write-through caching */
 #define PG_TBL_NOCACHE  0x010   /* Set disables caching */
 #define PG_TBL_ACCESSED 0x020   /* Set by HW when the page is accessed */
 #define PG_TBL_DIRTY    0x040   /* Set by HW when page is written */
 #define PG_TBL_ATTR     0x080   /* Should be unset */
-#define PG_TBL_GLOBAL   0x100   /* Prevents TLB flushing on ctx switch */
+#define PG_TBL_GLOBAL   0x100   /* Set prevents TLB flush on ctx switch */
 #define PG_TBL_AVAIL    0xE00   /* Available for programmer use */
-
-/* Page directory attribute flags */
-#define PG_DIR_PRESENT  0x001   /* Set indicates valid */
-#define PG_DIR_WRITABLE 0x002   /* Set indicates writable */
-#define PG_DIR_USER     0x004   /* Set indicates user accessible */
-#define PG_DIR_WRTHRU   0x008   /* Set enables write-through caching */
-#define PG_DIR_NOCACHE  0x010   /* Set disables caching */
-#define PG_DIR_ACCESSED 0x020   /* Set by HW when the page is accessed */
-#define PG_DIR_DIRTY    0x040   /* Invalid -- leave unset */
-#define PG_DIR_SIZE     0x080   /* Should be unset */
-#define PG_DIR_GLOBAL   0x100   /* Invalid -- leave unset */
-#define PG_DIR_AVAIL    0xE00   /* Available for programmer use */
 
 /* Page table indexing */
 #define PG_TBL_MASK    0x003FF000 /* [21,12] bits */
@@ -49,10 +42,10 @@
   ( (PG_DIR_MASK & ((unsigned int) (addr))) >> PG_DIR_SHIFT ) 
 
 /* Page directory entry unpacking */
-#define PG_DIR_PT_MASK    0xFFFFF000
-#define PG_DIR_ATTR_MASK  0x00000FFF
-#define GET_PT(pde)       ((pte_t *)(PG_DIR_PT_MASK & (pde)))
-#define GET_ATTRS(pde)    ((pte_t *)(PG_DIR_ATTR_MASK & (pde)))
+#define PG_MASK       (PG_DIR_MASK|PG_TBL_MASK)
+#define PG_ATTR_MASK  0x00000FFF
+#define GET_PT(pde)       ((pte_t *)(PG_MASK & (pde)))
+#define GET_ATTRS(pde)    ((pte_t *)(PG_ATTR_MASK & (pde)))
 
 /* Pack PDE */
 #define PACK_PDE(addr,flags)  ((pde_t)(addr) | (flags))
@@ -77,7 +70,7 @@ void init_kern_pt(void);
 /* --- PDE/PTE getters and setters --- */
 pde_t get_pde(pde_t *pd, void *addr);
 void set_pde(pde_t *pd, void *addr, pte_t *pt, unsigned int flags);
-pte_t get_pte(pde_t *pd, void *addr);
+int get_pte(pde_t *pd, void *addr, pte_t *dst);
 int set_pte(pde_t *pd, void *addr, void *frame, unsigned int flags);
 
 /* --- PD/PT Initialization --- */
