@@ -22,14 +22,13 @@
 typedef char frame_t[PAGE_SIZE];
 const frame_t *frames = (const frame_t *)NULL;
 
-unsigned int frame_index = USER_MEM_START/sizeof(frame_t);
+int frame_index = USER_MEM_START/sizeof(frame_t);
 
 
 void *alloc_frame(void)
 {
   void *base;
   base = (void *)&frames[frame_index];
-  lprintf("allocating frame %p", base);
   ++frame_index;
   return base;
 }
