@@ -18,4 +18,8 @@ int getbytes( const char *filename, int offset, int size, char *buf );
  * Declare your loader prototypes here.
  */
 
+void load_file(const char* filename);
+void load_segment(const char* filename, unsigned long offset, 
+                  unsigned long len, unsigned long start);
+
 #endif /* _LOADER_H */
