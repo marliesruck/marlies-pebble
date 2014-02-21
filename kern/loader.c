@@ -87,19 +87,19 @@ void load_file(const char* filename)
 
   /* Load text */
   load_segment(filename, se.e_txtoff, se.e_txtlen, se.e_txtstart, 
-               PG_TBL_PRESENT);
+               PG_TBL_PRESENT | PG_TBL_USER);
 
   /* Load rodata */
   load_segment(filename, se.e_rodatoff, se.e_rodatlen, se.e_rodatstart,
-               PG_TBL_PRESENT);
+               PG_TBL_PRESENT | PG_TBL_USER);
 
   /* Load data */
   load_segment(filename, se.e_datoff, se.e_datlen, se.e_datstart, 
-               PG_TBL_PRESENT | PG_TBL_WRITABLE | PG_TBL_USER );
+               PG_TBL_PRESENT | PG_TBL_WRITABLE | PG_TBL_USER);
 
   /* Zero bss */
   vm_alloc(pg_dir, (void*)(se.e_bssstart), se.e_bsslen,
-           PG_TBL_PRESENT | PG_TBL_WRITABLE | PG_TBL_USER );
+           PG_TBL_PRESENT | PG_TBL_WRITABLE | PG_TBL_USER);
   memset((void *)(se.e_bssstart), 0, se.e_bsslen);
 
   return;

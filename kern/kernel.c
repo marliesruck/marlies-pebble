@@ -22,6 +22,7 @@
 #include <x86/asm.h>                /* enable_interrupts() */
 #include <x86/cr.h>
 
+#include <vm.h>
 #include <pg_table.h>
 #include <frame_alloc.h>
 #include <loader.h>
@@ -56,6 +57,7 @@ void disable_paging(void)
   return;
 }
 
+void mode_switch(uint32_t eip, uint32_t esp);
 
 /** @brief Kernel entrypoint.
  *  
@@ -78,8 +80,14 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   set_cr3((uint32_t) pd);
   enable_paging();
 
-  /* Load idle task */
+  /* Load idle task and shamelessly hack our way into user-mode */
   load_file("idle");
+  uint32_t stack =
+    (uint32_t) vm_alloc(pg_dir, (void *)DIR_HIGH-1, 1,
+                        PG_TBL_PRESENT|PG_TBL_WRITABLE|PG_TBL_USER);
+  lprintf("stack = 0x%08X", (unsigned int) stack);
+  lprintf("pg_tables = %p", pg_tables);
+  mode_switch(USER_MEM_START, DIR_HIGH);
 
   /* Just some testing stuff */
   lprintf("Start testing...");
