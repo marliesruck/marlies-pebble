@@ -26,6 +26,7 @@
 #include <frame_alloc.h>
 #include <loader.h>
 
+
 /*************************************************************************
  *  Random paging stuff that should really be elsewhere
  *************************************************************************/
@@ -194,6 +195,19 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   }
 
   lprintf( "Hello from a brand new kernel!" );
+
+#include <x86/eflags.h>
+#include <asm.h>
+  // enable interrupts
+  unsigned eflags = 
+    (get_eflags() | EFL_RESV1 | EFL_IOPL_RING3) & ~EFL_AC;
+  void *sp = vm_alloc(pg_dir,(void *)(0xF0000000), 4096, 0);
+  sp += 4096;
+  lprintf("allocated stack frame at: 0x%x",(unsigned)sp);
+  lprintf("eflags: 0x%x",eflags);
+  MAGIC_BREAK;
+  mode(sp,eflags);
+
 
   while (1) {
       continue;
