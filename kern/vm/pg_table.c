@@ -7,15 +7,17 @@
  **/
 
 #include <pg_table.h>
-
 #include <frame_alloc.h>
 
-
 #define KERN_PD_ENTRIES PG_DIR_INDEX(USER_MEM_START)
+#define MEM_HIGH 0xFFFFFFFF
+#define DIR_HIGH (MEM_HIGH & PG_DIR_MASK)
+#define TBL_HIGH (MEM_HIGH & (PG_DIR_MASK | PG_TBL_MASK)) /* Last pg in mem */
+
 static pte_t *kern_pt[KERN_PD_ENTRIES];
 
-pt_t *pg_tables = (pt_t *)USER_MEM_START;
-pde_t *pg_directory = (pde_t *)(pt_t *)(USER_MEM_START + PAGE_SIZE*4);
+pt_t *pg_tables = (pt_t *)(DIR_HIGH);
+pde_t *pg_dir = (pde_t *)(TBL_HIGH);
 
 /* Populate kern page table */
 void init_kern_pt(void)
@@ -58,26 +60,23 @@ void set_pde(pde_t *pd, void *addr, pte_t *pt, unsigned int flags)
 }
 
 /* --- PTE getters and setters --- */
-int get_pte(pde_t *pd, void *addr, pte_t *dst)
+int get_pte(pde_t *pd, pt_t *pt, void *addr, pte_t *dst)
 {
-  int index;
-  pde_t pde;
-  pte_t *pt;
-
-  pde = get_pde(pd, addr);
+  pde_t pde = get_pde(pd, addr);
 
   /* And if the PDE isn't present?? */
   if (!(pde & PG_TBL_PRESENT))
     return -1;
 
-  pt = GET_PT(pde);
-  index = PG_TBL_INDEX(addr); 
+  int pdi = PG_DIR_INDEX(addr); 
+  int pti = PG_TBL_INDEX(addr); 
 
-  *dst = pt[index];
+  *dst = pt[pdi][pti];
+
   return 0;
 }
 
-int set_pte(pde_t *pd, void *addr, void *frame, unsigned int flags)
+int set_pte(pde_t *pd, pt_t *pt, void *addr, void *frame, unsigned int flags)
 {
   pde_t pde = get_pde(pd, addr);
 
@@ -86,11 +85,11 @@ int set_pte(pde_t *pd, void *addr, void *frame, unsigned int flags)
     return -1;
 
   /* Compute index into page directory */
-  int index = PG_TBL_INDEX(addr); 
+  int pdi = PG_DIR_INDEX(addr); 
+  int pti = PG_TBL_INDEX(addr); 
 
   /* Write to the page table */
-  pte_t *pt = GET_PT(pde);
-  pt[index] = PACK_PTE(frame,flags);
+  pt[pdi][pti] = PACK_PTE(frame,flags);
 
   return 0;
 }
@@ -121,8 +120,8 @@ void init_pd(pde_t *pd)
     pd[i] = PACK_PDE(kern_pt[i], PG_TBL_PRESENT|PG_TBL_WRITABLE);
   }
 
-  /* The page directory is also a page table... */
-  pd[i] = PACK_PDE(pd, PG_TBL_PRESENT|PG_TBL_WRITABLE);
+  /* The page directory is also a page table at the top of user mem... */
+  pd[PG_TBL_ENTRIES - 1] = PACK_PDE(pd, PG_TBL_PRESENT|PG_TBL_WRITABLE);
 
   return;
 }

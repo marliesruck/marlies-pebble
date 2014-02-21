@@ -40,7 +40,7 @@ void *vm_alloc(pte_t *pd, void *va_start, size_t len, unsigned int attr)
 
     lprintf("checking for %p", addr);
     /* If the PDE isn't valid, make it so */
-    if (get_pte(pd, addr, &pte)) {
+    if (get_pte(pd, pg_tables,addr, &pte)) {
       lprintf("NOT FOUND!  backing");
       frame = alloc_frame();
       set_pde(pd, addr, frame, PG_TBL_PRESENT|PG_TBL_WRITABLE);
@@ -56,7 +56,7 @@ void *vm_alloc(pte_t *pd, void *va_start, size_t len, unsigned int attr)
   /* Allocate frames for the requested memory */
   for (i = 0; i < num_pages; ++i) {
     frame = alloc_frame();
-    if (set_pte(pd, (char *)va_start + i*PAGE_SIZE, frame, attr))
+    if (set_pte(pd, pg_tables,(char *)va_start + i*PAGE_SIZE, frame, attr))
       return NULL;
   }
 

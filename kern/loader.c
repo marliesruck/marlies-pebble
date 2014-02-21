@@ -88,7 +88,8 @@ void load_file(const char* filename)
     assert(0);
 
   /* @bug Call vm_alloc with RO flags */
-  load_segment(filename, se.e_txtoff,se.e_txtlen, se.e_txtstart);
+  load_segment(filename, se.e_txtoff,se.e_txtlen, se.e_txtstart, 
+              PG_TBL_PRESENT);
 
   /* Zero out areas between .txt and .rodata */
 
@@ -96,20 +97,23 @@ void load_file(const char* filename)
   memset((void *)(text_end),0,se.e_rodatstart - text_end);
 
   /* @bug Call vm_alloc with RO flags */
-  load_segment(filename, se.e_rodatoff,se.e_rodatlen, se.e_rodatstart);
+  load_segment(filename, se.e_rodatoff,se.e_rodatlen, se.e_rodatstart,
+               PG_TBL_PRESENT);
 
   /* Zero out areas between .rodata and .data */
   unsigned long rodat_end = (unsigned)(se.e_rodatstart) + se.e_rodatlen;
   memset((void *)(rodat_end),0,(unsigned long)(se.e_datstart) - rodat_end);
 
-  load_segment(filename, se.e_datoff,se.e_datlen, se.e_datstart);
+  load_segment(filename, se.e_datoff,se.e_datlen, se.e_datstart, 
+              PG_TBL_PRESENT | PG_TBL_WRITABLE | PG_TBL_USER );
 
   /* Zero out areas between .data and .bss */
   unsigned long dat_end = (unsigned)(se.e_datstart) + se.e_datlen;
   memset((void *)(dat_end),0,(unsigned long)(se.e_bssstart) - dat_end);
 
   /* Init bss */
-  vm_alloc(pg_directory,(void*)(se.e_bssstart),se.e_bsslen);
+  vm_alloc(pg_dir,(void*)(se.e_bssstart),se.e_bsslen,
+           PG_TBL_PRESENT | PG_TBL_WRITABLE | PG_TBL_USER );
   memset((void *)(se.e_bssstart),0,se.e_bsslen);
 
   return;
@@ -122,10 +126,10 @@ void load_file(const char* filename)
  *  @param start Start of segment virtual address
  */
 void load_segment(const char* filename, unsigned long offset, 
-                  unsigned long len, unsigned long start)
+                  unsigned long len, unsigned long start, unsigned int flags)
 {
   /* Allocate frame(s) for section and map to virtual pages */
-  vm_alloc(pg_directory,(void*)(start),len);
+  vm_alloc(pg_dir,(void*)(start),len,flags);
 
   /* Read segment from the 'image' */
   char segment[len];

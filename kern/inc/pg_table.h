@@ -61,7 +61,7 @@ typedef pte_t pt_t[PG_TBL_ENTRIES];
 
 /* Current process' page tables and page directory */
 extern pt_t *pg_tables;
-extern pde_t *pg_directory;
+extern pde_t *pg_dir;
 
 
 /* --- Stuff that shouldn't be here --- */
@@ -70,8 +70,9 @@ void init_kern_pt(void);
 /* --- PDE/PTE getters and setters --- */
 pde_t get_pde(pde_t *pd, void *addr);
 void set_pde(pde_t *pd, void *addr, pte_t *pt, unsigned int flags);
-int get_pte(pde_t *pd, void *addr, pte_t *dst);
-int set_pte(pde_t *pd, void *addr, void *frame, unsigned int flags);
+
+int get_pte(pde_t *pd, pt_t *pt, void *addr, pte_t *dst);
+int set_pte(pde_t *pd, pt_t *pt, void *addr, void *frame, unsigned int flags);
 
 /* --- PD/PT Initialization --- */
 void init_pt(pte_t *pt);
