@@ -9,11 +9,6 @@
 #include <pg_table.h>
 #include <frame_alloc.h>
 
-#define KERN_PD_ENTRIES PG_DIR_INDEX(USER_MEM_START)
-#define MEM_HIGH 0xFFFFFFFF
-#define DIR_HIGH (MEM_HIGH & PG_DIR_MASK)
-#define TBL_HIGH (MEM_HIGH & (PG_DIR_MASK | PG_TBL_MASK)) /* Last pg in mem */
-
 static pte_t *kern_pt[KERN_PD_ENTRIES];
 
 pt_t *pg_tables = (pt_t *)(DIR_HIGH);
