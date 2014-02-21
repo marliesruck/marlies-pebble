@@ -31,6 +31,7 @@ void alloc_page(pte_t *pd, void *vaddr, unsigned int attr)
   /* If the PDE isn't valid, make it so */
   if (get_pte(pd, pg_tables, vaddr, &pte)) {
     frame = alloc_frame();
+    /* Should we really be marking these as user-accessible?? */
     set_pde(pd, vaddr, frame, PG_TBL_PRESENT|PG_TBL_WRITABLE|PG_TBL_USER);
   }
 

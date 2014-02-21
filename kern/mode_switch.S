@@ -5,7 +5,10 @@
  *  @author Enrique Naudon (esn)
  **/
 
- #include <x86/seg.h>
+#include <x86/seg.h>
+#include <x86/eflags.h>
+
+#define EFL_USER_MODE EFL_RESV1|EFL_IOPL_RING0&~EFL_AC
 
 .global mode_switch
 mode_switch:
@@ -18,20 +21,20 @@ mode_switch:
   movl  0x8(%ebp), %ecx           # Move user-mode EIP into ECX
   movl  0xC(%ebp), %edx           # Move user-mode ESP into EBX
 
-  # Setup various data segment registers
-  mov   $SEGSEL_USER_DS, %ax      # Can't move directly into segment regs
-  mov   %ax, %ds                  # Set DS data segment
-  mov   %ax, %es                  # Set ES data segment
-  mov   %ax, %fs                  # Set FS data segment
-  mov   %ax, %gs                  # Set GS data segment
+  # Setup various data segment selectors
+  movw  $SEGSEL_USER_DS, %ax      # Can't move into segment regs directly
+  movw  %ax, %ds                  # Set DS data segment
+  movw  %ax, %es                  # Set ES data segment
+  movw  %ax, %fs                  # Set FS data segment
+  movw  %ax, %gs                  # Set GS data segment
 
   # Setup stack for iret
   pushl $SEGSEL_USER_DS           # Push user stack segment selector
   pushl %edx                      # Push user stack pointer
-  pushf                           # Push flag register
+  push  $EFL_USER_MODE            # Push flag register
   pushl $SEGSEL_USER_CS           # Push user code segment selector
   pushl %ecx                      # Push user program counter
-  iret                             # To user-space!
+  iret                            # To user-space!
 
   # We shouldn't return from IRET
 
