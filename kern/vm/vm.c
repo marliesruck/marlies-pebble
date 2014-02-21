@@ -6,8 +6,6 @@
  *  @author Marlies Ruck (mruck)
  **/
 
-#include <simics.h>
-
 /* VM includes */
 #include <vm.h>
 
@@ -38,10 +36,8 @@ void *vm_alloc(pte_t *pd, void *va_start, size_t len, unsigned int attr)
   {
     addr = (char *)va_start + i*PAGE_SIZE;
 
-    lprintf("checking for %p", addr);
     /* If the PDE isn't valid, make it so */
     if (get_pte(pd, pg_tables,addr, &pte)) {
-      lprintf("NOT FOUND!  backing");
       frame = alloc_frame();
       set_pde(pd, addr, frame, PG_TBL_PRESENT|PG_TBL_WRITABLE);
     }
@@ -50,8 +46,6 @@ void *vm_alloc(pte_t *pd, void *va_start, size_t len, unsigned int attr)
     else if (pte & PG_TBL_PRESENT)
       return NULL;
   }
-
-  lprintf("k, all good");
 
   /* Allocate frames for the requested memory */
   for (i = 0; i < num_pages; ++i) {

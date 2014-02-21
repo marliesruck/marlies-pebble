@@ -70,13 +70,15 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
    * when you are ready.
    */
 
-  /* Set up kernel PT and a PD */
+  /* Set up kernel PTs and a PD */
   init_kern_pt();
   pde_t *pd = alloc_frame();
-  lprintf("pd = %p", pd);
   init_pd(pd);
   set_cr3((uint32_t) pd);
   enable_paging();
+
+  /* Load idle task */
+  load_file("idle");
 
   /* Just some testing stuff */
   lprintf("Start testing...");
@@ -181,10 +183,17 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   else lprintf("get_pte(%p) = 0x%08X", addr, pte);
   lprintf(" ");
 
-  lprintf( "Hello from a brand new kernel!" );
+  unsigned char *instrs = (unsigned char *)USER_MEM_START;
+  for (i = 0; i < 64; i += 15) {
+    lprintf("%p: %02x%02x%02x%02x %02x%02x%02x%02x"
+            " %02x%02x%02x%02x %02x%02x%02x%02x", &instrs[i],
+            instrs[i+0], instrs[i+1], instrs[i+2], instrs[i+3],
+            instrs[i+4], instrs[i+5], instrs[i+6], instrs[i+7],
+            instrs[i+8], instrs[i+9], instrs[i+10], instrs[i+11],
+            instrs[i+12], instrs[i+13], instrs[i+14], instrs[i+15]);
+  }
 
-  load_file("init");
-  MAGIC_BREAK;
+  lprintf( "Hello from a brand new kernel!" );
 
   while (1) {
       continue;
