@@ -13,8 +13,8 @@
 #define TRAP_GATE      (0x00000F00)     /* Trap gate bits */
 #define INTERRUPT_GATE (0x00000E00)     /* Interrupt gate bits */
 #define PRESENT_BIT    (0x00008000)     /* Present bit */
-#define USER_DPL       (0x00000300)     /* This handler is user callable */
-#define KERN_DPL       (0x00000000)     /* This handler must be called by 
+#define IDT_USER_DPL   (0x00006000)     /* This handler is user callable */
+#define IDT_KERN_DPL   (0x00000000)     /* This handler must be called by 
                                            the kernel */
 /* Since a gate is 64 bits, pack into ULL */
 #define PACK_IDT(hi,lo)\

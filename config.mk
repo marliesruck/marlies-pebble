@@ -149,4 +149,4 @@ KERNEL_OBJS = fake_console.o kernel.o loader.o malloc_wrappers.o vm/vm.o vm/pg_t
 # kernel in, or else your tweaked version will run and the test harness
 # won't.
 #
-STUDENTREQPROGS =
+STUDENTREQPROGS = introspective

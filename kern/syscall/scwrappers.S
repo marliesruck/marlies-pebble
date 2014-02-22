@@ -15,58 +15,59 @@
  *  Life cycle
  *************************************************************************/
 
-INTERRUPT sys_fork
-INTERRUPT sys_exec
-INTERRUPT sys_set_status
-INTERRUPT sys_vanish
-INTERRUPT sys_wait
-INTERRUPT sys_task_vanish
+NVOID_INTERRUPT sys_fork
+NVOID_INTERRUPT sys_exec
+VOID_INTERRUPT sys_set_status
+VOID_INTERRUPT sys_vanish
+NVOID_INTERRUPT sys_wait
+VOID_INTERRUPT sys_task_vanish
 
 
 /*************************************************************************
  *  Thread management
  *************************************************************************/
 
-INTERRUPT sys_gettid
-INTERRUPT sys_yield
-INTERRUPT sys_deschedule
-INTERRUPT sys_make_runnable
-INTERRUPT sys_get_ticks
-INTERRUPT sys_sleep
+NVOID_INTERRUPT sys_gettid
+NVOID_INTERRUPT sys_yield
+NVOID_INTERRUPT sys_deschedule
+NVOID_INTERRUPT sys_make_runnable
+NVOID_INTERRUPT sys_get_ticks
+NVOID_INTERRUPT sys_sleep
 
 
 /*************************************************************************
  *  Memory management
  *************************************************************************/
 
-INTERRUPT sys_new_pages
-INTERRUPT sys_remove_pages
+NVOID_INTERRUPT sys_new_pages
+NVOID_INTERRUPT sys_remove_pages
 
 
 /*************************************************************************
  *  Console I/O
  *************************************************************************/
 
-INTERRUPT sys_getchar
-INTERRUPT sys_readline
-INTERRUPT sys_print
-INTERRUPT sys_set_term_color
-INTERRUPT sys_set_cursor_pos
-INTERRUPT sys_get_cursor_pos
+/* Maybe we do something special for character returns?? */
+NVOID_INTERRUPT sys_getchar
+NVOID_INTERRUPT sys_readline
+NVOID_INTERRUPT sys_print
+NVOID_INTERRUPT sys_set_term_color
+NVOID_INTERRUPT sys_set_cursor_pos
+NVOID_INTERRUPT sys_get_cursor_pos
 
 
 /*************************************************************************
  *  Miscellaneous
  *************************************************************************/
 
-INTERRUPT sys_halt
-INTERRUPT sys_readfile
-INTERRUPT sys_swexn
+VOID_INTERRUPT sys_halt
+NVOID_INTERRUPT sys_readfile
+NVOID_INTERRUPT sys_swexn
 
 
 /*************************************************************************
  *  "Special"
  *************************************************************************/
 
-INTERRUPT sys_misbehave
+VOID_INTERRUPT sys_misbehave
 
