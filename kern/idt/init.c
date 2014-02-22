@@ -5,26 +5,41 @@
  *  @author Marlies Ruck(mruck)
  *  @bug No known bugs
  */
-#include <p1kern.h>
-#include <stdlib.h>
-#include <asm.h>
-#include <seg.h>
-#include <timer_defines.h>
-#include <keyhelp.h>
 #include "inc/init_i.h"
-#include "inc/timer_i.h"
-#include "inc/asm_wrappers.h"
 
-/** @brief Generic handler installation function
+/* x86 specific includes */
+#include <x86/asm.h>
+#include <x86/seg.h>
+
+/** @brief Install trap gate 
  *
  *  @param index IDT index
  *  @param handler address of handler
+ *  @param dpl Descriptor privledge level (should be either USER_DPL or
+ *  KERN_DPL)
+ *          
  */
-void load_idt_entry(int index, unsigned handler){
-	char *base = idt_base();
-	unsigned *word_one = (unsigned*)(base + (index * GATE_SIZE));
-	unsigned *word_two = word_one + 1;
-	*word_one =  (SEGSEL_KERNEL_CS << 16)| OFFSET_LSB(handler);
-	*word_two = OFFSET_MSB(handler) | FLAGS;
+void install_trap_gate(int index, unsigned handler,unsigned int dpl)
+{
+	unsigned long long *idt = idt_base();
+	unsigned int word_one =  (SEGSEL_KERNEL_CS << 16)| OFFSET_LSB(handler);
+	unsigned int word_two = OFFSET_MSB(handler) | (PRESENT_BIT | TRAP_GATE | dpl);
+  idt[index] = PACK_IDT(word_two,word_one);
+	return;
+}
+/** @brief Install interrupt gate 
+ *
+ *  @param index IDT index
+ *  @param handler address of handler
+ *  @param dpl Descriptor privledge level (should be either USER_DPL or
+ *  KERN_DPL)
+ *          
+ */
+void install_interrupt_gate(int index, unsigned handler,unsigned int dpl)
+{
+	unsigned long long *idt = idt_base();
+	unsigned int word_one =  (SEGSEL_KERNEL_CS << 16)| OFFSET_LSB(handler);
+	unsigned int word_two = OFFSET_MSB(handler) | (PRESENT_BIT | INTERRUPT_GATE | dpl);
+  idt[index] = PACK_IDT(word_two,word_one);
 	return;
 }
