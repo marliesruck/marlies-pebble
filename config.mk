@@ -99,7 +99,7 @@ THREAD_OBJS = malloc.o panic.o
 ###########################################################################
 # Object files for your syscall wrappers
 ###########################################################################
-SYSCALL_OBJS = syscall.o
+SYSCALL_OBJS = set_status.o vanish.o print.o fork.o exec.o wait.o task_vanish.o gettid.o yield.o deschedule.o make_runnable.o get_ticks.o sleep.o new_pages.o remove_pages.o get_cursor_pos.o getchar.o halt.o readfile.o readline.o set_cursor_pos.o set_term_color.o swexn.o misbehave.o
 
 ###########################################################################
 # Object files for your automatic stack handling
@@ -116,7 +116,7 @@ AUTOSTACK_OBJS = autostack.o
 #
 # Kernel object files you provide in from kern/
 #
-KERNEL_OBJS = fake_console.o kernel.o loader.o malloc_wrappers.o vm/vm.o vm/pg_table.o vm/frame_alloc.o mode_switch.o
+KERNEL_OBJS = fake_console.o kernel.o loader.o malloc_wrappers.o vm/vm.o vm/pg_table.o vm/frame_alloc.o mode_switch.o syscall/scwrappers.o syscall/syscalls.o
 
 ###########################################################################
 # WARNING: Do not put **test** programs into the REQPROGS variables.  Your
