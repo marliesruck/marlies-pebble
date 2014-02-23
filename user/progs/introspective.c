@@ -9,7 +9,7 @@ int main() {
 	int pid;
 
 	pid = gettid();
-	lprintf("Who am I?  I am %d.", pid);
+	lprintf("Q: What happened to thread 9?  A: %d.", pid);
 	
   while (1) continue;
 }

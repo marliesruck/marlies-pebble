@@ -30,6 +30,7 @@
 #include <loader.h>
 #include <syscall_int.h>
 #include "idt/inc/init_i.h"
+#include <process.h>
 
 
 /*************************************************************************
@@ -93,12 +94,18 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 
   /* Load idle task and shamelessly hack our way into user-mode */
   load_file("introspective");
+  /* stack starts at dir high and grows down. We should only allocate 1 pg at
+   * 0xFFDFF000 */
   vm_alloc(pg_dir, (void *)DIR_HIGH-1, 1,
            PG_TBL_PRESENT|PG_TBL_WRITABLE|PG_TBL_USER);
   sim_reg_process(pd, "introspective");
-  uint32_t stack;
-  set_esp0((uint32_t) &stack);
-  stack = 0;
+
+  my_pcb.pg_dir = (uint32_t)(pd);
+  my_pcb.my_tcb.tid = 789;
+
+  set_esp0((uint32_t)(&my_pcb.my_tcb.kstack[KSTACK_SIZE - 1]));
+  lprintf("kstack high: %p",&my_pcb.my_tcb.kstack[KSTACK_SIZE - 1]);
+  /* load_file should return user entry point! */
   mode_switch(USER_MEM_START, DIR_HIGH);
 
   return 0;

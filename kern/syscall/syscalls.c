@@ -10,6 +10,8 @@
  *  @author Marlies Ruck (mruck)
  **/
 
+#include <simics.h>
+#include <process.h>
 
 /*************************************************************************
  *  Life cycle
@@ -52,7 +54,9 @@ void sys_task_vanish(int status)
 
 int sys_gettid(void)
 {
-  return 123;
+  lprintf("In sys_gettid(), lets check the kstack!");
+  MAGIC_BREAK;
+  return my_pcb.my_tcb.tid;
 }
 
 int sys_yield(int pid)
