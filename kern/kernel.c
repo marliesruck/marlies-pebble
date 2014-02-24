@@ -74,6 +74,7 @@ void disable_paging(void)
 /** These does not belong here... */
 void mode_switch(void *entry_point, void *sp);
 int asm_sys_gettid(void);
+void install_fault_handlers(void);
 
 /** @brief Kernel entrypoint.
  *  
@@ -86,8 +87,8 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   lprintf( "Hello from a brand new kernel!" );
 
   /* IDT setup */
-  install_trap_gate(GETTID_INT, (unsigned int) asm_sys_gettid,
-                    IDT_USER_DPL);
+  install_trap_gate(GETTID_INT, asm_sys_gettid, IDT_USER_DPL);
+  install_fault_handlers();
 
   /* Set up kernel PTs and a PD */
   init_kern_pt();
