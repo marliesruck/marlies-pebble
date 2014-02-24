@@ -5,6 +5,7 @@
  *  @author Marlies Ruck(mruck)
  *  @bug No known bugs
  */
+
 #include "inc/init_i.h"
 
 /* x86 specific includes */
@@ -19,14 +20,18 @@
  *  KERN_DPL)
  *          
  */
-void install_trap_gate(int index, unsigned handler,unsigned int dpl)
+void install_trap_gate(int index, void *handler, unsigned int dpl)
 {
+  unsigned long hi, lo;
 	unsigned long long *idt = idt_base();
-	unsigned int word_one =  (SEGSEL_KERNEL_CS << 16)| OFFSET_LSB(handler);
-	unsigned int word_two = OFFSET_MSB(handler) | (PRESENT_BIT | TRAP_GATE | dpl);
-  idt[index] = PACK_IDT(word_two,word_one);
+
+	lo = (SEGSEL_KERNEL_CS << 16) | OFFSET_LSB(handler);
+	hi = OFFSET_MSB(handler) | (PRESENT_BIT | TRAP_GATE | dpl);
+
+  idt[index] = PACK_IDT(hi,lo);
 	return;
 }
+
 /** @brief Install interrupt gate 
  *
  *  @param index IDT index
@@ -35,11 +40,14 @@ void install_trap_gate(int index, unsigned handler,unsigned int dpl)
  *  KERN_DPL)
  *          
  */
-void install_interrupt_gate(int index, unsigned handler,unsigned int dpl)
+void install_interrupt_gate(int index, void *handler, unsigned int dpl)
 {
+  unsigned long hi, lo;
 	unsigned long long *idt = idt_base();
-	unsigned int word_one =  (SEGSEL_KERNEL_CS << 16)| OFFSET_LSB(handler);
-	unsigned int word_two = OFFSET_MSB(handler) | (PRESENT_BIT | INTERRUPT_GATE | dpl);
-  idt[index] = PACK_IDT(word_two,word_one);
+
+	lo = (SEGSEL_KERNEL_CS << 16) | OFFSET_LSB(handler);
+	hi = OFFSET_MSB(handler) | (PRESENT_BIT | INTERRUPT_GATE | dpl);
+
+  idt[index] = PACK_IDT(hi,lo);
 	return;
 }

@@ -37,13 +37,42 @@ asm_\handler:
 .endm
 
 
-/** @brief Wraps a non-void interrupt handler.
+/** @brief Wraps a interrupt handler which returns a 32-bit value.
+ *
+ *  Note that the "LONG" prefix refers to the 32-bit return value, *not*
+ *  the amount of time the handler is expected to take...
  *
  *  @param handler The name of the handler for this interrupt.
  *
  *  @return Whatever the handler returns.
  **/
-.macro NVOID_INTERRUPT handler
+.macro LONG_INTERRUPT handler
+
+# Export and label it...
+.extern \handler
+.global asm_\handler
+asm_\handler:
+
+  # Prologue
+  push  %ebp                      # Store old EBP
+  movl  %esp, %ebp                # Set up new EBP
+
+  call \handler                   # Call the interrupt handler
+
+  # Epilogue
+  pop   %ebp                      # Restore old EBP
+  iret                            # Return from the interrupt
+
+.endm
+
+
+/** @brief Wraps a interrupt handler which returns a 8-bit value.
+ *
+ *  @param handler The name of the handler for this interrupt.
+ *
+ *  @return Whatever the handler returns.
+ **/
+.macro BYTE_INTERRUPT handler
 
 # Export and label it...
 .extern \handler
