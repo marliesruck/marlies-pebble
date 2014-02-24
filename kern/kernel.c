@@ -22,15 +22,18 @@
 /* x86 specific includes */
 #include <x86/asm.h>                /* enable_interrupts() */
 #include <x86/cr.h>
+#include <syscall_int.h>
+#include "idt/inc/init_i.h"
 
 /* Pebbles includes */
 #include <vm.h>
 #include <pg_table.h>
 #include <frame_alloc.h>
-#include <loader.h>
-#include <syscall_int.h>
-#include "idt/inc/init_i.h"
 #include <process.h>
+
+/* Usr stack init includes */
+#include <loader.h>
+#include <usr_stack.h>
 
 
 /*************************************************************************
@@ -39,6 +42,7 @@
 
 #include <x86/cr.h>
 #define CR0_PAGE 0x80000000
+
 
 void enable_paging(void)
 {
@@ -68,7 +72,7 @@ void disable_paging(void)
  *************************************************************************/
 
 /** These does not belong here... */
-void mode_switch(uint32_t eip, uint32_t esp);
+void mode_switch(void *entry_point, void *sp);
 int asm_sys_gettid(void);
 
 /** @brief Kernel entrypoint.
@@ -93,20 +97,19 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   enable_paging();
 
   /* Load idle task and shamelessly hack our way into user-mode */
-  load_file("introspective");
-  /* stack starts at dir high and grows down. We should only allocate 1 pg at
-   * 0xFFDFF000 */
-  vm_alloc(pg_dir, (void *)DIR_HIGH-1, 1,
-           PG_TBL_PRESENT|PG_TBL_WRITABLE|PG_TBL_USER);
-  sim_reg_process(pd, "introspective");
+  void *entry_point = load_file("introspective");
 
+  /* Initialize pg dir and tid in prototype tcb */
   my_pcb.pg_dir = (uint32_t)(pd);
   my_pcb.my_tcb.tid = 789;
 
-  set_esp0((uint32_t)(&my_pcb.my_tcb.kstack[KSTACK_SIZE - 1]));
-  lprintf("kstack high: %p",&my_pcb.my_tcb.kstack[KSTACK_SIZE - 1]);
-  /* load_file should return user entry point! */
-  mode_switch(USER_MEM_START, DIR_HIGH);
+  sim_reg_process(pd, "introspective");
+  
+  /* Set up usr stack */
+  void *usr_sp = usr_stack_init();
+
+  MAGIC_BREAK;
+  mode_switch(entry_point, usr_sp);
 
   return 0;
 }

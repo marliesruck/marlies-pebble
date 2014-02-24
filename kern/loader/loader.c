@@ -32,9 +32,6 @@
 
 
 /* --- Local function prototypes --- */ 
-void load_segment(const char* filename, int offset, size_t len,
-                  unsigned long start, unsigned int flags);
-
 
 /** @brief Copies data from a file into a buffer.
  *
@@ -74,7 +71,7 @@ int getbytes( const char *filename, int offset, int size, char *buf )
  *
  *  @param filename File to be loaded
  */
-void load_file(const char* filename)
+void *load_file(const char* filename)
 {
   /* Validate elf header */
   if(elf_check_header(filename) < 0)
@@ -102,7 +99,7 @@ void load_file(const char* filename)
            PG_TBL_PRESENT | PG_TBL_WRITABLE | PG_TBL_USER);
   memset((void *)(se.e_bssstart), 0, se.e_bsslen);
 
-  return;
+  return (void *)(se.e_entry);
 }
 
 /** @brief Loads single segment into memory.

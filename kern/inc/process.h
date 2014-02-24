@@ -9,7 +9,6 @@
 typedef struct tcb{
   int tid;
   char kstack[KSTACK_SIZE];
-  struct tcb *next;
 }tcb_t;
 
 typedef struct pcb{
