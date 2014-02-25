@@ -6,7 +6,7 @@
  *  @bug No known bugs
  */
 
-#include "inc/init_i.h"
+#include <idt.h>
 
 /* x86 specific includes */
 #include <x86/asm.h>

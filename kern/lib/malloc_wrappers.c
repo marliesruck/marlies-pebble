@@ -1,7 +1,6 @@
 #include <stddef.h>
 #include <malloc.h>
 #include <malloc/malloc_internal.h>
-#include "../410kern/inc/malloc.h"
 
 /* safe versions of malloc functions */
 void *malloc(size_t size)

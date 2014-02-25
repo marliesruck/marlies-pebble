@@ -10,8 +10,8 @@
 #include <simics.h>
 #include <x86/idt.h>
 
-#include "idt/inc/init_i.h"
-#include "idt/fault_wrappers.h"
+#include <idt.h>
+#include "fault_wrappers.h"
 
 /** @brief Installs our fault handlers.
  *

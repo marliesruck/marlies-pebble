@@ -23,7 +23,7 @@
 #include <x86/asm.h>                /* enable_interrupts() */
 #include <x86/cr.h>
 #include <syscall_int.h>
-#include "idt/inc/init_i.h"
+#include <idt.h>
 
 /* Pebbles includes */
 #include <vm.h>

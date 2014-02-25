@@ -14,6 +14,14 @@ static pte_t *kern_pt[KERN_PD_ENTRIES];
 pt_t *pg_tables = (pt_t *)(DIR_HIGH);
 pde_t *pg_dir = (pde_t *)(TBL_HIGH);
 
+
+void copy_pg_dir(pde_t *src, pde_t *dest){
+  return;
+}
+void copy_pde(){
+  return;
+}
+
 /* Populate kern page table */
 void init_kern_pt(void)
 {
