@@ -104,12 +104,10 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   my_pcb.pg_dir = (uint32_t)(pd);
   my_pcb.my_tcb.tid = 789;
 
-  sim_reg_process(pd, "introspective");
-  
   /* Set up usr stack */
   void *usr_sp = usr_stack_init();
 
-  MAGIC_BREAK;
+  sim_reg_process(pd, "introspective");
   mode_switch(entry_point, usr_sp);
 
   return 0;

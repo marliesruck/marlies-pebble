@@ -54,8 +54,6 @@ void sys_task_vanish(int status)
 
 int sys_gettid(void)
 {
-  lprintf("In sys_gettid(), lets check the kstack!");
-  MAGIC_BREAK;
   return my_pcb.my_tcb.tid;
 }
 

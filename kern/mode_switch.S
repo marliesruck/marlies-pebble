@@ -31,9 +31,20 @@ mode_switch:
   # Setup stack for iret
   pushl $SEGSEL_USER_DS           # Push user stack segment selector
   pushl %edx                      # Push user stack pointer
-  push  $EFL_USER_MODE            # Push flag register
+  pushl $EFL_USER_MODE            # Push flag register
   pushl $SEGSEL_USER_CS           # Push user code segment selector
   pushl %ecx                      # Push user program counter
+
+  # Set register values
+  movl  %edx, %ebp                # EBP = user ESP
+  xorl  %eax, %eax                # Clear EAX
+  xorl  %ebx, %ebx                # Clear EBX
+  xorl  %ecx, %ecx                # Clear ECX
+  xorl  %edx, %edx                # Clear EDX
+  xorl  %esi, %esi                # Clear ESI
+  xorl  %edi, %edi                # Clear EBI
+
+  # Perform the IRET
   iret                            # To user-space!
 
   # We shouldn't return from IRET
