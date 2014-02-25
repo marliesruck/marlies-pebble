@@ -99,7 +99,7 @@ THREAD_OBJS = malloc.o panic.o
 ###########################################################################
 # Object files for your syscall wrappers
 ###########################################################################
-SYSCALL_OBJS = syscall.o
+SYSCALL_OBJS = set_status.o vanish.o print.o fork.o exec.o wait.o task_vanish.o gettid.o yield.o deschedule.o make_runnable.o get_ticks.o sleep.o new_pages.o remove_pages.o get_cursor_pos.o getchar.o halt.o readfile.o readline.o set_cursor_pos.o set_term_color.o swexn.o misbehave.o
 
 ###########################################################################
 # Object files for your automatic stack handling
@@ -116,7 +116,7 @@ AUTOSTACK_OBJS = autostack.o
 #
 # Kernel object files you provide in from kern/
 #
-KERNEL_OBJS = fake_console.o kernel.o loader.o malloc_wrappers.o
+KERNEL_OBJS = drivers/fake_console.o kernel.o lib/malloc_wrappers.o vm/vm.o vm/pg_table.o vm/frame_alloc.o mode_switch.o syscall/syscall_wrappers.o syscall/syscalls.o idt/install_idt.o idt/faults.o idt/fault_wrappers.o loader/loader.o loader/usr_stack.o
 
 ###########################################################################
 # WARNING: Do not put **test** programs into the REQPROGS variables.  Your
@@ -149,4 +149,4 @@ KERNEL_OBJS = fake_console.o kernel.o loader.o malloc_wrappers.o
 # kernel in, or else your tweaked version will run and the test harness
 # won't.
 #
-STUDENTREQPROGS =
+STUDENTREQPROGS = introspective

@@ -11,11 +11,11 @@
      
 
 /* --- Prototypes --- */
+int getbytes(const char *filename, int offset, int size, char *buf);
+void *load_file(const char* filename);
+void load_segment(const char* filename, int offset, size_t len,
+                  unsigned long start, unsigned int flags);
 
-int getbytes( const char *filename, int offset, int size, char *buf );
-
-/*
- * Declare your loader prototypes here.
- */
 
 #endif /* _LOADER_H */
+
