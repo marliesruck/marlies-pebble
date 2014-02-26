@@ -8,7 +8,7 @@
 #include <x86/seg.h>
 #include <x86/eflags.h>
 
-#define EFL_USER_MODE EFL_RESV1|EFL_IOPL_RING0&~EFL_AC
+#define EFL_USER_MODE EFL_RESV1 | EFL_IOPL_RING0 | EFL_IF & ~EFL_AC
 
 .global mode_switch
 mode_switch:

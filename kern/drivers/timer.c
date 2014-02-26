@@ -18,6 +18,7 @@ void init_timer(void)
 
 void int_timer(void)
 {
+  ++numTicks;
   outb(INT_CTL_PORT,INT_ACK_CURRENT);
   return;
 }

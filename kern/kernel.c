@@ -127,9 +127,8 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 
   lprintf("enabling interrupts...");
   enable_interrupts();
-  while(1);
+  //while(1);
 
-  lprintf("We should NOT be here!");
   mode_switch(entry_point, usr_sp);
 
   return 0;

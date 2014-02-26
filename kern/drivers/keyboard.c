@@ -13,6 +13,8 @@
 #include "keyboard_internal.h"
 #include "driver_wrappers.h"
 
+#include <sched.h>
+
 #include <simics.h>
 
 /** @brief Handles keyboard interrupts.
@@ -31,6 +33,9 @@ void int_keyboard(void)
   __buffer_write(scancode);
 
   outb(INT_CTL_PORT, INT_ACK_CURRENT);
+
+  ctx_switch();
+
   return;
 }
 
