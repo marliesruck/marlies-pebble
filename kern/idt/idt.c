@@ -1,11 +1,12 @@
-/** @file init.h
+/** @file install_idt.c
  *
- *  @brief Installs handlers in IDT
+ *  @brief Implements IDT-manipulating functions.
  *
  *  @author Marlies Ruck(mruck)
  *  @bug No known bugs
  */
 
+#include "idt_internal.h"
 #include <idt.h>
 
 /* x86 specific includes */
@@ -22,14 +23,17 @@
  */
 void install_trap_gate(int index, void *handler, unsigned int dpl)
 {
-  unsigned long hi, lo;
-	unsigned long long *idt = idt_base();
+  idt_ent_s *idt = idt_base();
 
-	lo = (SEGSEL_KERNEL_CS << 16) | OFFSET_LSB(handler);
-	hi = OFFSET_MSB(handler) | (PRESENT_BIT | TRAP_GATE | dpl);
+  idt[index].off_lo = OFFSET_LSB(handler);
+  idt[index].off_hi = OFFSET_MSB(handler);
+  idt[index].segsel = SEGSEL_KERNEL_CS;
+  idt[index].type = TRAP_GATE;
+  idt[index].dpl = dpl;
+  idt[index].pres = 1;
+  idt[index].resv = 0;
 
-  idt[index] = PACK_IDT(hi,lo);
-	return;
+  return;
 }
 
 /** @brief Install interrupt gate 
@@ -42,12 +46,15 @@ void install_trap_gate(int index, void *handler, unsigned int dpl)
  */
 void install_interrupt_gate(int index, void *handler, unsigned int dpl)
 {
-  unsigned long hi, lo;
-	unsigned long long *idt = idt_base();
+  idt_ent_s *idt = idt_base();
 
-	lo = (SEGSEL_KERNEL_CS << 16) | OFFSET_LSB(handler);
-	hi = OFFSET_MSB(handler) | (PRESENT_BIT | INTERRUPT_GATE | dpl);
+  idt[index].off_lo = OFFSET_LSB(handler);
+  idt[index].off_hi = OFFSET_MSB(handler);
+  idt[index].segsel = SEGSEL_KERNEL_CS;
+  idt[index].type = INTERRUPT_GATE;
+  idt[index].dpl = dpl;
+  idt[index].pres = 1;
+  idt[index].resv = 0;
 
-  idt[index] = PACK_IDT(hi,lo);
-	return;
+  return;
 }
