@@ -21,7 +21,7 @@
 #include <keyhelp.h>
 #include <x86/asm.h>
 
-#include <keyboard_internal.h>
+#include "keyboard_internal.h"
 
 
 /*************************************************************************/

@@ -22,8 +22,12 @@
 /* x86 specific includes */
 #include <x86/asm.h>                /* enable_interrupts() */
 #include <x86/cr.h>
+
+/* IDT specific includes */
 #include <syscall_int.h>
 #include <idt.h>
+#include <keyhelp.h>
+#include "drivers/driver_wrappers.h"
 
 /* Pebbles includes */
 #include <vm.h>
@@ -74,6 +78,7 @@ void disable_paging(void)
 /** These does not belong here... */
 void mode_switch(void *entry_point, void *sp);
 int asm_sys_gettid(void);
+void asm_int_keyboard(void);
 void install_fault_handlers(void);
 
 /** @brief Kernel entrypoint.
@@ -86,9 +91,14 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 {
   lprintf( "Hello from a brand new kernel!" );
 
-  /* IDT setup */
+                      /* --- IDT setup --- */
+  /* Exception handlers */
   install_trap_gate(GETTID_INT, asm_sys_gettid, IDT_USER_DPL);
-  install_fault_handlers();
+  /* Hardware handlers...Should this be a trap? What if we get interrupted while
+   * processing? */
+  install_interrupt_gate(KEY_IDT_ENTRY,asm_int_keyboard,IDT_KERN_DPL); 
+  /* Fault handlers */
+  install_fault_handlers(); 
 
   /* Set up kernel PTs and a PD */
   init_kern_pt();
