@@ -27,7 +27,9 @@
 #include <syscall_int.h>
 #include <idt.h>
 #include <keyhelp.h>
+#include <timer_defines.h>
 #include "drivers/driver_wrappers.h"
+#include "drivers/timer.h"
 
 /* Pebbles includes */
 #include <vm.h>
@@ -78,7 +80,7 @@ void disable_paging(void)
 /** These does not belong here... */
 void mode_switch(void *entry_point, void *sp);
 int asm_sys_gettid(void);
-void asm_int_keyboard(void);
+//void asm_int_keyboard(void);
 void install_fault_handlers(void);
 
 /** @brief Kernel entrypoint.
@@ -97,6 +99,8 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   /* Hardware handlers...Should this be a trap? What if we get interrupted while
    * processing? */
   install_interrupt_gate(KEY_IDT_ENTRY,asm_int_keyboard,IDT_KERN_DPL); 
+  init_timer();
+  install_interrupt_gate(TIMER_IDT_ENTRY,asm_int_timer,IDT_KERN_DPL); 
   /* Fault handlers */
   install_fault_handlers(); 
 
@@ -118,6 +122,14 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   void *usr_sp = usr_stack_init();
 
   sim_reg_process(pd, "introspective");
+
+#include <x86/eflags.h>
+
+  lprintf("enabling interrupts...");
+  enable_interrupts();
+  while(1);
+
+  lprintf("We should NOT be here!");
   mode_switch(entry_point, usr_sp);
 
   return 0;
