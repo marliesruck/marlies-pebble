@@ -1,27 +1,30 @@
-/** @file introspective.c
+/** @file introvert.c
  **/
 
 #include <syscall.h>  /* for getpid */
 #include <simics.h>    /* for lprintf */
 
+
 int main() {
-// while(1){
-  lprintf("In Introspective...");
-// }
+//  while(1){
+    lprintf("In Introvert...");
+ // }
   while(1){
     if(getchar() > 0)
-      lprintf("introspective");
+      lprintf("introvert");
   }
-  /*
+
+    while(1) continue;
+    /*
 	int pid;
 
 	pid = gettid();
-	lprintf("Q: What happened to thread 9?  A: %d.", pid);
-
+	lprintf("My pid is %d and I'm a bit introverted...", pid);
+	
   int i = 0;
   while (1){
     if(i%1000 == 0)
-      lprintf("*");
+      lprintf("!");
     i++;
   }
   */

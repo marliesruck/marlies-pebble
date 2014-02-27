@@ -149,4 +149,4 @@ KERNEL_OBJS = kernel.o sched/sched.o sched/ctx_switch.o drivers/keyboard.o drive
 # kernel in, or else your tweaked version will run and the test harness
 # won't.
 #
-STUDENTREQPROGS = introspective
+STUDENTREQPROGS = introspective introvert

@@ -17,6 +17,38 @@
 
 #include <simics.h>
 
+/*************************************************************************/
+/* External Interface                                                    */
+/*************************************************************************/
+
+/** @brief Returns the next character in the keyboard buffer.
+ *
+ *  Search the keyboard's scancode buffer for a valid character-key press
+ *  event; return the corresponding character.  If no such event is found,
+ *  return -1.
+ *
+ *  NOTE: This function does not block if there are no characters in the
+ *  keyboard buffer
+ *
+ *  @return The next character in the keyboard buffer, or -1 if the
+ *          keyboard buffer is currently empty.
+ **/
+
+int sys_getchar(void)
+{
+  int res;
+  char scancode;
+  kh_type k;
+
+  while ((res = __buffer_read(&scancode)) != -1)
+  {
+    k = process_scancode(scancode);
+    if (KH_HASDATA(k) && KH_ISMAKE(k))
+      return KH_GETCHAR(k);
+  }
+
+  return -1;
+}
 /** @brief Handles keyboard interrupts.
  *
  *  Simply read a scancode from the keyboard and write it into the keyboard
@@ -34,42 +66,19 @@ void int_keyboard(void)
 
   outb(INT_CTL_PORT, INT_ACK_CURRENT);
 
-  ctx_switch();
+  /* Only ctx_switch on 'c' */
+  int k = process_scancode(scancode);
+  if (KH_HASDATA(k) && KH_ISMAKE(k)){
+    if(KH_GETCHAR(k) == 'c') {
+      lprintf("c");
+      sys_getchar();  /* increment buf */
+      ctx_switch(); /* ctx switch */
+    }
+  }
 
   return;
 }
 
-/*************************************************************************/
-/* External Interface                                                    */
-/*************************************************************************/
-
-/** @brief Returns the next character in the keyboard buffer.
- *
- *  Search the keyboard's scancode buffer for a valid character-key press
- *  event; return the corresponding character.  If no such event is found,
- *  return -1.
- *
- *  NOTE: This function does not block if there are no characters in the
- *  keyboard buffer
- *
- *  @return The next character in the keyboard buffer, or -1 if the
- *          keyboard buffer is currently empty.
- **/
-int readchar(void)
-{
-  int res;
-  char scancode;
-  kh_type k;
-
-  while ((res = __buffer_read(&scancode)) != -1)
-  {
-    k = process_scancode(scancode);
-    if (KH_HASDATA(k) && KH_ISMAKE(k))
-      return KH_GETCHAR(k);
-  }
-
-  return -1;
-}
 
 /*************************************************************************/
 /* Internal helper functions                                             */

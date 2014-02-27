@@ -1,4 +1,4 @@
-/** @file syscalls.S
+/** @file syscalls.c
  *
  *  @brief Implements our system calls.
  *
@@ -102,10 +102,12 @@ int sys_remove_pages(void * addr)
  *  Console I/O
  *************************************************************************/
 
+/* REMOVED FOR DEBUGGING, REVERT THIS
 char sys_getchar(void)
 {
   return -1;
 }
+*/
 
 int sys_readline(int size, char *buf)
 {
