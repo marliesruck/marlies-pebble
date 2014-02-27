@@ -9,21 +9,31 @@
 /* VM includes */
 #include <vm.h>
 
-/* Pebbles includes */
-#include <frame_alloc.h>
-
 /* Libc includes */
 #include <assert.h>
+#include <malloc.h>
 #include <stddef.h>
 
+
+/*************************************************************************
+ *  The page allocator (should have its own file)
+ *************************************************************************/
+
+#include <frame_alloc.h>
+#include <pg_table.h>
+
+
 #define PAGE_MASK 0xFFFFF000
-#define PAGE_ALIGN(addr) (void *)(((unsigned int) (addr)) & PAGE_MASK)
+#define PAGE_FLOOR(addr)  \
+  (void *)(((unsigned int) (addr)) & PAGE_MASK)
+#define PAGE_CEILING(addr)  \
+  (void *)(((unsigned int) (addr) + PAGE_SIZE - 1)/PAGE_SIZE)
 
 /**
  * @bug This will overwrite an existing pte for the specified virtual
  * address.
  **/
-void alloc_page(pte_t *pd, void *vaddr, unsigned int attr)
+void alloc_page(pte_t *pd, void *vaddr, unsigned int attrs)
 {
   void *frame;
   pte_t pte;
@@ -37,7 +47,7 @@ void alloc_page(pte_t *pd, void *vaddr, unsigned int attr)
 
   /* Back the requested vaddr with a page */
   frame = alloc_frame();
-  assert( !set_pte(pd, pg_tables, vaddr, frame, attr) );
+  assert( !set_pte(pd, pg_tables, vaddr, frame, attrs) );
 
   return;
 }
@@ -53,26 +63,103 @@ int page_is_allocated(pte_t *pd, void *vaddr)
   return pte & PG_TBL_PRESENT;
 }
 
-void *vm_alloc(pte_t *pd, void *va_start, size_t len, unsigned int attr)
+
+/*************************************************************************
+ *  Memory map and region manipulation
+ *************************************************************************/
+
+void mreg_init(mem_region_s *mreg, void *start, void *limit, unsigned int attrs)
+{
+  /* Intialize the mem region struct */
+  mreg->start = start;
+  mreg->limit = limit;
+  mreg->attrs = attrs;
+
+  return;
+}
+
+enum order { ORD_LT, ORD_EQ, ORD_GT };
+typedef enum order ord_e;
+
+ord_e mreg_compare(mem_region_s *lhs, mem_region_s *rhs)
+{
+  if (lhs->start < rhs->start && lhs->limit < rhs->start)
+    return ORD_LT;
+  else if (lhs->start > rhs->limit && lhs->limit > rhs->limit)
+    return ORD_GT;
+
+  return ORD_EQ;
+}
+
+int mreg_insert(cll_list *map, mem_region_s *mreg)
+{
+  cll_node *n;
+
+  /* Try to allocate a cll node */
+  n = malloc(sizeof(cll_node));
+  if (!n) return -1;
+
+  /* Insert the region into the mem map*/
+  cll_init_node(n, mreg);
+  cll_insert(map->next, n);
+
+  return 0;
+}
+
+
+/*************************************************************************
+ *  VM Information manipulation
+ *************************************************************************/
+
+
+
+/*************************************************************************
+ *  The actual vm allocator
+ *************************************************************************/
+
+/* This should be per-process eventually */
+vm_info_s vmi = {
+  .pg_dir = (pde_t *)(TBL_HIGH),
+  .pg_tbls = (pt_t *)(DIR_HIGH),
+  .mmap = CLL_LIST_INITIALIZER(vmi.mmap)
+};
+
+void *vm_alloc(pte_t *pd, void *va_start, size_t len, unsigned int attrs)
 {
   void *actual_start, *va_limit;
-  unsigned int actual_len, num_pages;
+  unsigned int num_pages;
   int i;
 
-  actual_start = PAGE_ALIGN(va_start);
+  cll_node *n;
+  mem_region_s *mreg, *cursor;
+
+  actual_start = PAGE_FLOOR(va_start);
   va_limit = (void *)((unsigned int) va_start + len);
-  actual_len = (unsigned int) va_limit - (unsigned int) actual_start;
-  num_pages = (actual_len + PAGE_SIZE - 1)/PAGE_SIZE;
+  num_pages = (unsigned int) PAGE_CEILING(va_limit - actual_start);
+
+  /* Initialize the memory region */
+  mreg = malloc(sizeof(mem_region_s));
+  if (!mreg) return NULL;
+  mreg_init(mreg, va_start, va_limit, attrs);
 
   /* Check that the requested memory is available */
-  for (i = 0; i < num_pages; ++i) {
-    if (page_is_allocated(pd, (char *)va_start + i*PAGE_SIZE))
+  cll_foreach(&vmi.mmap, n) {
+    cursor = cll_entry(mem_region_s *, n);
+    if (mreg_compare(mreg, cursor) == ORD_EQ) {
+      free(mreg);
       return NULL;
+    }
+  }
+
+  /* Insert it into the memory map */
+  if (mreg_insert(&vmi.mmap, mreg)) {
+    free(mreg);
+    return NULL;
   }
 
   /* Allocate frames for the requested memory */
   for (i = 0; i < num_pages; ++i) {
-    alloc_page(pd, (char *)va_start + i*PAGE_SIZE, attr);
+    alloc_page(vmi.pg_dir, (char *)va_start + i*PAGE_SIZE, attrs);
   }
 
   /* Return the ACTUAL start of the allocation */
