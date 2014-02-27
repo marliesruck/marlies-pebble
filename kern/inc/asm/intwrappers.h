@@ -30,8 +30,21 @@
 asm_\handler:
 
   pusha                           # Store GP registers
+
+  push %ds                        # Store DS data segment
+  push %es                        # Store ES data segment
+  push %fs                        # Store FS data segment
+  push %gs                        # Store GS data segment
+
   call \handler                   # Call the interrupt handler
+
+  pop %ds                         # Restore DS data segment
+  pop %es                         # Restore ES data segment
+  pop %fs                         # Restore FS data segment
+  pop %gs                         # Restore GS data segment
+
   popa                            # Restore GP registers
+
   iret                            # Return from the interrupt
 
 .endm
@@ -57,7 +70,17 @@ asm_\handler:
   push  %ebp                      # Store old EBP
   movl  %esp, %ebp                # Set up new EBP
 
+  push %ds                        # Store DS data segment
+  push %es                        # Store ES data segment
+  push %fs                        # Store FS data segment
+  push %gs                        # Store GS data segment
+
   call \handler                   # Call the interrupt handler
+
+  pop %ds                         # Restore DS data segment
+  pop %es                         # Restore ES data segment
+  pop %fs                         # Restore FS data segment
+  pop %gs                         # Restore GS data segment
 
   # Epilogue
   pop   %ebp                      # Restore old EBP
@@ -83,7 +106,17 @@ asm_\handler:
   push  %ebp                      # Store old EBP
   movl  %esp, %ebp                # Set up new EBP
 
+  push %ds                        # Store DS data segment
+  push %es                        # Store ES data segment
+  push %fs                        # Store FS data segment
+  push %gs                        # Store GS data segment
+
   call \handler                   # Call the interrupt handler
+
+  pop %ds                         # Restore DS data segment
+  pop %es                         # Restore ES data segment
+  pop %fs                         # Restore FS data segment
+  pop %gs                         # Restore GS data segment
 
   # Epilogue
   pop   %ebp                      # Restore old EBP
