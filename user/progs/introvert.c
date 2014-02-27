@@ -3,29 +3,19 @@
 
 #include <syscall.h>  /* for getpid */
 #include <simics.h>    /* for lprintf */
+#include <spin.h>
+#include "my_spin.h"
 
-
+extern spin_s spin;
 int main() {
-//  while(1){
-    lprintf("In Introvert...");
- // }
+  int ch;
+  lprintf("In introvert");
   while(1){
-    if(getchar() > 0)
-      lprintf("introvert");
+    spin_lock(&spin);
+    lprintf("introvert: press 'r' to release the lock!");
+    while((ch = getchar()) != 'r');
+    spin_unlock(&spin);
+    lprintf("introvert: press 't' to take the lock!");
+    while((ch = getchar()) != 't');
   }
-
-    while(1) continue;
-    /*
-	int pid;
-
-	pid = gettid();
-	lprintf("My pid is %d and I'm a bit introverted...", pid);
-	
-  int i = 0;
-  while (1){
-    if(i%1000 == 0)
-      lprintf("!");
-    i++;
-  }
-  */
 }

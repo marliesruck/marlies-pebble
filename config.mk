@@ -86,7 +86,7 @@ STUDENTFILES =
 ###########################################################################
 # Object files for your thread library
 ###########################################################################
-THREAD_OBJS = malloc.o panic.o
+THREAD_OBJS = malloc.o panic.o atomic.o spin.o
 
 # Thread Group Library Support.
 #

@@ -1,0 +1,32 @@
+diff --git a/user/libthread/synch/mutex.c b/user/libthread/synch/mutex.c
+index f63302e..f210806 100644
+--- a/user/libthread/synch/mutex.c
++++ b/user/libthread/synch/mutex.c
+@@ -2,24 +2,10 @@
+  *
+  *  @brief This file implements our mutexes.
+  *
+- *  Our mutexes are potentially-blocking locks, based on the non-blocking
+- *  spinlocks (see /user/mutex/spin.h).
+- *
+- *  The mutex struct, mutex_t, contains a list of waiting processes, a
+- *  spinlock (used to protect the waiting list), and a state field.  To
+- *  lock the mutex, the locker must first grab the spinlock.  With the
+- *  spinlock held, the locker adds him/her self to the wait queue and
+- *  blocks (if the mutex is locked), or sets the mutex to the locked state
+- *  and continues into the critical section (if the mutex is not currently
+- *  locked).  To unlock the mutex, the locker must again grab the spinlock.
+- *  Holding the spinlock, the locker unblocks the first waiting thread in
+- *  the wait queue, or, if the queue is empty, simply sets the lock to
+- *  unlocked.
+- *
+- *  Note that mutexes inherit the non-blocking property from the spinlocks
+- *  on which they are based.
+- *
+  *  @author Enrique Naudon (esn)
++ *  @author Marlies Ruck
++ *
++ *  @bug No known bugs
+  */
+ 
+ #include "qentry.h"
