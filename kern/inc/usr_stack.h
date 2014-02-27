@@ -1,8 +1,9 @@
 #ifndef _USR_STACK_H
 #define _USR_STACK_H
 
-#include <x86/page.h>
 #include <pg_table.h>
+#include <vm.h>
+#include <x86/page.h>
 
 #define USR_STACK_SIZE PAGE_SIZE
 #define USR_SP_HI (void *)(DIR_HIGH)
@@ -29,6 +30,6 @@ typedef unsigned int esp_t;
     *(esp_t*)(sp) = (unsigned)(elem); \
   } while (0)
 
-void *usr_stack_init(void);
+void *usr_stack_init(vm_info_s *vmi);
 
 #endif /* _USR_STACK_H */

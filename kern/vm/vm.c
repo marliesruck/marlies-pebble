@@ -27,7 +27,7 @@
 #define PAGE_FLOOR(addr)  \
   (void *)(((unsigned int) (addr)) & PAGE_MASK)
 #define PAGE_CEILING(addr)  \
-  (void *)(((unsigned int) (addr) + PAGE_SIZE - 1)/PAGE_SIZE)
+  (void *)(((unsigned int) (addr) + PAGE_SIZE - 1) & PAGE_MASK)
 
 /**
  * @bug This will overwrite an existing pte for the specified virtual
@@ -117,33 +117,27 @@ int mreg_insert(cll_list *map, mem_region_s *mreg)
  *  The actual vm allocator
  *************************************************************************/
 
-/* This should be per-process eventually */
-vm_info_s vmi = {
-  .pg_dir = (pde_t *)(TBL_HIGH),
-  .pg_tbls = (pt_t *)(DIR_HIGH),
-  .mmap = CLL_LIST_INITIALIZER(vmi.mmap)
-};
-
-void *vm_alloc(pte_t *pd, void *va_start, size_t len, unsigned int attrs)
+void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
+               unsigned int attrs)
 {
-  void *actual_start, *va_limit;
+  void *pg_start, *pg_limit;
   unsigned int num_pages;
   int i;
 
   cll_node *n;
   mem_region_s *mreg, *cursor;
 
-  actual_start = PAGE_FLOOR(va_start);
-  va_limit = (void *)((unsigned int) va_start + len);
-  num_pages = (unsigned int) PAGE_CEILING(va_limit - actual_start);
+  pg_start = PAGE_FLOOR(va_start);
+  pg_limit = PAGE_CEILING(va_start + len);
+  num_pages = (pg_limit - pg_start)/PAGE_SIZE;
 
   /* Initialize the memory region */
   mreg = malloc(sizeof(mem_region_s));
   if (!mreg) return NULL;
-  mreg_init(mreg, va_start, va_limit, attrs);
+  mreg_init(mreg, pg_start, pg_limit-1, attrs);
 
   /* Check that the requested memory is available */
-  cll_foreach(&vmi.mmap, n) {
+  cll_foreach(&vmi->mmap, n) {
     cursor = cll_entry(mem_region_s *, n);
     if (mreg_compare(mreg, cursor) == ORD_EQ) {
       free(mreg);
@@ -152,18 +146,18 @@ void *vm_alloc(pte_t *pd, void *va_start, size_t len, unsigned int attrs)
   }
 
   /* Insert it into the memory map */
-  if (mreg_insert(&vmi.mmap, mreg)) {
+  if (mreg_insert(&vmi->mmap, mreg)) {
     free(mreg);
     return NULL;
   }
 
   /* Allocate frames for the requested memory */
   for (i = 0; i < num_pages; ++i) {
-    alloc_page(vmi.pg_dir, (char *)va_start + i*PAGE_SIZE, attrs);
+    alloc_page(vmi->pg_dir, (char *)pg_start + i*PAGE_SIZE, attrs);
   }
 
   /* Return the ACTUAL start of the allocation */
-  return actual_start;
+  return pg_start;
 }
 
 void vm_free(pte_t *pd, void *va_start)

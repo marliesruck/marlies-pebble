@@ -149,4 +149,4 @@ KERNEL_OBJS = drivers/fake_console.o kernel.o lib/malloc_wrappers.o lib/cllist.o
 # kernel in, or else your tweaked version will run and the test harness
 # won't.
 #
-STUDENTREQPROGS = introspective
+STUDENTREQPROGS = introspective schizo

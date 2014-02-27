@@ -74,6 +74,7 @@ void disable_paging(void)
 /** These does not belong here... */
 void mode_switch(void *entry_point, void *sp);
 int asm_sys_gettid(void);
+int asm_sys_exec(void);
 void install_fault_handlers(void);
 
 /** @brief Kernel entrypoint.
@@ -88,6 +89,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 
   /* IDT setup */
   install_trap_gate(GETTID_INT, asm_sys_gettid, IDT_USER_DPL);
+  install_trap_gate(EXEC_INT, asm_sys_exec, IDT_USER_DPL);
   install_fault_handlers();
 
   /* Set up kernel PTs and a PD */
@@ -97,15 +99,20 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   set_cr3((uint32_t) pd);
   enable_paging();
 
-  /* Load idle task and shamelessly hack our way into user-mode */
-  void *entry_point = load_file("introspective");
-
   /* Initialize pg dir and tid in prototype tcb */
   my_pcb.pg_dir = (uint32_t)(pd);
+  my_pcb.vmi = (vm_info_s) {
+    .pg_dir = (pde_t *)(TBL_HIGH),
+    .pg_tbls = (pt_t *)(DIR_HIGH),
+    .mmap = CLL_LIST_INITIALIZER(my_pcb.vmi.mmap)
+  };
   my_pcb.my_tcb.tid = 789;
 
+  /* Load idle task and shamelessly hack our way into user-mode */
+  void *entry_point = load_file(&my_pcb.vmi, "introspective");
+
   /* Set up usr stack */
-  void *usr_sp = usr_stack_init();
+  void *usr_sp = usr_stack_init(&my_pcb.vmi);
 
   sim_reg_process(pd, "introspective");
   mode_switch(entry_point, usr_sp);

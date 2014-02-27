@@ -1,6 +1,4 @@
-/* The 15-410 kernel project
- *
- *     loader.h
+/* @file loader.h
  *
  * Structure definitions, #defines, and function prototypes
  * for the user process loader.
@@ -9,12 +7,11 @@
 #ifndef _LOADER_H
 #define _LOADER_H
      
+#include <vm.h>
 
-/* --- Prototypes --- */
+
 int getbytes(const char *filename, int offset, int size, char *buf);
-void *load_file(const char* filename);
-void load_segment(const char* filename, int offset, size_t len,
-                  unsigned long start, unsigned int flags);
+void *load_file(vm_info_s *vmi, const char* filename);
 
 
 #endif /* _LOADER_H */

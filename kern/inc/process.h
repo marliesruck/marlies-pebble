@@ -1,10 +1,15 @@
 /* @file process.h
  *
  */
-#ifndef _PROCESS_H
-#define _PROCESS_H
+#ifndef __PROCESS_H__
+#define __PROCESS_H__
 
-#define KSTACK_SIZE 4096
+#include <vm.h>
+
+#include <x86/page.h>
+
+
+#define KSTACK_SIZE PAGE_SIZE
 
 typedef struct tcb{
   int tid;
@@ -13,6 +18,7 @@ typedef struct tcb{
 
 typedef struct pcb{
   unsigned int pg_dir;
+  vm_info_s vmi;
   tcb_t my_tcb;  
 }pcb_t;
 

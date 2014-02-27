@@ -25,13 +25,15 @@
 
 #include <pg_table.h>
 #include <frame_alloc.h>
-#include <vm.h>
 
 /* --- Debugging --- */
 #include <assert.h>
+#include <simics.h>
 
 
 /* --- Local function prototypes --- */ 
+void load_segment(const char* filename, int offset, size_t len,
+                  unsigned long start);
 
 /** @brief Copies data from a file into a buffer.
  *
@@ -71,33 +73,41 @@ int getbytes( const char *filename, int offset, int size, char *buf )
  *
  *  @param filename File to be loaded
  */
-void *load_file(const char* filename)
+void *load_file(vm_info_s *vmi, const char* filename)
 {
-  /* Validate elf header */
-  if(elf_check_header(filename) < 0)
-    assert(0);
-
-  /* Populate elf struct */
   simple_elf_t se;
-  if(elf_load_helper(&se,filename) < 0)
-    assert(0);
+  void *ret;
 
-  /* Load text */
-  load_segment(filename, se.e_txtoff, se.e_txtlen, se.e_txtstart, 
-               PG_TBL_PRESENT | PG_TBL_USER);
+  /* Validate header and populate elf struct */
+  assert(elf_check_header(filename) == 0);
+  assert(elf_load_helper(&se,filename) == 0);
 
-  /* Load rodata */
-  load_segment(filename, se.e_rodatoff, se.e_rodatlen, se.e_rodatstart,
-               PG_TBL_PRESENT | PG_TBL_USER);
+  /* For simplicity, we assume text < rodata and data < bss */
+  assert(se.e_txtstart < se.e_rodatstart);
+  assert(se.e_datstart < se.e_bssstart);
 
-  /* Load data */
-  load_segment(filename, se.e_datoff, se.e_datlen, se.e_datstart, 
-               PG_TBL_PRESENT | PG_TBL_WRITABLE | PG_TBL_USER);
+  /* Allocate read/execute memory */
+  ret = vm_alloc(vmi, (void *)se.e_txtstart,
+                 (se.e_rodatstart - se.e_txtstart) + se.e_rodatlen,
+                 PG_TBL_PRESENT | PG_TBL_USER);
+  assert(ret != NULL);
 
-  /* Zero bss */
-  vm_alloc(pg_dir, (void*)(se.e_bssstart), se.e_bsslen,
-           PG_TBL_PRESENT | PG_TBL_WRITABLE | PG_TBL_USER);
-  memset((void *)(se.e_bssstart), 0, se.e_bsslen);
+  /* Load read/execute sections (text and rodata) */
+  load_segment(filename, se.e_txtoff, se.e_txtlen, se.e_txtstart);
+  memset((void *)(se.e_txtstart + se.e_txtlen), 0,
+         se.e_rodatstart - (se.e_txtstart + se.e_txtlen));
+  load_segment(filename, se.e_rodatoff, se.e_rodatlen, se.e_rodatstart);
+
+  /* Allocate read/write memory */
+  ret = vm_alloc(vmi, (void *)se.e_datstart,
+                 se.e_bssstart - se.e_datstart + se.e_bsslen,
+                 PG_TBL_PRESENT | PG_TBL_USER);
+  assert(ret != NULL);
+
+  /* Load read/execute sections (data and bss) */
+  load_segment(filename, se.e_datoff, se.e_datlen, se.e_datstart);
+  memset((void *)(se.e_datstart + se.e_datlen), 0,
+         (se.e_bssstart + se.e_bsslen) - (se.e_datstart + se.e_datlen));
 
   return (void *)(se.e_entry);
 }
@@ -112,13 +122,11 @@ void *load_file(const char* filename)
  *  @return Void.
  */
 void load_segment(const char* filename, int offset, size_t len,
-                  unsigned long start, unsigned int flags)
+                  unsigned long start)
 {
-  /* Allocate frame(s) for section and map to virtual pages */
-  vm_alloc(pg_dir, (void*)(start), len, flags);
+  char segment[len];
 
   /* Read segment from the 'image' */
-  char segment[len];
   getbytes(filename, offset, len, segment);
 
   /* Copy segment to virtual page(s) */
