@@ -28,9 +28,9 @@
 #include <idt.h>
 #include <keyhelp.h>
 #include <timer_defines.h>
-#include "drivers/driver_wrappers.h"
-#include "drivers/timer.h"
-#include "syscall/syscall_wrappers.h"
+#include "entry/drivers/driver_wrappers.h"
+#include "entry/drivers/timer.h"
+#include "entry/syscall/syscall_wrappers.h"
 
 /* Pebbles includes */
 #include <vm.h>
