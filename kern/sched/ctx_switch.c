@@ -1,4 +1,4 @@
-#include <sched.h>
+#include <ctx_switch.h>
 #include <process.h>
 
 #include <x86/eflags.h>

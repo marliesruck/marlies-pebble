@@ -13,7 +13,7 @@
 #include "keyboard_internal.h"
 #include "driver_wrappers.h"
 
-#include <sched.h>
+#include <ctx_switch.h>
 
 #include <simics.h>
 
