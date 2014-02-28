@@ -26,9 +26,6 @@
 /* IDT specific includes */
 #include <syscall_int.h>
 #include <idt.h>
-#include <keyhelp.h>
-#include <timer_defines.h>
-#include "entry/drivers/driver_wrappers.h"
 #include "entry/drivers/timer.h"
 #include "entry/syscall/syscall_wrappers.h"
 
@@ -80,7 +77,6 @@ void disable_paging(void)
 
 /** These does not belong here... */
 void mode_switch(void *entry_point, void *sp);
-void install_fault_handlers(void);
 
 /** @brief Kernel entrypoint.
  *  
@@ -94,18 +90,15 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 
                       /* --- IDT setup --- */
 
-  /* System calls */
-  install_trap_gate(GETTID_INT, asm_sys_gettid, IDT_USER_DPL);
-  install_trap_gate(EXEC_INT, asm_sys_exec, IDT_USER_DPL);
-  install_trap_gate(GETCHAR_INT, asm_sys_getchar, IDT_USER_DPL);
-
   /* Hardware interrupts */
-  install_interrupt_gate(KEY_IDT_ENTRY,asm_int_keyboard,IDT_KERN_DPL); 
-  init_timer();
-  install_interrupt_gate(TIMER_IDT_ENTRY,asm_int_timer,IDT_KERN_DPL); 
+  install_device_handlers();
 
   /* Fault handlers */
   install_fault_handlers(); 
+
+  /* System calls */
+  install_sys_handlers(); 
+
 
   /* Enable interrupts */
   enable_interrupts();

@@ -19,6 +19,10 @@
 void install_trap_gate(int index, void *handler, unsigned int dpl);
 void install_interrupt_gate(int index, void *handler, unsigned int dpl);
 
+void install_device_handlers(void);
+void install_fault_handlers(void);
+void install_sys_handlers(void);
+
 
 #endif /* __IDT_H__ */
 
