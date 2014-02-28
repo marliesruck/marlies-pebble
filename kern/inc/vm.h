@@ -25,7 +25,7 @@ typedef struct mem_region mem_region_s;
 /** @struct vm_info
  **/
 struct vm_info {
-  pte_t *pg_dir;    /**< The page directory. **/
+  pte_s *pg_dir;    /**< The page directory. **/
   pt_t  *pg_tbls;   /**< The page tables. **/
   cll_list mmap;    /**< A list of currently allocated regions **/
 };
@@ -33,7 +33,7 @@ typedef struct vm_info vm_info_s;
 
 void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
                unsigned int attrs);
-void vm_free(pte_t *pd, void *addr);
+void vm_free(pte_s *pd, void *addr);
 
 
 #endif /* __VM_H__ */

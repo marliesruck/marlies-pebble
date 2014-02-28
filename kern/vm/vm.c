@@ -9,59 +9,21 @@
 /* VM includes */
 #include <vm.h>
 
+/* Pebbles includes */
+#include <page_alloc.h>
+#include <pg_table.h>
+
 /* Libc includes */
 #include <assert.h>
 #include <malloc.h>
 #include <stddef.h>
 
-/*************************************************************************
- *  The page allocator (should have its own file)
- *************************************************************************/
 
-#include <frame_alloc.h>
-#include <pg_table.h>
-
-
-#define PAGE_MASK 0xFFFFF000
 #define PAGE_FLOOR(addr)  \
-  (void *)(((unsigned int) (addr)) & PAGE_MASK)
+  (void *)(((unsigned int) (addr)) & PG_ADDR_MASK)
+
 #define PAGE_CEILING(addr)  \
-  (void *)(((unsigned int) (addr) + PAGE_SIZE - 1) & PAGE_MASK)
-
-/**
- * @bug This will overwrite an existing pte for the specified virtual
- * address.
- **/
-void alloc_page(pte_t *pd, void *vaddr, unsigned int attrs)
-{
-  void *frame;
-  pte_t pte;
-
-  /* If the PDE isn't valid, make it so */
-  if (get_pte(pd, pg_tables, vaddr, &pte)) {
-    frame = alloc_frame();
-    /* Should we really be marking these as user-accessible?? */
-    set_pde(pd, vaddr, frame, PG_TBL_PRESENT|PG_TBL_WRITABLE|PG_TBL_USER);
-  }
-
-  /* Back the requested vaddr with a page */
-  frame = alloc_frame();
-  assert( !set_pte(pd, pg_tables, vaddr, frame, attrs) );
-
-  return;
-}
-
-int page_is_allocated(pte_t *pd, void *vaddr)
-{
-  pte_t pte;
-
-  /* If the PDE isn't valid, the page isn't allocated */
-  if (get_pte(pd, pg_tables, vaddr, &pte))
-    return 0;
-
-  return pte & PG_TBL_PRESENT;
-}
-
+  (void *)(((unsigned int) (addr) + PAGE_SIZE - 1) & PG_ADDR_MASK)
 
 /*************************************************************************
  *  Memory map and region manipulation
@@ -159,7 +121,7 @@ void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
   return pg_start;
 }
 
-void vm_free(pte_t *pd, void *va_start)
+void vm_free(pte_s *pd, void *va_start)
 {
   /* Oh, uh yeah... we just freed it. */
   return;
