@@ -170,6 +170,9 @@ void mode_switch(void *entry_point, void *sp);
   your_pcb.cr3 = (uint32_t)(pd2);
   your_pcb.my_tcb.tid = 123;
   
+  /* Initializing running tcb */
+  curr_pcb = &your_pcb;
+
   /* Enable keyboard interrupts so we can ctx switch! */
   enable_interrupts();
 

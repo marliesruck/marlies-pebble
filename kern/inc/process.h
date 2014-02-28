@@ -7,6 +7,7 @@
 #include <vm.h>
 
 #include <x86/page.h>
+#include <stdint.h>
 
 
 #define KSTACK_SIZE PAGE_SIZE
@@ -26,5 +27,6 @@ typedef struct pcb{
 
 pcb_t my_pcb;
 pcb_t your_pcb;
+pcb_t *curr_pcb;
 
 #endif /* _PROCESS_H */

@@ -4,20 +4,16 @@
 #include <syscall.h>  /* for getpid */
 #include <simics.h>    /* for lprintf */
 #include <spin.h>
-//#include "my_spin.h"
 
 spin_s spin = {0,0};
-int main() {
-//  spin_s my_spin;
-//spin_s spin = {0,0};
+int main() 
+{
   int ch;
-  lprintf("In introvert");
   while(1){
     spin_lock(&spin);
-    lprintf("introvert: press 'r' to release the lock!");
+    lprintf("Who am I? Press 'r' to find out!");
     while((ch = getchar()) != 'r');
+    lprintf("I'm introverted...my tid is %d",gettid());
     spin_unlock(&spin);
-    lprintf("introvert: press 't' to take the lock!");
-    while((ch = getchar()) != 't');
   }
 }

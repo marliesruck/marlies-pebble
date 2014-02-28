@@ -54,7 +54,7 @@ void sys_task_vanish(int status)
 
 int sys_gettid(void)
 {
-  return my_pcb.my_tcb.tid;
+  return curr_pcb->my_tcb.tid;
 }
 
 int sys_yield(int pid)

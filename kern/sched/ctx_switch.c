@@ -21,19 +21,16 @@ void ctx_switch(void)
 
   if(i%2 == 0){
     i++;
+    curr_pcb = &my_pcb;
     asm_ctx_switch(&your_pcb.my_tcb.sp, &your_pcb.my_tcb.pc,
-                 my_pcb.my_tcb.sp, my_pcb.my_tcb.pc, my_pcb.pg_dir);
+                 my_pcb.my_tcb.sp, my_pcb.my_tcb.pc, my_pcb.cr3);
   }
   else{
-    lprintf("ctx switching back to first task");
     i++;
+    curr_pcb = &your_pcb;
     asm_ctx_switch(&my_pcb.my_tcb.sp, &my_pcb.my_tcb.pc,
-                 your_pcb.my_tcb.sp, your_pcb.my_tcb.pc, your_pcb.pg_dir);
+                 your_pcb.my_tcb.sp, your_pcb.my_tcb.pc, your_pcb.cr3);
   }
-  /*
-  asm_ctx_switch(&my_pcb[0].my_tcb.sp, &my_pcb[0].my_tcb.pc,
-                 my_pcb[1].my_tcb.sp, my_pcb[1].my_tcb.pc, my_pcb[1].pg_dir);
-                 */
   return;
 }
 
