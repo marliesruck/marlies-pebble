@@ -19,7 +19,7 @@ typedef struct tcb{
 }tcb_t;
 
 typedef struct pcb{
-  unsigned int pg_dir;
+  uint32_t cr3;  
   vm_info_s vmi;
   tcb_t my_tcb;  
 }pcb_t;

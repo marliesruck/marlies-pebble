@@ -134,8 +134,17 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   /* Set up usr stack */
   void *usr_sp = usr_stack_init(&my_pcb.vmi);
 
+  /* set tcb.pc = mode switch
+   * set tcb.sp = kstack[HIGH - 1]
+   * push args to moded switch
+void mode_switch(void *entry_point, void *sp);
+  Set up kstack for user -> kernel mode switch 
+  set_esp0((uint32_t)(&my_pcb.my_tcb.kstack[KSTACK_SIZE - 1]));
+
+*/
+
   my_pcb.my_tcb.tid = 789;
-  my_pcb.pg_dir = (uint32_t)(pd); /* REDUNDANT */
+  my_pcb.cr3 = (uint32_t)(pd); 
   my_pcb.my_tcb.sp = usr_sp;
   my_pcb.my_tcb.pc = entry_point;
 
@@ -158,7 +167,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   usr_sp = usr_stack_init(&your_pcb.vmi);
 
   /* Initialize pg dir and tid in prototype tcb */
-  your_pcb.pg_dir = (uint32_t)(pd2);
+  your_pcb.cr3 = (uint32_t)(pd2);
   your_pcb.my_tcb.tid = 123;
   
   /* Enable keyboard interrupts so we can ctx switch! */
