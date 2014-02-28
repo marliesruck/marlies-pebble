@@ -67,14 +67,16 @@ void int_keyboard(void)
   outb(INT_CTL_PORT, INT_ACK_CURRENT);
 
   /* Only ctx_switch on 'c' */
+  /*
   int k = process_scancode(scancode);
   if (KH_HASDATA(k) && KH_ISMAKE(k)){
     if(KH_GETCHAR(k) == 'c') {
       lprintf("c");
-      sys_getchar();  /* increment buf */
-      ctx_switch(); /* ctx switch */
+      sys_getchar();  
+      ctx_switch(); 
     }
   }
+  */
 
   return;
 }
