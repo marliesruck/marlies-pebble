@@ -86,7 +86,7 @@ STUDENTFILES =
 ###########################################################################
 # Object files for your thread library
 ###########################################################################
-THREAD_OBJS = malloc.o panic.o
+THREAD_OBJS = malloc.o panic.o atomic.o spin.o
 
 # Thread Group Library Support.
 #
@@ -116,7 +116,9 @@ AUTOSTACK_OBJS = autostack.o
 #
 # Kernel object files you provide in from kern/
 #
-KERNEL_OBJS = drivers/fake_console.o kernel.o lib/malloc_wrappers.o lib/cllist.o vm/vm.o vm/pg_table.o vm/frame_alloc.o mode_switch.o syscall/syscall_wrappers.o syscall/syscalls.o idt/idt.o idt/faults.o idt/fault_wrappers.o loader/loader.o loader/usr_stack.o
+#KERNEL_OBJS = drivers/fake_console.o kernel.o lib/malloc_wrappers.o lib/cllist.o vm/vm.o vm/pg_table.o vm/frame_alloc.o mode_switch.o syscall/syscall_wrappers.o syscall/syscalls.o idt/idt.o idt/faults.o idt/fault_wrappers.o loader/loader.o loader/usr_stack.o
+
+KERNEL_OBJS = kernel.o lib/cllist.o sched/sched.o sched/ctx_switch.o drivers/keyboard.o drivers/timer.o drivers/driver_wrappers.o drivers/fake_console.o lib/malloc_wrappers.o vm/vm.o vm/pg_table.o vm/frame_alloc.o mode_switch.o syscall/syscall_wrappers.o syscall/syscalls.o idt/idt.o faults/faults.o faults/fault_wrappers.o loader/loader.o loader/usr_stack.o
 
 ###########################################################################
 # WARNING: Do not put **test** programs into the REQPROGS variables.  Your
@@ -149,4 +151,4 @@ KERNEL_OBJS = drivers/fake_console.o kernel.o lib/malloc_wrappers.o lib/cllist.o
 # kernel in, or else your tweaked version will run and the test harness
 # won't.
 #
-STUDENTREQPROGS = introspective schizo
+STUDENTREQPROGS = introspective schizo introvert

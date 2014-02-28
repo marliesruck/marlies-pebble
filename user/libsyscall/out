@@ -1,0 +1,15 @@
+diff --git a/user/libsyscall/scwrappers.h b/user/libsyscall/scwrappers.h
+index 84aaca7..4e025c0 100644
+--- a/user/libsyscall/scwrappers.h
++++ b/user/libsyscall/scwrappers.h
+@@ -5,10 +5,6 @@
+  *  Most of the system call wrappers are exactly the same; these macros are
+  *  supposed to take advantage of that.
+  *
+- *  TODO: perhaps these should not be complete functions (i.e. not include
+- *  the epilogue and prologue)??  The answer to this should become apparent
+- *  as we handle more complex system calls.
+- *
+  *  @author Enrique Naudon (esn)
+  **/
+  #ifndef __SCWRAPPERS_H__

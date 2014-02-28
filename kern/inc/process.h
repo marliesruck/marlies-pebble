@@ -13,6 +13,8 @@
 
 typedef struct tcb{
   int tid;
+  void *sp;
+  void *pc;
   char kstack[KSTACK_SIZE];
 }tcb_t;
 
@@ -23,5 +25,6 @@ typedef struct pcb{
 }pcb_t;
 
 pcb_t my_pcb;
+pcb_t your_pcb;
 
 #endif /* _PROCESS_H */

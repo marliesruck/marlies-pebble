@@ -22,8 +22,15 @@
 /* x86 specific includes */
 #include <x86/asm.h>                /* enable_interrupts() */
 #include <x86/cr.h>
+
+/* IDT specific includes */
 #include <syscall_int.h>
 #include <idt.h>
+#include <keyhelp.h>
+#include <timer_defines.h>
+#include "drivers/driver_wrappers.h"
+#include "drivers/timer.h"
+#include "syscall/syscall_wrappers.h"
 
 /* Pebbles includes */
 #include <vm.h>
@@ -73,8 +80,6 @@ void disable_paging(void)
 
 /** These does not belong here... */
 void mode_switch(void *entry_point, void *sp);
-int asm_sys_gettid(void);
-int asm_sys_exec(void);
 void install_fault_handlers(void);
 
 /** @brief Kernel entrypoint.
@@ -87,36 +92,83 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 {
   lprintf( "Hello from a brand new kernel!" );
 
-  /* IDT setup */
+                      /* --- IDT setup --- */
+
+  /* Exception handlers */
   install_trap_gate(GETTID_INT, asm_sys_gettid, IDT_USER_DPL);
   install_trap_gate(EXEC_INT, asm_sys_exec, IDT_USER_DPL);
-  install_fault_handlers();
+  install_trap_gate(GETCHAR_INT, asm_sys_getchar, IDT_USER_DPL);
 
-  /* Set up kernel PTs and a PD */
+  /* Hardware handlers  */
+  install_interrupt_gate(KEY_IDT_ENTRY,asm_int_keyboard,IDT_KERN_DPL); 
+  init_timer();
+  install_interrupt_gate(TIMER_IDT_ENTRY,asm_int_timer,IDT_KERN_DPL); 
+
+  /* Fault handlers */
+  install_fault_handlers(); 
+
+                  /* --- Hand load 2 executables for ctx switching  --- */
   init_kern_pt();
+
+  /* First executable page directory */
   pde_t *pd = alloc_frame();
   init_pd(pd);
+
+  /* Second executebale page directory */
+  pde_t *pd2 = alloc_frame();
+  init_pd(pd2);
+
+                        /* --- Map first executable --- */ 
+
   set_cr3((uint32_t) pd);
   enable_paging();
 
   /* Initialize pg dir and tid in prototype tcb */
-  my_pcb.pg_dir = (uint32_t)(pd);
   my_pcb.vmi = (vm_info_s) {
     .pg_dir = (pde_t *)(TBL_HIGH),
     .pg_tbls = (pt_t *)(DIR_HIGH),
     .mmap = CLL_LIST_INITIALIZER(my_pcb.vmi.mmap)
   };
-  my_pcb.my_tcb.tid = 789;
-
-  /* Load idle task and shamelessly hack our way into user-mode */
-  void *entry_point = load_file(&my_pcb.vmi, "introspective");
+  void *entry_point = load_file(&my_pcb.vmi,"introspective");
 
   /* Set up usr stack */
   void *usr_sp = usr_stack_init(&my_pcb.vmi);
 
+  my_pcb.my_tcb.tid = 789;
+  my_pcb.pg_dir = (uint32_t)(pd); /* REDUNDANT */
+  my_pcb.my_tcb.sp = usr_sp;
+  my_pcb.my_tcb.pc = entry_point;
+
+  /* Make the user task debuggable */
   sim_reg_process(pd, "introspective");
+
+                        /* --- Map second executable --- */ 
+
+  set_cr3((uint32_t) pd2);
+
+  /* Initialize pg dir and tid in prototype tcb */
+  your_pcb.vmi = (vm_info_s) {
+    .pg_dir = (pde_t *)(TBL_HIGH),
+    .pg_tbls = (pt_t *)(DIR_HIGH),
+    .mmap = CLL_LIST_INITIALIZER(your_pcb.vmi.mmap)
+  };
+  entry_point = load_file(&your_pcb.vmi, "introvert");
+
+  /* Set up usr stack */
+  usr_sp = usr_stack_init(&your_pcb.vmi);
+
+  /* Initialize pg dir and tid in prototype tcb */
+  your_pcb.pg_dir = (uint32_t)(pd2);
+  your_pcb.my_tcb.tid = 123;
+  
+  /* Enable keyboard interrupts so we can ctx switch! */
+  enable_interrupts();
+
+  /* Drop into user mode */
   mode_switch(entry_point, usr_sp);
 
+  (void)(entry_point);
+  while(1);
   return 0;
 }
 

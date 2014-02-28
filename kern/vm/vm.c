@@ -14,6 +14,7 @@
 #include <malloc.h>
 #include <stddef.h>
 
+#include <simics.h>
 
 /*************************************************************************
  *  The page allocator (should have its own file)
@@ -120,6 +121,8 @@ int mreg_insert(cll_list *map, mem_region_s *mreg)
 void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
                unsigned int attrs)
 {
+  lprintf("vm_alloc(vmi = %p, va_start = %p, len = %u, attrs = %x)",
+            vmi, va_start,len, attrs);
   void *pg_start, *pg_limit;
   unsigned int num_pages;
   int i;

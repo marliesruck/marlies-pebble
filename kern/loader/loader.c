@@ -87,6 +87,7 @@ void *load_file(vm_info_s *vmi, const char* filename)
   assert(se.e_datstart < se.e_bssstart);
 
   /* Allocate read/execute memory */
+  lprintf("load_file(vmi = %p, filename = %s)", vmi, filename);
   ret = vm_alloc(vmi, (void *)se.e_txtstart,
                  (se.e_rodatstart - se.e_txtstart) + se.e_rodatlen,
                  PG_TBL_PRESENT | PG_TBL_USER);
@@ -101,7 +102,7 @@ void *load_file(vm_info_s *vmi, const char* filename)
   /* Allocate read/write memory */
   ret = vm_alloc(vmi, (void *)se.e_datstart,
                  se.e_bssstart - se.e_datstart + se.e_bsslen,
-                 PG_TBL_PRESENT | PG_TBL_USER);
+                 PG_TBL_PRESENT | PG_TBL_USER | PG_TBL_WRITABLE);
   assert(ret != NULL);
 
   /* Load read/execute sections (data and bss) */
