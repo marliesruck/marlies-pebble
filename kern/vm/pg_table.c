@@ -12,10 +12,10 @@
 static pte_t *kern_pt[KERN_PD_ENTRIES];
 
 pt_t *pg_tables = (pt_t *)(DIR_HIGH);
-pde_t *pg_dir = (pde_t *)(TBL_HIGH);
+pte_t *pg_dir = (pte_t *)(TBL_HIGH);
 
 
-void copy_pg_dir(pde_t *src, pde_t *dest){
+void copy_pg_dir(pte_t *src, pte_t *dest){
   return;
 }
 void copy_pde(){
@@ -44,14 +44,14 @@ void init_kern_pt(void)
 }
 
 /* --- PDE getters and setters --- */
-pde_t get_pde(pde_t *pd, void *addr)
+pte_t get_pde(pte_t *pd, void *addr)
 {
   int index;
   index = PG_DIR_INDEX(addr);
   return pd[index];
 }
 
-void set_pde(pde_t *pd, void *addr, pte_t *pt, unsigned int flags)
+void set_pde(pte_t *pd, void *addr, pte_t *pt, unsigned int flags)
 {
   /* Compute index into page directory */
   int index = PG_DIR_INDEX(addr); 
@@ -63,9 +63,9 @@ void set_pde(pde_t *pd, void *addr, pte_t *pt, unsigned int flags)
 }
 
 /* --- PTE getters and setters --- */
-int get_pte(pde_t *pd, pt_t *pt, void *addr, pte_t *dst)
+int get_pte(pte_t *pd, pt_t *pt, void *addr, pte_t *dst)
 {
-  pde_t pde = get_pde(pd, addr);
+  pte_t pde = get_pde(pd, addr);
 
   /* And if the PDE isn't present?? */
   if (!(pde & PG_TBL_PRESENT))
@@ -79,9 +79,9 @@ int get_pte(pde_t *pd, pt_t *pt, void *addr, pte_t *dst)
   return 0;
 }
 
-int set_pte(pde_t *pd, pt_t *pt, void *addr, void *frame, unsigned int flags)
+int set_pte(pte_t *pd, pt_t *pt, void *addr, void *frame, unsigned int flags)
 {
-  pde_t pde = get_pde(pd, addr);
+  pte_t pde = get_pde(pd, addr);
 
   /* Return an error if the PDE isn't present */
   if (!(pde & PG_TBL_PRESENT))
@@ -109,7 +109,7 @@ void init_pt(pte_t *pt)
   return;
 }
 
-void init_pd(pde_t *pd)
+void init_pd(pte_t *pd)
 {
   int i;
 

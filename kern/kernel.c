@@ -111,11 +111,11 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   init_kern_pt();
 
   /* First executable page directory */
-  pde_t *pd = alloc_frame();
+  pte_t *pd = alloc_frame();
   init_pd(pd);
 
   /* Second executebale page directory */
-  pde_t *pd2 = alloc_frame();
+  pte_t *pd2 = alloc_frame();
   init_pd(pd2);
 
                         /* --- Map first executable --- */ 
@@ -125,7 +125,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 
   /* Initialize pg dir and tid in prototype tcb */
   my_pcb.vmi = (vm_info_s) {
-    .pg_dir = (pde_t *)(TBL_HIGH),
+    .pg_dir = (pte_t *)(TBL_HIGH),
     .pg_tbls = (pt_t *)(DIR_HIGH),
     .mmap = CLL_LIST_INITIALIZER(my_pcb.vmi.mmap)
   };
@@ -148,7 +148,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 
   /* Initialize pg dir and tid in prototype tcb */
   your_pcb.vmi = (vm_info_s) {
-    .pg_dir = (pde_t *)(TBL_HIGH),
+    .pg_dir = (pte_t *)(TBL_HIGH),
     .pg_tbls = (pt_t *)(DIR_HIGH),
     .mmap = CLL_LIST_INITIALIZER(your_pcb.vmi.mmap)
   };

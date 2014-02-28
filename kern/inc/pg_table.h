@@ -48,7 +48,7 @@
 #define GET_ATTRS(pde)    ((pte_t *)(PG_ATTR_MASK & (pde)))
 
 /* Pack PDE */
-#define PACK_PDE(addr,flags)  ((pde_t)(addr) | (flags))
+#define PACK_PDE(addr,flags)  ((pte_t)(addr) | (flags))
 
 /* Pack PTE */
 #define PACK_PTE(addr,flags)  ((pte_t)(addr) | (flags))
@@ -58,7 +58,6 @@
 #define DIR_HIGH (MEM_HIGH & PG_DIR_MASK)
 #define TBL_HIGH (MEM_HIGH & (PG_DIR_MASK | PG_TBL_MASK)) /* Last pg in mem */
 
-typedef unsigned int pde_t;
 typedef unsigned int pte_t;
 
 #define PG_TBL_ENTRIES PAGE_SIZE/sizeof(pte_t)
@@ -66,22 +65,22 @@ typedef pte_t pt_t[PG_TBL_ENTRIES];
 
 /* Current process' page tables and page directory */
 extern pt_t *pg_tables;
-extern pde_t *pg_dir;
+extern pte_t *pg_dir;
 
 
 /* --- Stuff that shouldn't be here --- */
 void init_kern_pt(void);
 
 /* --- PDE/PTE getters and setters --- */
-pde_t get_pde(pde_t *pd, void *addr);
-void set_pde(pde_t *pd, void *addr, pte_t *pt, unsigned int flags);
+pte_t get_pde(pte_t *pd, void *addr);
+void set_pde(pte_t *pd, void *addr, pte_t *pt, unsigned int flags);
 
-int get_pte(pde_t *pd, pt_t *pt, void *addr, pte_t *dst);
-int set_pte(pde_t *pd, pt_t *pt, void *addr, void *frame, unsigned int flags);
+int get_pte(pte_t *pd, pt_t *pt, void *addr, pte_t *dst);
+int set_pte(pte_t *pd, pt_t *pt, void *addr, void *frame, unsigned int flags);
 
 /* --- PD/PT Initialization --- */
 void init_pt(pte_t *pt);
-void init_pd(pde_t *pd);
+void init_pd(pte_t *pd);
 
 
 #endif /* __PG_TABLE_H__ */
