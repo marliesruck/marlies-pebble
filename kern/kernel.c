@@ -94,12 +94,12 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 
                       /* --- IDT setup --- */
 
-  /* Exception handlers */
+  /* System calls */
   install_trap_gate(GETTID_INT, asm_sys_gettid, IDT_USER_DPL);
   install_trap_gate(EXEC_INT, asm_sys_exec, IDT_USER_DPL);
   install_trap_gate(GETCHAR_INT, asm_sys_getchar, IDT_USER_DPL);
 
-  /* Hardware handlers  */
+  /* Hardware interrupts */
   install_interrupt_gate(KEY_IDT_ENTRY,asm_int_keyboard,IDT_KERN_DPL); 
   init_timer();
   install_interrupt_gate(TIMER_IDT_ENTRY,asm_int_timer,IDT_KERN_DPL); 
@@ -107,15 +107,20 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   /* Fault handlers */
   install_fault_handlers(); 
 
-                  /* --- Hand load 2 executables for ctx switching  --- */
+  /* Enable interrupts */
+  enable_interrupts();
+
+  /*  */
   init_kern_pt();
 
+                  /* --- Hand load 2 executables for ctx switching  --- */
+
   /* First executable page directory */
-  pde_t *pd = alloc_frame();
+  pte_s *pd = alloc_frame();
   init_pd(pd);
 
   /* Second executebale page directory */
-  pde_t *pd2 = alloc_frame();
+  pte_s *pd2 = alloc_frame();
   init_pd(pd2);
 
                         /* --- Map first executable --- */ 
@@ -125,7 +130,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 
   /* Initialize pg dir and tid in prototype tcb */
   my_pcb.vmi = (vm_info_s) {
-    .pg_dir = (pde_t *)(TBL_HIGH),
+    .pg_dir = (pte_s *)(TBL_HIGH),
     .pg_tbls = (pt_t *)(DIR_HIGH),
     .mmap = CLL_LIST_INITIALIZER(my_pcb.vmi.mmap)
   };
@@ -157,7 +162,7 @@ void mode_switch(void *entry_point, void *sp);
 
   /* Initialize pg dir and tid in prototype tcb */
   your_pcb.vmi = (vm_info_s) {
-    .pg_dir = (pde_t *)(TBL_HIGH),
+    .pg_dir = (pte_s *)(TBL_HIGH),
     .pg_tbls = (pt_t *)(DIR_HIGH),
     .mmap = CLL_LIST_INITIALIZER(your_pcb.vmi.mmap)
   };
