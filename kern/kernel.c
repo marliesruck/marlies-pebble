@@ -91,13 +91,9 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 {
                       /* --- IDT setup --- */
 
-  /* Hardware interrupts */
+  /* Install interrupt handlers */
   install_device_handlers();
-
-  /* Fault handlers */
   install_fault_handlers(); 
-
-  /* System calls */
   install_sys_handlers(); 
 
   /* Enable interrupts */
@@ -123,8 +119,10 @@ void load_first_task(void)
 
   /* Initialize vm struct */
   my_pcb.vmi = (vm_info_s) {
-    .pg_dir = (pte_s *)(TBL_HIGH),
-    .pg_tbls = (pt_t *)(DIR_HIGH),
+    .pg_info = (pg_info_s) {
+      .pg_dir = (pte_s *)(TBL_HIGH),
+      .pg_tbls = (pt_t *)(DIR_HIGH),
+    },
     .mmap = CLL_LIST_INITIALIZER(my_pcb.vmi.mmap)
   };
   void *entry_point = load_file(&my_pcb.vmi, "introvert");

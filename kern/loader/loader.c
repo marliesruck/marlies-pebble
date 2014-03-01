@@ -69,10 +69,10 @@ int getbytes( const char *filename, int offset, int size, char *buf )
 /** @brief Loads file into memory 
  *
  *  Assumes page directory has already been initialized with 4 entries for
- *  kernel memory and one self-referential entry
+ *  kernel memory and one self-referential entry.
  *
  *  @param filename File to be loaded
- */
+ **/
 void *load_file(vm_info_s *vmi, const char* filename)
 {
   simple_elf_t se;
@@ -89,7 +89,7 @@ void *load_file(vm_info_s *vmi, const char* filename)
   /* Allocate read/execute memory */
   ret = vm_alloc(vmi, (void *)se.e_txtstart,
                  (se.e_rodatstart - se.e_txtstart) + se.e_rodatlen,
-                 PG_TBL_PRESENT | PG_TBL_USER);
+                 VM_ATTR_USER);
   assert(ret != NULL);
 
   /* Load read/execute sections (text and rodata) */
@@ -101,7 +101,7 @@ void *load_file(vm_info_s *vmi, const char* filename)
   /* Allocate read/write memory */
   ret = vm_alloc(vmi, (void *)se.e_datstart,
                  se.e_bssstart - se.e_datstart + se.e_bsslen,
-                 PG_TBL_PRESENT | PG_TBL_USER | PG_TBL_WRITABLE);
+                 VM_ATTR_USER | VM_ATTR_RDWR);
   assert(ret != NULL);
 
   /* Load read/execute sections (data and bss) */

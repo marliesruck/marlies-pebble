@@ -6,9 +6,11 @@
  *  @author Marlies Ruck (mruck)
  **/
 
+#include <page_alloc.h>
+
 /* Pebbles */
 #include <frame_alloc.h>
-#include <pg_table.h>
+#include <vm.h>
 
 /* Libc includes */
 #include <assert.h>
@@ -16,41 +18,65 @@
 #include <string.h>
 
 
-/**
- * @bug This will overwrite an existing pte for the specified virtual
- * address.
- **/
-void alloc_page(pte_s *pd, void *vaddr, unsigned int attrs)
+/*************************************************************************
+ *  Helper functions
+ *************************************************************************/
+
+void translate_attrs(pte_s *pte, unsigned int attrs)
 {
-  pte_s pde;
-  void *frame;
-
-  /* If the PDE isn't valid, make it so */
-  if (get_pte(pd, pg_tables, vaddr, NULL)) {
-    memset(&pde, 0, sizeof(pte_s));
-    pde.addr = ((unsigned int) alloc_frame()) >> 12;
-    pde.present = 1;
-    pde.writable = 1;
-    pde.user = 1;
-    set_pde(pd, vaddr, &pde);
-  }
-
-  /* Back the requested vaddr with a page */
-  frame = alloc_frame();
-  int temp = PACK_PTE(frame,attrs);
-  assert( !set_pte(pd, pg_tables, vaddr, (pte_s *)&temp) );
+  pte->writable = (attrs & VM_ATTR_RDWR) ? 1 : 0;
+  pte->user = (attrs & VM_ATTR_USER) ? 1 : 0;
 
   return;
 }
 
-int page_is_allocated(pte_s *pd, void *vaddr)
+
+/*************************************************************************
+ *  Exported API
+ *************************************************************************/
+
+/** @brief Allocate a page of virtual memory.
+ *
+ *  @bug This will overwrite an existing pte for the specified virtual
+ *  address.  Not sure if that's alright or not...
+ *
+ *  @param pgi Page table information.
+ *  @param vaddr The virtual address to allocate.
+ *  @param attrs The attributes for the allocation.
+ *
+ *  @return Void.
+ **/
+void alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs)
 {
-  pte_s pte;
+  pte_s pde;
 
-  /* If the PDE isn't valid, the page isn't allocated */
-  if (get_pte(pd, pg_tables, vaddr, &pte))
-    return 0;
+  /* If the PDE isn't valid, make it so */
+  if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, NULL)) {
+    init_pte(&pde, alloc_frame());
+    pde.present = 1;
+    pde.writable = 1;
+    pde.user = 1;
+    set_pde(pgi->pg_dir, vaddr, &pde);
+  }
 
-  return pte.present;
+  /* Back the requested vaddr with a page */
+  init_pte(&pde, alloc_frame());
+  pde.present = 1;
+  translate_attrs(&pde, attrs);
+  assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pde) );
+
+  return;
+}
+
+/** @brief Free a page.
+ *
+ *  @param pgi Page table information.
+ *  @param vaddr The virtual address to free.
+ *
+ *  @return Void.
+ **/
+void free_page(pg_info_s *pgi, void *vaddr)
+{
+  return;
 }
 

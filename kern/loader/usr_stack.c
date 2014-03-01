@@ -6,8 +6,7 @@ void *usr_stack_init(vm_info_s *vmi)
 {
   /* Allocate user's stack */
   void *base = USR_SP_HI - USR_STACK_SIZE;
-  vm_alloc(vmi, base, USR_STACK_SIZE,
-          PG_TBL_PRESENT|PG_TBL_WRITABLE|PG_TBL_USER);
+  vm_alloc(vmi, base, USR_STACK_SIZE, VM_ATTR_RDWR|VM_ATTR_USER);
 
   /* Initialize user's stack for _main() */
   void *sp = USR_SP_HI;

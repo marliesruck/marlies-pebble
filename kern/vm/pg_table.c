@@ -9,6 +9,7 @@
 #include <pg_table.h>
 #include <frame_alloc.h>
 
+#include <stddef.h>
 #include <string.h>
 
 static pte_s *kern_pt[KERN_PD_ENTRIES];
@@ -24,7 +25,14 @@ void copy_pde(){
   return;
 }
 
-/* Populate kern page table */
+/** @brief Initialize kernel pages.
+ *
+ *  Kernel memory is direct-mapped into every process' lowest 16MB of
+ *  memory, so we store the page tables in a global and reuse them for each
+ *  process.
+ *
+ *  @return Void.
+ **/
 void init_kern_pt(void)
 {
   int i, j;
@@ -33,40 +41,63 @@ void init_kern_pt(void)
   for (i = 0; i < KERN_PD_ENTRIES; i++) {
     kern_pt[i] = alloc_frame();
     for (j = 0; j < PAGE_SIZE; j++) {
-      kern_pt[i][j].addr = (i * PAGE_SIZE * 1024 + j * PAGE_SIZE) >> 12;
+      init_pte(&kern_pt[i][j],
+               (void *)(i * PAGE_SIZE * 1024 + j * PAGE_SIZE));
       kern_pt[i][j].present = 1;
       kern_pt[i][j].writable = 1;
       kern_pt[i][j].global = 1;
     }
   }
-  
 
   return;
 }
 
-void old_init_kern_pt(void)
+
+/*************************************************************************
+ *  Page directory manipulation
+ *************************************************************************/
+
+
+/*************************************************************************
+ *  Page directory manipulation
+ *************************************************************************/
+
+/** @brief Initialize a page directory.
+ *
+ *  @param pd The page table to initialize.
+ *
+ *  @return Void.
+ **/
+void init_pd(pte_s *pd)
 {
-  void *frame;
-  unsigned int flags;
-  unsigned int temp;
-  int i, j;
+  int i;
 
-  /* Direct map kernel memory */
-  flags = PG_TBL_PRESENT | PG_TBL_WRITABLE;
+  /* Init the directory */
+  init_pt(pd);
+
+  /* Map the kernel's page table */
   for (i = 0; i < KERN_PD_ENTRIES; i++) {
-    kern_pt[i] = alloc_frame();
-    for (j = 0; j < PAGE_SIZE; j++) {
-      frame = (void *)(i * PAGE_SIZE * 1024 + j * PAGE_SIZE);
-      temp = PACK_PTE(frame, flags);
-      kern_pt[i][j] = *(pte_s *)&temp;
-    }
+    init_pte(&pd[i], kern_pt[i]);
+    pd[i].present = 1;
+    pd[i].writable = 1;
+    pd[i].global = 1;
   }
-  
+
+  /* The page directory is also a page table... */
+  init_pte(&pd[PG_TBL_ENTRIES - 1], pd);
+  pd[PG_TBL_ENTRIES - 1].present = 1;
+  pd[PG_TBL_ENTRIES - 1].writable = 1;
 
   return;
 }
 
-/* --- PDE getters and setters --- */
+/** @brief Get a page directory entry.
+ *
+ *  @param pd The page directory the entry is in.
+ *  @param addr The virtual address whose entry we want.
+ *
+ *  @return The page directory entry for the specified virtual address.
+ **/
 pte_s get_pde(pte_s *pd, void *addr)
 {
   int pdi;
@@ -74,15 +105,67 @@ pte_s get_pde(pte_s *pd, void *addr)
   return pd[pdi];
 }
 
-void set_pde(pte_s *pd, void *addr, pte_s *pt)
+/** @brief Set a page directory entry.
+ *
+ *  @param pd The page directory the entry is in.
+ *  @param addr The virtual address whose entry we want to write.
+ *  @param pte The entry to write into the page directory.
+ *
+ *  @return Void.
+ **/
+void set_pde(pte_s *pd, void *addr, pte_s *pte)
 {
   int pdi;
   pdi = PG_DIR_INDEX(addr); 
-  pd[pdi] = *pt;
+  pd[pdi] = *pte;
   return;
 }
 
-/* --- PTE getters and setters --- */
+
+/*************************************************************************
+ *  Page table manipulation
+ *************************************************************************/
+
+/** @brief Initialize a page table entry.
+ *
+ *  @param pt The page table entry to initialize.
+ *
+ *  @return Void.
+ **/
+void init_pte(pte_s *pte, void *frame)
+{
+  memset(pte, 0, sizeof(pte_s));
+  pte->addr = ((unsigned int) frame) >> PG_TBL_SHIFT;
+  return;
+}
+
+/** @brief Initialize a page table.
+ *
+ *  @param pt The page table to initialize.
+ *
+ *  @return Void.
+ **/
+void init_pt(pte_s *pt)
+{
+  int i;
+
+  /* Init everything to absent */
+  for(i = 0; i < PAGE_SIZE; i++) {
+    init_pte(&pt[i], NULL);
+  }
+
+  return;
+}
+
+/** @brief Get a page table entry.
+ *
+ *  @param pd The page directory the entry's page table is in.
+ *  @param pt The page table the entry is in.
+ *  @param addr The virtual address whose entry we want.
+ *  @param dst A pointer to into which to write the entry.
+ *
+ *  @return 0 on success; a negative integer error code on failure.
+ **/
 int get_pte(pte_s *pd, pt_t *pt, void *addr, pte_s *dst)
 {
   int pdi, pti;
@@ -103,6 +186,15 @@ int get_pte(pte_s *pd, pt_t *pt, void *addr, pte_s *dst)
   return 0;
 }
 
+/** @brief Set a page table entry.
+ *
+ *  @param pd The page directory the entry's page table is in.
+ *  @param pt The page table the entry is in.
+ *  @param addr The virtual address whose entry we want to write.
+ *  @param pte The entry to write into the page table.
+ *
+ *  @return 0 on success; a negative integer error code on failure.
+ **/
 int set_pte(pte_s *pd, pt_t *pt, void *addr, pte_s *pte)
 {
   int pdi, pti;
@@ -121,40 +213,5 @@ int set_pte(pte_s *pd, pt_t *pt, void *addr, pte_s *pte)
   pt[pdi][pti] = *pte;
 
   return 0;
-}
-
-/* --- PD and PT initialization --- */
-void init_pt(pte_s *pt)
-{
-  int i;
-
-  /* Init everything to absent */
-  for(i = 0; i < PAGE_SIZE; i++){
-    memset(&pt[i], 0, sizeof(pte_s));
-  }
-  return;
-}
-
-void init_pd(pte_s *pd)
-{
-  int i;
-
-  /* Init the directory */
-  init_pt(pd);
-
-  /* Map the kernel's page table */
-  for (i = 0; i < KERN_PD_ENTRIES; i++) {
-    pd[i].addr = ((unsigned int) kern_pt[i]) >> 12;
-    pd[i].present = 1;
-    pd[i].writable = 1;
-    pd[i].global = 1;
-  }
-
-  /* The page directory is also a page table... */
-  pd[PG_TBL_ENTRIES - 1].addr = ((unsigned int) pd) >> 12;
-  pd[PG_TBL_ENTRIES - 1].present = 1;
-  pd[PG_TBL_ENTRIES - 1].writable = 1;
-
-  return;
 }
 
