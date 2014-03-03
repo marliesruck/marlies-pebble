@@ -92,17 +92,35 @@ int mreg_insert(cll_list *map, mem_region_s *mreg)
  *  The actual vm allocator
  *************************************************************************/
 
+/** @brief Allocate a contiguous region in memory.
+ *
+ *  This function allocates a region of virtual memory in the address-space
+ *  specified by vmi,  The new region will starting at va_start, extending
+ *  for len bytes, and have the protections specified by attrs.
+ *
+ *  The starting address, va_start, is rounded down to a page boundary to
+ *  determine the actual starting address for the allocation.  Furthermore,
+ *  only whole pages are allocated, so the actual allocation may be larger
+ *  than the reqested space.  If the allocation succeeds, the actual
+ *  starting address of the allocated region is returned; otherwise NULL is
+ *  returned.
+ *
+ *  @param vmi The vm_info struct for this allocation.
+ *  @param va_start The requested starting address for the allocation.
+ *  @param len The length (in bytes) of the allocation.
+ *  @param attrs Attributes the allocated region will have.
+ *
+ *  @return The actual starting address of the allocation.
+ **/
 void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
                unsigned int attrs)
 {
   void *pg_start, *pg_limit;
-  unsigned int num_pages;
   mem_region_s *mreg;
-  int i;
+  void *addr;
 
   pg_start = PAGE_FLOOR(va_start);
   pg_limit = PAGE_CEILING(va_start + len);
-  num_pages = (pg_limit - pg_start)/PAGE_SIZE;
 
   /* Initialize the memory region */
   mreg = malloc(sizeof(mem_region_s));
@@ -113,8 +131,7 @@ void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
   if (mreg_lookup(&vmi->mmap, mreg)) {
     free(mreg);
     return NULL;
-  }
-
+  } 
   /* Insert it into the memory map */
   if (mreg_insert(&vmi->mmap, mreg)) {
     free(mreg);
@@ -122,17 +139,23 @@ void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
   }
 
   /* Allocate frames for the requested memory */
-  for (i = 0; i < num_pages; ++i) {
-    alloc_page(&vmi->pg_info, (char *)pg_start + i*PAGE_SIZE, attrs);
+  for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE) {
+    alloc_page(&vmi->pg_info, addr, attrs);
   }
 
   /* Return the ACTUAL start of the allocation */
   return pg_start;
 }
 
+/** @brief Frees a region previously allocated by vm_alloc(...).
+ *
+ *  @param vmi The vm_info struct for this allocation.
+ *  @param va_start The starting address for the allocation.
+ *
+ *  @return Void.
+ **/
 void vm_free(vm_info_s *vmi, void *va_start)
 {
-  unsigned int num_pages;
   mem_region_s temp, *mreg;
   void *addr;
 
@@ -142,15 +165,22 @@ void vm_free(vm_info_s *vmi, void *va_start)
   if (!mreg) return;
 
   /* Free pages in that region */
-  num_pages = (mreg->start - mreg->limit)/PAGE_SIZE;
   for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE) {
     free_page(&vmi->pg_info, addr);
   }
 
-  /* Oh, uh yeah... we just freed it. */
   return;
 }
 
+/** @brief Frees a process' entire address space.
+ *
+ *  Technically, this function only free those parts allocated with
+ *  vm_alloc(...).
+ *
+ *  @param vmi The vm_info struct whose memory map we'll free.
+ *
+ *  @return Void.
+ **/
 void vm_final(vm_info_s *vmi)
 {
   mem_region_s *mreg;
