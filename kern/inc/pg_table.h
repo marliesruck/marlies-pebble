@@ -62,7 +62,7 @@
  *  @return The address in the entry.
  **/
 #define GET_ADDR(pte)   \
-  ( (void *)(PG_ADDR_MASK & (pde)) )
+  ( (void *)(PG_ADDR_MASK & ((unsigned int) (pte))) )
 
 /** @brief Retrieve the attributes from a page table entry.
  *
@@ -71,7 +71,7 @@
  *  @return The attributes in the entry.
  **/
 #define GET_ATTRS(pte)  \
-  ( (unsigned int *)(PG_ATTR_MASK & (pde)) )
+  ( (unsigned int) (PG_ATTR_MASK & ((unsigned int) (pte))) )
 
 /** @brief Construct a page table entry from an address and attributes.
  *

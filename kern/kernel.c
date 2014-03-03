@@ -125,10 +125,6 @@ void load_first_task(void)
     },
     .mmap = CLL_LIST_INITIALIZER(my_pcb.vmi.mmap)
   };
-  void *entry_point = load_file(&my_pcb.vmi, "introvert");
-
-  /* Set up usr stack */
-  void *usr_sp = usr_stack_init(&my_pcb.vmi);
 
   /* Give up the kernel stack that was given to us by the bootloader */
   set_esp0((uint32_t)(&my_pcb.my_tcb.kstack[KSTACK_SIZE - 1]));
@@ -141,6 +137,8 @@ void load_first_task(void)
   curr_pcb = &my_pcb;
 
   /* Drop into user mode */
+  void *entry_point = load_file(&my_pcb.vmi, "schizo");
+  void *usr_sp = usr_stack_init(&my_pcb.vmi);
   mode_switch(entry_point, usr_sp);
 
   /* We should never reach here! */

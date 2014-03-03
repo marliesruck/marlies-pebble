@@ -70,13 +70,29 @@ void alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs)
 
 /** @brief Free a page.
  *
+ *  TODO: tlb_inval_page(...) needs a header.
+ *
  *  @param pgi Page table information.
  *  @param vaddr The virtual address to free.
  *
  *  @return Void.
  **/
+void tlb_inval_page(void *addr);
 void free_page(pg_info_s *pgi, void *vaddr)
 {
+  pte_s pte;
+
+  /* If the PDE isn't valid, there's nothing to free */
+  if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte)) return;
+
+  /* Free the frame */
+  free_frame((void *)(pte.addr << 12));
+
+  /* Free the page; invalidate the tlb entry */
+  init_pte(&pte, NULL);
+  set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte);
+  tlb_inval_page(vaddr);
+
   return;
 }
 

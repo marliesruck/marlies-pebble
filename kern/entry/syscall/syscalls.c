@@ -17,7 +17,7 @@
 #include <syscall_int.h>
 #include "syscall_wrappers.h"
 
-/** @brief Installs our fault handlers.
+/** @brief Installs our system calls.
  *
  *  @return Void.
  **/
@@ -58,8 +58,18 @@ int sys_fork(void)
   return -1;
 }
 
+#include <loader.h>
+#include <usr_stack.h>
+#include <vm.h>
+void mode_switch(void *entry_point, void *sp);
 int sys_exec(char *execname, char *argvec[])
 {
+  vm_final(&curr_pcb->vmi);
+
+  void *entry_point = load_file(&curr_pcb->vmi, "introvert");
+  void *usr_sp = usr_stack_init(&curr_pcb->vmi);
+  mode_switch(entry_point, usr_sp);
+
   return -1;
 }
 
@@ -90,7 +100,7 @@ void sys_task_vanish(int status)
 
 int sys_gettid(void)
 {
-  return my_pcb.my_tcb.tid;
+  return curr_pcb->my_tcb.tid;
 }
 
 int sys_yield(int pid)

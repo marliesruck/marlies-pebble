@@ -130,9 +130,45 @@ void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
   return pg_start;
 }
 
-void vm_free(pte_s *pd, void *va_start)
+void vm_free(vm_info_s *vmi, void *va_start)
 {
+  unsigned int num_pages;
+  mem_region_s temp, *mreg;
+  void *addr;
+
+  /* Find the allocated region */
+  mreg_init(&temp, va_start, 0, 0); 
+  mreg = mreg_lookup(&vmi->mmap, &temp);
+  if (!mreg) return;
+
+  /* Free pages in that region */
+  num_pages = (mreg->start - mreg->limit)/PAGE_SIZE;
+  for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE) {
+    free_page(&vmi->pg_info, addr);
+  }
+
   /* Oh, uh yeah... we just freed it. */
+  return;
+}
+
+void vm_final(vm_info_s *vmi)
+{
+  mem_region_s *mreg;
+  cll_node *n;
+  void *addr;
+
+  while (!cll_empty(&vmi->mmap))
+  {
+    /* Extract each region from the mem map */
+    n = cll_extract(&vmi->mmap, vmi->mmap.next);
+    mreg = cll_entry(mem_region_s *, n);
+
+    /* Free all of each region's pages */
+    for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE) {
+      free_page(&vmi->pg_info, addr);
+    }
+  }
+
   return;
 }
 

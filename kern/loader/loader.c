@@ -13,7 +13,6 @@
  *  @author Marlies Ruck (mruck)
  *  @author Enrique Naudon (esn)
  */
-/*@{*/
 
 /* --- Includes --- */
 #include <string.h>
@@ -72,6 +71,8 @@ int getbytes( const char *filename, int offset, int size, char *buf )
  *  kernel memory and one self-referential entry.
  *
  *  @param filename File to be loaded
+ *
+ *  @return The entry point of the newly loaded executable.
  **/
 void *load_file(vm_info_s *vmi, const char* filename)
 {
@@ -93,10 +94,10 @@ void *load_file(vm_info_s *vmi, const char* filename)
   assert(ret != NULL);
 
   /* Load read/execute sections (text and rodata) */
-  load_segment(filename, se.e_txtoff, se.e_txtlen, se.e_txtstart);
+  getbytes(filename, se.e_txtoff, se.e_txtlen, (void *)se.e_txtstart);
   memset((void *)(se.e_txtstart + se.e_txtlen), 0,
          se.e_rodatstart - (se.e_txtstart + se.e_txtlen));
-  load_segment(filename, se.e_rodatoff, se.e_rodatlen, se.e_rodatstart);
+  getbytes(filename, se.e_rodatoff, se.e_rodatlen, (void *)se.e_rodatstart);
 
   /* Allocate read/write memory */
   ret = vm_alloc(vmi, (void *)se.e_datstart,
@@ -105,34 +106,10 @@ void *load_file(vm_info_s *vmi, const char* filename)
   assert(ret != NULL);
 
   /* Load read/execute sections (data and bss) */
-  load_segment(filename, se.e_datoff, se.e_datlen, se.e_datstart);
+  getbytes(filename, se.e_datoff, se.e_datlen, (void *)se.e_datstart);
   memset((void *)(se.e_datstart + se.e_datlen), 0,
          (se.e_bssstart + se.e_bsslen) - (se.e_datstart + se.e_datlen));
 
   return (void *)(se.e_entry);
 }
 
-/** @brief Loads single segment into memory.
- *.
- *  @param filename Name of file with segment.
- *  @param offset Offset of segment in file.
- *  @param len Length of segment in bytes.
- *  @param start Start of segment virtual address.
- *
- *  @return Void.
- */
-void load_segment(const char* filename, int offset, size_t len,
-                  unsigned long start)
-{
-  char segment[len];
-
-  /* Read segment from the 'image' */
-  getbytes(filename, offset, len, segment);
-
-  /* Copy segment to virtual page(s) */
-  memcpy((void*)(start), segment, len);
-
-  return;
-}
-
-/*@}*/
