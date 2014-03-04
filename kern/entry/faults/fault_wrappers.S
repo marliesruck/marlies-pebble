@@ -2,7 +2,7 @@
  *
  *  @brief Implements assembly wrapper for the various faults.
  *
- *  See /kern/asm/intwrappers.h for the expanded INTERRUPT macro.
+ *  See /kern/asm/intwrappers.h for the expanded *_INTERRUPT macros.
  *
  *  @author Enrique Naudon (esn)
  *  @author Marlies Ruck (esn)

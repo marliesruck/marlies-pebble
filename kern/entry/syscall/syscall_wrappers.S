@@ -2,45 +2,45 @@
  *
  *  @brief Implements assembly wrapper for the various system calls.
  *
- *  See /kern/asm/intwrappers.h for the expanded INTERRUPT macro.
+ *  See /kern/asm/scwrappers.h for the expanded SYSCALL macros.
  *
  *  @author Enrique Naudon (esn)
  *  @author Marlies Ruck (esn)
  **/
 
-#include <asm/intwrappers.h>
+#include "sc_utils.h"
 
 
 /*************************************************************************
  *  Life cycle
  *************************************************************************/
 
-LONG_INTERRUPT sys_fork
-LONG_INTERRUPT sys_exec
-VOID_INTERRUPT sys_set_status
-VOID_INTERRUPT sys_vanish
-LONG_INTERRUPT sys_wait
-VOID_INTERRUPT sys_task_vanish
+NULLARY_SYSCALL sys_fork
+N_ARY_SYSCALL sys_exec,$2
+UNARY_SYSCALL sys_set_status
+NULLARY_SYSCALL sys_vanish
+UNARY_SYSCALL sys_wait
+UNARY_SYSCALL sys_task_vanish
 
 
 /*************************************************************************
  *  Thread management
  *************************************************************************/
 
-LONG_INTERRUPT sys_gettid
-LONG_INTERRUPT sys_yield
-LONG_INTERRUPT sys_deschedule
-LONG_INTERRUPT sys_make_runnable
-LONG_INTERRUPT sys_get_ticks
-LONG_INTERRUPT sys_sleep
+NULLARY_SYSCALL sys_gettid
+UNARY_SYSCALL sys_yield
+UNARY_SYSCALL sys_deschedule
+UNARY_SYSCALL sys_make_runnable
+NULLARY_SYSCALL sys_get_ticks
+UNARY_SYSCALL sys_sleep
 
 
 /*************************************************************************
  *  Memory management
  *************************************************************************/
 
-LONG_INTERRUPT sys_new_pages
-LONG_INTERRUPT sys_remove_pages
+N_ARY_SYSCALL sys_new_pages,$2
+UNARY_SYSCALL sys_remove_pages
 
 
 /*************************************************************************
@@ -48,26 +48,26 @@ LONG_INTERRUPT sys_remove_pages
  *************************************************************************/
 
 /* Maybe we do something special for character returns?? */
-LONG_INTERRUPT sys_getchar
-LONG_INTERRUPT sys_readline
-LONG_INTERRUPT sys_print
-LONG_INTERRUPT sys_set_term_color
-LONG_INTERRUPT sys_set_cursor_pos
-LONG_INTERRUPT sys_get_cursor_pos
+NULLARY_SYSCALL sys_getchar
+N_ARY_SYSCALL sys_readline,$2
+N_ARY_SYSCALL sys_print,$2
+UNARY_SYSCALL sys_set_term_color
+N_ARY_SYSCALL sys_set_cursor_pos,$2
+N_ARY_SYSCALL sys_get_cursor_pos,$2
 
 
 /*************************************************************************
  *  Miscellaneous
  *************************************************************************/
 
-VOID_INTERRUPT sys_halt
-LONG_INTERRUPT sys_readfile
-LONG_INTERRUPT sys_swexn
+NULLARY_SYSCALL sys_halt
+N_ARY_SYSCALL sys_readfile,$4
+N_ARY_SYSCALL sys_swexn,$4
 
 
 /*************************************************************************
  *  "Special"
  *************************************************************************/
 
-VOID_INTERRUPT sys_misbehave
+UNARY_SYSCALL sys_misbehave
 

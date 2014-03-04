@@ -11,11 +11,12 @@
  **/
 
 #include <simics.h>
-#include <process.h>
 
+#include <process.h>
 #include <idt.h>
 #include <syscall_int.h>
 #include "syscall_wrappers.h"
+#include "sc_utils.h"
 
 /** @brief Installs our system calls.
  *
@@ -49,6 +50,8 @@ void install_sys_handlers(void)
 
   return;
 }
+
+
 /*************************************************************************
  *  Life cycle
  *************************************************************************/
@@ -61,12 +64,25 @@ int sys_fork(void)
 #include <loader.h>
 #include <usr_stack.h>
 #include <vm.h>
+#include <malloc.h>
+#include <string.h>
 void mode_switch(void *entry_point, void *sp);
 int sys_exec(char *execname, char *argvec[])
 {
+  char *execname_k = "\0";
+
+#include <simics.h>
+lprintf("sys_exec(execname=%s, argvec=%p)", execname, argvec);
+
+  /* Copy execname from user space */
+  execname_k = malloc(strlen(execname));
+  if (!execname_k) return -1;
+  if (copy_from_user(execname_k, execname, strlen(execname) + 1))
+    return -1;
+
   vm_final(&curr_pcb->vmi);
 
-  void *entry_point = load_file(&curr_pcb->vmi, "introvert");
+  void *entry_point = load_file(&curr_pcb->vmi, execname_k);
   void *usr_sp = usr_stack_init(&curr_pcb->vmi);
   mode_switch(entry_point, usr_sp);
 

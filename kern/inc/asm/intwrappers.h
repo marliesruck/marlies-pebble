@@ -16,7 +16,10 @@
 
 #ifdef ASSEMBLER
 
-/** @brief Wraps a void interrupt handler.
+/** @brief Wraps an interrupt handler.
+ *
+ *  All the interrupts need the same assembly wrapper; we leverage that
+ *  with this generic assembly macros.
  *
  *  @param handler The name of the handler for this interrupt.
  *
@@ -29,8 +32,8 @@
 .global asm_\handler
 asm_\handler:
 
+  # Prologue
   pusha                           # Store GP registers
-
   push %ds                        # Store DS data segment
   push %es                        # Store ES data segment
   push %fs                        # Store FS data segment
@@ -38,11 +41,11 @@ asm_\handler:
 
   call \handler                   # Call the interrupt handler
 
+  # Epilogue
   pop %ds                         # Restore DS data segment
   pop %es                         # Restore ES data segment
   pop %fs                         # Restore FS data segment
   pop %gs                         # Restore GS data segment
-
   popa                            # Restore GP registers
 
   iret                            # Return from the interrupt
@@ -50,16 +53,13 @@ asm_\handler:
 .endm
 
 
-/** @brief Wraps a interrupt handler which returns a 32-bit value.
- *
- *  Note that the "LONG" prefix refers to the 32-bit return value, *not*
- *  the amount of time the handler is expected to take...
+/** @brief Wraps a interrupt handler which returns a 8-bit value.
  *
  *  @param handler The name of the handler for this interrupt.
  *
  *  @return Whatever the handler returns.
  **/
-.macro LONG_INTERRUPT handler
+.macro BYTE_INTERRUPT handler
 
 # Export and label it...
 .extern \handler
@@ -89,13 +89,16 @@ asm_\handler:
 .endm
 
 
-/** @brief Wraps a interrupt handler which returns a 8-bit value.
+/** @brief Wraps a interrupt handler which returns a 32-bit value.
+ *
+ *  Note that the "LONG" prefix refers to the 32-bit return value, *not*
+ *  the amount of time the handler is expected to take...
  *
  *  @param handler The name of the handler for this interrupt.
  *
  *  @return Whatever the handler returns.
  **/
-.macro BYTE_INTERRUPT handler
+.macro LONG_INTERRUPT handler
 
 # Export and label it...
 .extern \handler
