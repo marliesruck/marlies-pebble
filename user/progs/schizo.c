@@ -1,21 +1,22 @@
 /** @file schizo.c
+ *
+ *  @brief Exec's a new process.
+ *
+ *  @author Enrique Naudon (esn)
  **/
-
 #include <syscall.h>
 #include <simics.h>
 #include <stddef.h>
 
+#define NUM_ARGS 5
 
 int main()
 {
-  char *argvec[4] = { NULL };
-
-  argvec[0] = "arg 1";
-  argvec[1] = "arg 2";
-  argvec[2] = "arg 3";
+  char *bin = "introspective";
+  char *argvec[NUM_ARGS] = { bin, "-v", "-O2", "-ggdb", NULL };
 
   lprintf("exec'ing...");
-  exec("introspective", argvec);
+  exec(bin, argvec);
 	
   while (1) continue;
   return 0;

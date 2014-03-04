@@ -69,12 +69,8 @@ int sys_fork(void)
 void mode_switch(void *entry_point, void *sp);
 int sys_exec(char *execname, char *argvec[])
 {
-  char *execname_k;
-  char **argvec_k;
+  char *execname_k, **argvec_k;
   int i, j;
-
-#include <simics.h>
-lprintf("sys_exec(execname=%s, argvec=%p)", execname, argvec);
 
   /* Copy execname from user-space */
   execname_k = malloc(strlen(execname) + 1);
@@ -99,13 +95,20 @@ lprintf("sys_exec(execname=%s, argvec=%p)", execname, argvec);
   }
   argvec_k[i] = NULL;
 
+  /* Destroy the old address space; setup the new */
   vm_final(&curr_pcb->vmi);
-
   void *entry_point = load_file(&curr_pcb->vmi, execname_k);
   void *usr_sp = usr_stack_init(&curr_pcb->vmi, argvec_k);
+
+  /* Free copied parameters*/
+  for (j = 0; j < i; ++j) free(argvec_k[j]);
+  free(argvec_k);
+  free(execname_k);
+
+  /* Execute the new program */
   mode_switch(entry_point, usr_sp);
 
-  return -1;
+  return 0;
 }
 
 void sys_set_status(int status)
@@ -168,12 +171,12 @@ int sys_sleep(int ticks)
  *  Memory management
  *************************************************************************/
 
-int sys_new_pages(void * addr, int len)
+int sys_new_pages(void *addr, int len)
 {
   return -1;
 }
 
-int sys_remove_pages(void * addr)
+int sys_remove_pages(void *addr)
 {
   return -1;
 }
