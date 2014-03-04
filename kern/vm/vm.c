@@ -11,18 +11,12 @@
 
 /* Pebbles includes */
 #include <page_alloc.h>
+#include <util.h>
 
 /* Libc includes */
 #include <assert.h>
 #include <malloc.h>
 #include <stddef.h>
-
-
-#define PAGE_FLOOR(addr)  \
-  (void *)(((unsigned int) (addr)) & PG_ADDR_MASK)
-
-#define PAGE_CEILING(addr)  \
-  (void *)(((unsigned int) (addr) + PAGE_SIZE - 1) & PG_ADDR_MASK)
 
 
 /*************************************************************************
@@ -119,8 +113,10 @@ void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
   mem_region_s *mreg;
   void *addr;
 
-  pg_start = PAGE_FLOOR(va_start);
-  pg_limit = PAGE_CEILING(va_start + len);
+  pg_start = (void *)FLOOR(va_start, PAGE_SIZE);
+  pg_limit = (void *)CEILING(va_start + len, PAGE_SIZE);
+  assert( (((unsigned int) pg_start) & (PAGE_SIZE-1)) == 0 );
+  assert( (((unsigned int) pg_limit) & (PAGE_SIZE-1)) == 0 );
 
   /* Initialize the memory region */
   mreg = malloc(sizeof(mem_region_s));

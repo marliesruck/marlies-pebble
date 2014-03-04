@@ -30,6 +30,6 @@ typedef unsigned int esp_t;
     *(esp_t*)(sp) = (unsigned)(elem); \
   } while (0)
 
-void *usr_stack_init(vm_info_s *vmi);
+void *usr_stack_init(vm_info_s *vmi, char **argv);
 
 #endif /* _USR_STACK_H */

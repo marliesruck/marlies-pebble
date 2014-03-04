@@ -3,18 +3,16 @@
 
 #include <syscall.h>  /* for getpid */
 #include <simics.h>    /* for lprintf */
-#include <spin.h>
 
-spin_s spin = {0,0};
-int main()
+int main(int argc, char **argv)
 {
-  int ch;
-  while(1){
-    spin_lock(&spin);
-    lprintf("Who am I? Press 'r' to find out!");
-    while((ch = getchar()) != 'r');
-    lprintf("I'm introspective! My tid is %d!", gettid());
-    spin_unlock(&spin);
-  }
+  int i;
 
+  lprintf("Who am I?  I'm introspective!");
+  lprintf("My tid is %d, and my args are...", gettid());
+
+  for (i = 0; i < argc; ++i)
+    lprintf("  argv[%d] = %s", i, argv[i]);
+
+  while (1) continue;
 }

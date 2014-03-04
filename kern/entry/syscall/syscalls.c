@@ -69,21 +69,40 @@ int sys_fork(void)
 void mode_switch(void *entry_point, void *sp);
 int sys_exec(char *execname, char *argvec[])
 {
-  char *execname_k = "\0";
+  char *execname_k;
+  char **argvec_k;
+  int i, j;
 
 #include <simics.h>
 lprintf("sys_exec(execname=%s, argvec=%p)", execname, argvec);
 
-  /* Copy execname from user space */
-  execname_k = malloc(strlen(execname));
+  /* Copy execname from user-space */
+  execname_k = malloc(strlen(execname) + 1);
   if (!execname_k) return -1;
-  if (copy_from_user(execname_k, execname, strlen(execname) + 1))
+  if (copy_from_user(execname_k, execname, strlen(execname) + 1)) {
+    free(execname_k);
     return -1;
+  }
+
+  /* Copy argvec from user-space */
+  for (i = 0; argvec[i] != NULL; ++i) continue;
+  argvec_k = malloc((i + 1) * sizeof(char *));
+  for (i = 0; argvec[i] != NULL; ++i)
+  {
+    argvec_k[i] = malloc(strlen(argvec[i]) + 1);
+    if (copy_from_user(argvec_k[i], argvec[i], strlen(argvec[i]) + 1)) {
+      free(execname_k);
+      for (j = 0; j < i; ++j) free(argvec_k[j]);
+      free(argvec_k);
+      return -1;
+    }
+  }
+  argvec_k[i] = NULL;
 
   vm_final(&curr_pcb->vmi);
 
   void *entry_point = load_file(&curr_pcb->vmi, execname_k);
-  void *usr_sp = usr_stack_init(&curr_pcb->vmi);
+  void *usr_sp = usr_stack_init(&curr_pcb->vmi, argvec_k);
   mode_switch(entry_point, usr_sp);
 
   return -1;

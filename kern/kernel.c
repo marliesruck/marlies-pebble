@@ -138,7 +138,7 @@ void load_first_task(void)
 
   /* Drop into user mode */
   void *entry_point = load_file(&my_pcb.vmi, "schizo");
-  void *usr_sp = usr_stack_init(&my_pcb.vmi);
+  void *usr_sp = usr_stack_init(&my_pcb.vmi, NULL);
   mode_switch(entry_point, usr_sp);
 
   /* We should never reach here! */
