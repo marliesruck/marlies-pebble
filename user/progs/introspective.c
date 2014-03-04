@@ -14,5 +14,10 @@ int main(int argc, char **argv)
   for (i = 0; i < argc; ++i)
     lprintf("  argv[%d] = %s", i, argv[i]);
 
+  while(1){
+    while(getchar() != 'r');
+    lprintf("In introspective!");
+  }
+
   while (1) continue;
 }

@@ -25,8 +25,8 @@ typedef struct pcb{
   tcb_t my_tcb;  
 }pcb_t;
 
-pcb_t my_pcb;
-pcb_t your_pcb;
+pcb_t pcb1;
+pcb_t pcb2;
 pcb_t *curr_pcb;
 
 #endif /* _PROCESS_H */

@@ -7,7 +7,7 @@
 #include <simics.h>
 
 void asm_ctx_switch(void *my_sp, void *my_pc, void *new_sp, void *new_pc,
-                    unsigned int new_cr3);
+                    unsigned int new_cr3, unsigned int kstack_high);
 /* All args are in registers to preserve the stack */
 void store_and_switch(void);
 
@@ -17,24 +17,24 @@ void ctx_switch(void)
 {
   /* Set the flags for the first ctx switch because we haven't launched this
    * task yet */
+  lprintf("ctx_switching...");
   if(i == 0) set_eflags(EFL_USER_MODE);
 
   if(i%2 == 0){
+  lprintf("switch to pcb1 with introspective");
     i++;
-    curr_pcb = &my_pcb;
-    asm_ctx_switch(&your_pcb.my_tcb.sp, &your_pcb.my_tcb.pc,
-                 my_pcb.my_tcb.sp, my_pcb.my_tcb.pc, my_pcb.cr3);
+    curr_pcb = &pcb1;
+    asm_ctx_switch(&pcb2.my_tcb.sp, &pcb2.my_tcb.pc, pcb1.my_tcb.sp, 
+                    pcb1.my_tcb.pc, pcb1.cr3, (unsigned int)
+                    (&pcb1.my_tcb.kstack[KSTACK_SIZE -1]));
   }
   else{
+  lprintf("switch to pcb2 with exec");
     i++;
-    curr_pcb = &your_pcb;
-    asm_ctx_switch(&my_pcb.my_tcb.sp, &my_pcb.my_tcb.pc,
-                 your_pcb.my_tcb.sp, your_pcb.my_tcb.pc, your_pcb.cr3);
+    curr_pcb = &pcb2;
+    asm_ctx_switch(&pcb1.my_tcb.sp, &pcb1.my_tcb.pc, pcb2.my_tcb.sp, 
+                    pcb2.my_tcb.pc, pcb2.cr3, (unsigned int)
+                    (&pcb2.my_tcb.kstack[KSTACK_SIZE -1]));
   }
   return;
 }
-
-/* If we load in a new task (i.e. via exec) and we want to 
-void launch_new_task(void){
-*/
-

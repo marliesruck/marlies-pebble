@@ -1,3 +1,6 @@
+.extern set_esp0
+.extern sim_breakpoint
+
 .global asm_ctx_switch
 asm_ctx_switch:
   # Prologue
@@ -13,6 +16,7 @@ asm_ctx_switch:
   mov 0x10(%ebp), %edx  # new_sp
   mov 0x14(%ebp), %esi  # new_pc
   mov 0x18(%ebp), %edi  # new_cr3
+# mov 0x1c(%ebp), %ebx  # new_kstack_high
 
   call store_and_switch       
 
@@ -29,6 +33,10 @@ store_and_switch:
   push %ebp
   mov %esp, %ebp
 
+  # Set next thread's esp0
+# push %ebx
+# call set_esp0
+
   # Store out current thread's context
   leal 8(%ebp), %ebx   # Compute old ESP
   mov %ebx, (%eax)     # Store old ESP in &my_sp 
@@ -38,7 +46,7 @@ store_and_switch:
   # Restore new thread's context
   mov %edx, %esp       # Restore ESP
   mov %edi, %cr3       # Load correct PTBR
-  jmp *%esi             # Jump to new thread's EIP
+  jmp *%esi            # Jump to new thread's EIP
 
   
 
