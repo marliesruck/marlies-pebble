@@ -1,13 +1,16 @@
 .extern set_esp0
 .extern sim_breakpoint
 
+.global finish_fork
 .global asm_ctx_switch
 asm_ctx_switch:
   # Prologue
   push %ebp
   mov %esp, %ebp
 
-  pusha                 # Store gp
+  pusha                 # Store GP
+  push %ebp             # Store EBP
+  pushfl                # Store EFLAGS
   
   # Set next thread's esp0
   mov 0x1c(%ebp), %ebx  # new_kstack_high
@@ -24,6 +27,8 @@ asm_ctx_switch:
 
   call store_and_switch       
 
+  popfl 
+  pop  %ebp
   popa                  # Restore gp
 
   # Epilogue
@@ -37,7 +42,6 @@ store_and_switch:
   push %ebp
   mov %esp, %ebp
 
-  call sim_breakpoint
   # Store out current thread's context
   leal 8(%ebp), %ebx   # Compute old ESP
   mov %ebx, (%eax)     # Store old ESP in &my_sp 
@@ -48,6 +52,7 @@ store_and_switch:
   mov %edx, %esp       # Restore ESP
   mov %edi, %cr3       # Load correct PTBR
 
+  call sim_breakpoint
   jmp *%esi            # Jump to new thread's EIP
 
   
