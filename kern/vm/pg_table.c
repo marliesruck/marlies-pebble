@@ -12,7 +12,7 @@
 #include <stddef.h>
 #include <string.h>
 
-static pte_s *kern_pt[KERN_PD_ENTRIES];
+pte_s *kern_pt[KERN_PD_ENTRIES];
 
 pt_t *pg_tables = (pt_t *)(DIR_HIGH);
 pte_s *pg_dir = (pte_s *)(TBL_HIGH);

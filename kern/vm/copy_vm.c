@@ -19,8 +19,6 @@
  * can memcpy */
 #define BUF (void *)(0xE0000000)
 
-static pte_s *kern_pt[KERN_PD_ENTRIES];
-
 /* For striding through virtual memory */
 tome_t *tomes = (tome_t *)(NULL);
 
@@ -35,15 +33,19 @@ tome_t *tomes = (tome_t *)(NULL);
  * @param src Page to be copied
  * @param frame Frame to copy page to
  */
-
+void tlb_inval_page(void *addr);
 void copy_pg(pt_t *pt, void *src, void *frame)
 {
   pt[PG_DIR_INDEX(BUF)][PG_TBL_INDEX(BUF)].present = 1; 
-  pt[PG_DIR_INDEX(BUF)][PG_TBL_INDEX(BUF)].writable= 1; 
-  pt[PG_DIR_INDEX(BUF)][PG_TBL_INDEX(BUF)].addr = (unsigned int)(frame) >> PG_TBL_SHIFT;
+  pt[PG_DIR_INDEX(BUF)][PG_TBL_INDEX(BUF)].writable = 1; 
+  pt[PG_DIR_INDEX(BUF)][PG_TBL_INDEX(BUF)].addr =
+    (unsigned int)(frame) >> PG_TBL_SHIFT;
 
   /* Map frame in */
   memcpy(BUF, src, PAGE_SIZE);
+
+  pt[PG_DIR_INDEX(BUF)][PG_TBL_INDEX(BUF)].present = 0;
+  tlb_inval_page(BUF);
 
   return;
 }
@@ -87,9 +89,10 @@ void copy_pg_dir(pte_s *src, pt_t *src_pg_tbl, pte_s *dest, pt_t *dest_pg_tbl)
 
   /* Map the kernel's page table */
   for (i = 0; i < KERN_PD_ENTRIES; i++) {
+    init_pte(&dest[i], kern_pt[i]);
     dest[i].present = 1;
     dest[i].writable = 1;
-    dest[i].addr = ((unsigned int)(kern_pt[i])) >> PG_TBL_SHIFT;
+    dest[i].global = 1;
   }
 
   /* Copy page directory parent's page directory.
@@ -120,3 +123,4 @@ void copy_pg_dir(pte_s *src, pt_t *src_pg_tbl, pte_s *dest, pt_t *dest_pg_tbl)
   }
   return;
 }
+

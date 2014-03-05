@@ -55,6 +55,3 @@ store_and_switch:
   call sim_breakpoint
   jmp *%esi            # Jump to new thread's EIP
 
-  
-
-

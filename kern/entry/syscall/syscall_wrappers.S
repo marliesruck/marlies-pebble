@@ -12,7 +12,6 @@
 
 /* Special */
 .extern sys_fork
-
 .global asm_sys_fork
 asm_sys_fork:
 
@@ -29,10 +28,7 @@ asm_sys_fork:
 
   # Push the %esp as an argument
   push %esp
-
   call sys_fork
-
-  # Clean up stack
   pop %ecx
   
   # Restore data segments

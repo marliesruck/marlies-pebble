@@ -61,26 +61,30 @@ void install_sys_handlers(void)
  *  Life cycle
  *************************************************************************/
 
-int sys_fork(void *esp)
+int sys_fork(unsigned int esp)
 {
   /* Copy the parent's page directory and tables */
   void *child_cr3 = mem_map_child();
 
   /* Initialize child tcb */
   init_child_tcb(child_cr3);
+  lprintf("child's cr3=%p", child_cr3);
 
   int tid = pcb2.my_tcb.tid;
 
   /* Compute the parent's esp offstack from its kstack base */
-  unsigned int offset = KSTACK_LOW_OFFSET(esp,&curr_pcb->my_tcb.kstack[0]);
-  size_t n = KSTACK_HIGH_OFFSET(esp,&curr_pcb->my_tcb.kstack[KSTACK_SIZE - 1]);
+  unsigned int offset = esp - ((unsigned int) curr_pcb->my_tcb.kstack);
+  size_t len = ((unsigned int) &curr_pcb->my_tcb.kstack[KSTACK_SIZE]) - esp;
+//  unsigned int offset = KSTACK_LOW_OFFSET(esp,&curr_pcb->my_tcb.kstack[0]);
+//  size_t n = KSTACK_HIGH_OFFSET(esp,&curr_pcb->my_tcb.kstack[KSTACK_SIZE - 1]);
 
   /* Copy the parent's kstack */
-  void *dest = (void *)((unsigned int)(&pcb2.my_tcb.kstack[0]) + offset);
-  memcpy(dest, esp, n);
+  void *dest = &pcb2.my_tcb.kstack[offset];
+  memcpy(dest, (void *)esp, len);
+  lprintf("copying (%p,%p) to dest=%p", (void *)esp, (void *)(esp + len), dest);
 
   /* Set the child's pc to finish_fork and sp to its esp relative its own kstack */
-  pcb2.my_tcb.sp = esp;
+  pcb2.my_tcb.sp = &pcb2.my_tcb.kstack[offset];
   pcb2.my_tcb.pc = finish_fork;
 
   /* Atomically insert child into runnable queue */
