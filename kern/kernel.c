@@ -110,16 +110,21 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   pte_s *pd2 = alloc_frame();
   init_pd(pd2);
 
+  /* Load the first executable */
   set_cr3((uint32_t) pd);
   enable_paging();
-
-  /* Load the first executable */
-  load_task(pd, &pcb1, "introvert");
+  load_task(pd, &pcb1, "peon");
+#include <usr_stack.h>
+  void *sp = &pcb1.my_tcb.kstack[KSTACK_SIZE-1];
+  PUSH(sp, pcb1.my_tcb.sp);
+  PUSH(sp, pcb1.my_tcb.pc);
+  PUSH(sp, 0);
+  pcb1.my_tcb.sp = sp;
+  pcb1.my_tcb.pc = mode_switch;
 
   /* Load the second executable */
   set_cr3((uint32_t) pd2);
-  load_task(pd2, &pcb2, "schizo");
-
+  load_task(pd2, &pcb2, "peon");
 
   /* Give up the kernel stack that was given to us by the bootloader */
   set_esp0((uint32_t)(&pcb2.my_tcb.kstack[KSTACK_SIZE - 1]));
@@ -134,6 +139,8 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 
 void load_task(void *pd, pcb_t *my_pcb, const char *fname)
 {
+  static int tid = 0;
+
   /* Initialize vm struct */
   my_pcb->vmi = (vm_info_s) {
     .pg_info = (pg_info_s) {
@@ -145,7 +152,7 @@ void load_task(void *pd, pcb_t *my_pcb, const char *fname)
 
   /* Initialize pg dir and tid in prototype tcb */
   my_pcb->cr3 = (uint32_t)(pd);
-  my_pcb->my_tcb.tid = 123;
+  my_pcb->my_tcb.tid = ++tid;
   
   /* Initialize running tcb */
   curr_pcb = my_pcb;
