@@ -17,14 +17,6 @@ static pte_s *kern_pt[KERN_PD_ENTRIES];
 pt_t *pg_tables = (pt_t *)(DIR_HIGH);
 pte_s *pg_dir = (pte_s *)(TBL_HIGH);
 
-
-void copy_pg_dir(pte_s *src, pte_s *dest){
-  return;
-}
-void copy_pde(){
-  return;
-}
-
 /** @brief Initialize kernel pages.
  *
  *  Kernel memory is direct-mapped into every process' lowest 16MB of

@@ -25,8 +25,14 @@ typedef struct pcb{
   tcb_t my_tcb;  
 }pcb_t;
 
+/* For exec debugging */
 pcb_t pcb1;
 pcb_t pcb2;
+
+/* For fork debugging*/
+pcb_t child_pcb;
+
+/* There should also be a curr tcb so we only flush the tlb when task switching */
 pcb_t *curr_pcb;
 
 #endif /* _PROCESS_H */

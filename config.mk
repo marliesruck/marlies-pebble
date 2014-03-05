@@ -57,7 +57,7 @@ UPDATE_METHOD = web
 # A list of the test programs you want compiled in from the 410user/progs
 # directory.
 #
-410TESTS = ck1
+410TESTS = ck1 peon merchant
 
 ###########################################################################
 # Test programs you have written which you wish to run
@@ -116,7 +116,7 @@ AUTOSTACK_OBJS = autostack.o
 #
 # Kernel object files you provide in from kern/
 #
-KERNEL_OBJS = kernel.o lib/cllist.o sched/ctx_switch.o sched/asm_ctx_switch.o lib/malloc_wrappers.o vm/vm.o vm/paging.o vm/page_alloc.o vm/frame_alloc.o vm/pg_table.o mode_switch.o loader/loader.o loader/usr_stack.o entry/drivers/keyboard.o entry/drivers/timer.o entry/idt.o entry/drivers/driver_wrappers.o entry/drivers/fake_console.o entry/syscall/sc_utils.o entry/syscall/syscall_wrappers.o entry/syscall/syscalls.o entry/faults/faults.o entry/faults/fault_wrappers.o entry/drivers/drivers.o entry/syscall/fork_i.o
+KERNEL_OBJS = kernel.o lib/cllist.o sched/ctx_switch.o sched/asm_ctx_switch.o lib/malloc_wrappers.o vm/vm.o vm/paging.o vm/page_alloc.o vm/frame_alloc.o vm/pg_table.o mode_switch.o loader/loader.o loader/usr_stack.o entry/drivers/keyboard.o entry/drivers/timer.o entry/idt.o entry/drivers/driver_wrappers.o entry/drivers/fake_console.o entry/syscall/sc_utils.o entry/syscall/syscall_wrappers.o entry/syscall/syscalls.o entry/faults/faults.o entry/faults/fault_wrappers.o entry/drivers/drivers.o vm/copy_vm.o entry/syscall/fork_i.o
 
 ###########################################################################
 # WARNING: Do not put **test** programs into the REQPROGS variables.  Your

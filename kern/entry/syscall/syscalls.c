@@ -69,6 +69,11 @@ int sys_fork(void *esp)
 
   /* Copy the parent's kstack */
 
+  /* Set the child's pc to finish_fork and sp to its esp relative its own kstack
+   * */
+
+  /* Atomically insert child into runnable queue */
+
   return -1;
 }
 
