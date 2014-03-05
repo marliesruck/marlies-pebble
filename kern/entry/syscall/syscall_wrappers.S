@@ -11,11 +11,10 @@
 #include "sc_utils.h"
 
 /* Special */
-NULLARY_SYSCALL sys_fork
 .extern sys_fork
 
-.global asm_fork
-asm_fork:
+.global asm_sys_fork
+asm_sys_fork:
 
   # Save callee-saved registers for the child
   push %esi
@@ -36,7 +35,7 @@ asm_fork:
   # Clean up stack
   pop %ecx
   
-  # Restore dat segments
+  # Restore data segments
   pop %gs                         # Restore GS data segment
   pop %fs                         # Restore FS data segment
   pop %es                         # Restore ES data segment
@@ -46,6 +45,9 @@ asm_fork:
   pop %ebx
   pop %edi
   pop %esi
+
+  # To userland!
+  iret
 
 /*************************************************************************
  *  Life cycle

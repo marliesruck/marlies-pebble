@@ -106,25 +106,16 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   pte_s *pd = alloc_frame();
   init_pd(pd);
 
-  /* Second executable page directory */
-  pte_s *pd2 = alloc_frame();
-  init_pd(pd2);
-
   set_cr3((uint32_t) pd);
   enable_paging();
 
   /* Load the first executable */
   load_task(pd, &pcb1, "introvert");
 
-  /* Load the second executable */
-  set_cr3((uint32_t) pd2);
-  load_task(pd2, &pcb2, "schizo");
-
-
   /* Give up the kernel stack that was given to us by the bootloader */
-  set_esp0((uint32_t)(&pcb2.my_tcb.kstack[KSTACK_SIZE - 1]));
+  set_esp0((uint32_t)(&pcb1.my_tcb.kstack[KSTACK_SIZE - 1]));
 
-  mode_switch(pcb2.my_tcb.pc, pcb2.my_tcb.sp);
+  mode_switch(pcb1.my_tcb.pc, pcb1.my_tcb.sp);
 
   /* We should never reach here! */
   assert(0);

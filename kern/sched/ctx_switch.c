@@ -17,24 +17,19 @@ void ctx_switch(void)
 {
   /* Set the flags for the first ctx switch because we haven't launched this
    * task yet */
-  lprintf("ctx_switching...");
-  if(i == 0) set_eflags(EFL_USER_MODE);
-
   if(i%2 == 0){
-  lprintf("switch to pcb1 with introspective");
-    i++;
-    curr_pcb = &pcb1;
-    asm_ctx_switch(&pcb2.my_tcb.sp, &pcb2.my_tcb.pc, pcb1.my_tcb.sp, 
-                    pcb1.my_tcb.pc, pcb1.cr3, (unsigned int)
-                    (&pcb1.my_tcb.kstack[KSTACK_SIZE -1]));
-  }
-  else{
-  lprintf("switch to pcb2 with exec");
     i++;
     curr_pcb = &pcb2;
     asm_ctx_switch(&pcb1.my_tcb.sp, &pcb1.my_tcb.pc, pcb2.my_tcb.sp, 
                     pcb2.my_tcb.pc, pcb2.cr3, (unsigned int)
                     (&pcb2.my_tcb.kstack[KSTACK_SIZE -1]));
+  }
+  else{
+    i++;
+    curr_pcb = &pcb1;
+    asm_ctx_switch(&pcb2.my_tcb.sp, &pcb2.my_tcb.pc, pcb1.my_tcb.sp, 
+                    pcb1.my_tcb.pc, pcb1.cr3, (unsigned int)
+                    (&pcb1.my_tcb.kstack[KSTACK_SIZE -1]));
   }
   return;
 }

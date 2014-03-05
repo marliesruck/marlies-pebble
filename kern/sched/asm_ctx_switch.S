@@ -37,6 +37,7 @@ store_and_switch:
   push %ebp
   mov %esp, %ebp
 
+  call sim_breakpoint
   # Store out current thread's context
   leal 8(%ebp), %ebx   # Compute old ESP
   mov %ebx, (%eax)     # Store old ESP in &my_sp 

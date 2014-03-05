@@ -21,6 +21,8 @@
 /* Internal fork helper routines */
 #include "fork_i.h"
 
+#include <string.h>
+
 /** @brief Installs our system calls.
  *
  *  @return Void.
@@ -67,14 +69,23 @@ int sys_fork(void *esp)
   /* Initialize child tcb */
   init_child_tcb(child_cr3);
 
-  /* Copy the parent's kstack */
+  int tid = pcb2.my_tcb.tid;
 
-  /* Set the child's pc to finish_fork and sp to its esp relative its own kstack
-   * */
+  /* Compute the parent's esp offstack from its kstack base */
+  unsigned int offset = KSTACK_LOW_OFFSET(esp,&curr_pcb->my_tcb.kstack[0]);
+  size_t n = KSTACK_HIGH_OFFSET(esp,&curr_pcb->my_tcb.kstack[KSTACK_SIZE - 1]);
+
+  /* Copy the parent's kstack */
+  void *dest = (void *)((unsigned int)(&pcb2.my_tcb.kstack[0]) + offset);
+  memcpy(dest, esp, n);
+
+  /* Set the child's pc to finish_fork and sp to its esp relative its own kstack */
+  pcb2.my_tcb.sp = esp;
+  pcb2.my_tcb.pc = finish_fork;
 
   /* Atomically insert child into runnable queue */
 
-  return -1;
+  return tid;
 }
 
 #include <loader.h>
