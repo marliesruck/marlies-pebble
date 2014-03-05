@@ -15,8 +15,6 @@ asm_ctx_switch:
   call set_esp0
   pop  %ebx
 
-  call sim_breakpoint
-
   # Liberally clobber all regs since we already stored them all out
   mov 8(%ebp), %eax     # &my_sp
   mov 0xc(%ebp), %ecx   # &my_pc
@@ -50,7 +48,4 @@ store_and_switch:
   mov %edi, %cr3       # Load correct PTBR
 
   jmp *%esi            # Jump to new thread's EIP
-
-  
-
 

@@ -33,15 +33,19 @@ tome_t *tomes = (tome_t *)(NULL);
  * @param src Page to be copied
  * @param frame Frame to copy page to
  */
-
+void tlb_inval_page(void *addr);
 void copy_pg(pt_t *pt, void *src, void *frame)
 {
   pt[PG_DIR_INDEX(BUF)][PG_TBL_INDEX(BUF)].present = 1; 
-  pt[PG_DIR_INDEX(BUF)][PG_TBL_INDEX(BUF)].writable= 1; 
-  pt[PG_DIR_INDEX(BUF)][PG_TBL_INDEX(BUF)].addr = (unsigned int)(frame) >> PG_TBL_SHIFT;
+  pt[PG_DIR_INDEX(BUF)][PG_TBL_INDEX(BUF)].writable = 1; 
+  pt[PG_DIR_INDEX(BUF)][PG_TBL_INDEX(BUF)].addr =
+    (unsigned int)(frame) >> PG_TBL_SHIFT;
 
   /* Map frame in */
   memcpy(BUF, src, PAGE_SIZE);
+
+  pt[PG_DIR_INDEX(BUF)][PG_TBL_INDEX(BUF)].present = 0;
+  tlb_inval_page(BUF);
 
   return;
 }
@@ -119,3 +123,4 @@ void copy_pg_dir(pte_s *src, pt_t *src_pg_tbl, pte_s *dest, pt_t *dest_pg_tbl)
   }
   return;
 }
+
