@@ -111,6 +111,10 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 
   /* Load the first executable */
   load_task(pd, &pcb1, "introvert");
+  lprintf("parent stack = [%p, %p)", pcb1.my_tcb.kstack,
+          &pcb1.my_tcb.kstack[KSTACK_SIZE]);
+  lprintf("child stack = [%p, %p)", pcb2.my_tcb.kstack,
+          &pcb2.my_tcb.kstack[KSTACK_SIZE]);
 
   /* Give up the kernel stack that was given to us by the bootloader */
   set_esp0((uint32_t)(&pcb1.my_tcb.kstack[KSTACK_SIZE - 1]));

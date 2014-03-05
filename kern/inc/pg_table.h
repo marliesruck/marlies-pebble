@@ -3,8 +3,7 @@
  *  @brief Delcares the page table API.
  *
  *  @author Enrique Naudon (esn)
- *  @author Marlies Ruck (mruck)
- **/
+ *  @author Marlies Ruck (mruck) **/
 #ifndef __PG_TABLE_H__
 #define __PG_TABLE_H__
 
@@ -112,6 +111,8 @@ typedef pte_s pt_t[PG_TBL_ENTRIES];
 /* Current process' page tables and page directory */
 extern pt_t *pg_tables;
 extern pte_s *pg_dir;
+
+extern pte_s *kern_pt[KERN_PD_ENTRIES];
 
 
 /* Stuff that shouldn't be here */

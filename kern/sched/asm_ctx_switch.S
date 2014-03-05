@@ -15,6 +15,8 @@ asm_ctx_switch:
   call set_esp0
   pop  %ebx
 
+  call sim_breakpoint
+
   # Liberally clobber all regs since we already stored them all out
   mov 8(%ebp), %eax     # &my_sp
   mov 0xc(%ebp), %ecx   # &my_pc
@@ -37,7 +39,6 @@ store_and_switch:
   push %ebp
   mov %esp, %ebp
 
-  call sim_breakpoint
   # Store out current thread's context
   leal 8(%ebp), %ebx   # Compute old ESP
   mov %ebx, (%eax)     # Store old ESP in &my_sp 

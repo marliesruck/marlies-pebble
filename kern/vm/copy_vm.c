@@ -19,8 +19,6 @@
  * can memcpy */
 #define BUF (void *)(0xE0000000)
 
-static pte_s *kern_pt[KERN_PD_ENTRIES];
-
 /* For striding through virtual memory */
 tome_t *tomes = (tome_t *)(NULL);
 
@@ -87,9 +85,10 @@ void copy_pg_dir(pte_s *src, pt_t *src_pg_tbl, pte_s *dest, pt_t *dest_pg_tbl)
 
   /* Map the kernel's page table */
   for (i = 0; i < KERN_PD_ENTRIES; i++) {
+    init_pte(&dest[i], kern_pt[i]);
     dest[i].present = 1;
     dest[i].writable = 1;
-    dest[i].addr = ((unsigned int)(kern_pt[i])) >> PG_TBL_SHIFT;
+    dest[i].global = 1;
   }
 
   /* Copy page directory parent's page directory.
