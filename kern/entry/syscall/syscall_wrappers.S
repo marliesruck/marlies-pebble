@@ -10,12 +10,47 @@
 
 #include "sc_utils.h"
 
+/* Special */
+NULLARY_SYSCALL sys_fork
+.extern sys_fork
+
+.global asm_fork
+asm_fork:
+
+  # Save callee-saved registers for the child
+  push %esi
+  push %edi
+  push %ebx
+
+  # Save data segments
+  push %ds                        # Store DS data segment
+  push %es                        # Store ES data segment
+  push %fs                        # Store FS data segment
+  push %gs                        # Store GS data segment
+
+  # Push the %esp as an argument
+  push %esp
+
+  call sys_fork
+
+  # Clean up stack
+  pop %ecx
+  
+  # Restore dat segments
+  pop %gs                         # Restore GS data segment
+  pop %fs                         # Restore FS data segment
+  pop %es                         # Restore ES data segment
+  pop %ds                         # Restore DS data segment
+
+  # Restore callee-saved registers
+  pop %ebx
+  pop %edi
+  pop %esi
 
 /*************************************************************************
  *  Life cycle
  *************************************************************************/
 
-NULLARY_SYSCALL sys_fork
 N_ARY_SYSCALL sys_exec,$2
 UNARY_SYSCALL sys_set_status
 NULLARY_SYSCALL sys_vanish

@@ -18,6 +18,9 @@
 #include "syscall_wrappers.h"
 #include "sc_utils.h"
 
+/* Internal fork helper routines */
+#include "fork_i.h"
+
 /** @brief Installs our system calls.
  *
  *  @return Void.
@@ -56,8 +59,16 @@ void install_sys_handlers(void)
  *  Life cycle
  *************************************************************************/
 
-int sys_fork(void)
+int sys_fork(void *esp)
 {
+  /* Copy the parent's page directory and tables */
+  void *child_cr3 = mem_map_child();
+
+  /* Initialize child tcb */
+  init_child_tcb(child_cr3);
+
+  /* Copy the parent's kstack */
+
   return -1;
 }
 
