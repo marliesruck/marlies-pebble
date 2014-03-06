@@ -1,5 +1,6 @@
 #include <ctx_switch.h>
 #include <process.h>
+#include <thread.h>
 
 #include <x86/eflags.h>
 #define EFL_USER_MODE (EFL_RESV1 | EFL_IOPL_RING0 | EFL_IF) & ~EFL_AC
@@ -19,17 +20,17 @@ void ctx_switch(void)
    * task yet */
   if(i%2 == 0){
     i++;
-    curr_pcb = &pcb2;
-    asm_ctx_switch(&pcb1.my_tcb.sp, &pcb1.my_tcb.pc, pcb2.my_tcb.sp, 
-                    pcb2.my_tcb.pc, pcb2.cr3, (unsigned int)
-                    (&pcb2.my_tcb.kstack[KSTACK_SIZE -1]));
+    curr = &thread2;
+    asm_ctx_switch(&thread1.sp, &thread1.pc, thread2.sp, 
+                    thread2.pc, task2.cr3, (unsigned int)
+                    (&thread2.kstack[KSTACK_SIZE -1]));
   }
   else{
     i++;
-    curr_pcb = &pcb1;
-    asm_ctx_switch(&pcb2.my_tcb.sp, &pcb2.my_tcb.pc, pcb1.my_tcb.sp, 
-                    pcb1.my_tcb.pc, pcb1.cr3, (unsigned int)
-                    (&pcb1.my_tcb.kstack[KSTACK_SIZE -1]));
+    curr = &thread1;
+    asm_ctx_switch(&thread2.sp, &thread2.pc, thread1.sp, 
+                    thread1.pc, task1.cr3, (unsigned int)
+                    (&thread1.kstack[KSTACK_SIZE -1]));
   }
   return;
 }

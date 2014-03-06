@@ -13,6 +13,7 @@
 #include <simics.h>
 
 #include <process.h>
+#include <thread.h>
 #include <idt.h>
 #include <syscall_int.h>
 #include "syscall_wrappers.h"
@@ -68,24 +69,20 @@ int sys_fork(unsigned int esp)
 
   /* Initialize child tcb */
   init_child_tcb(child_cr3);
-  lprintf("child's cr3=%p", child_cr3);
 
-  int tid = pcb2.my_tcb.tid;
+  int tid = thread2.tid;
 
   /* Compute the parent's esp offstack from its kstack base */
-  unsigned int offset = esp - ((unsigned int) curr_pcb->my_tcb.kstack);
-  size_t len = ((unsigned int) &curr_pcb->my_tcb.kstack[KSTACK_SIZE]) - esp;
-//  unsigned int offset = KSTACK_LOW_OFFSET(esp,&curr_pcb->my_tcb.kstack[0]);
-//  size_t n = KSTACK_HIGH_OFFSET(esp,&curr_pcb->my_tcb.kstack[KSTACK_SIZE - 1]);
+  unsigned int offset = esp - ((unsigned int) curr->kstack);
+  size_t len = ((unsigned int) &curr->kstack[KSTACK_SIZE]) - esp;
 
   /* Copy the parent's kstack */
-  void *dest = &pcb2.my_tcb.kstack[offset];
+  void *dest = &thread2.kstack[offset];
   memcpy(dest, (void *)esp, len);
-  lprintf("copying (%p,%p) to dest=%p", (void *)esp, (void *)(esp + len), dest);
 
   /* Set the child's pc to finish_fork and sp to its esp relative its own kstack */
-  pcb2.my_tcb.sp = &pcb2.my_tcb.kstack[offset];
-  pcb2.my_tcb.pc = finish_fork;
+  thread2.sp = &thread2.kstack[offset];
+  thread2.pc = finish_fork;
 
   /* Atomically insert child into runnable queue */
 
@@ -127,9 +124,9 @@ int sys_exec(char *execname, char *argvec[])
   argvec_k[i] = NULL;
 
   /* Destroy the old address space; setup the new */
-  vm_final(&curr_pcb->vmi);
-  void *entry_point = load_file(&curr_pcb->vmi, execname_k);
-  void *usr_sp = usr_stack_init(&curr_pcb->vmi, argvec_k);
+  vm_final(&curr->task_info->vmi);
+  void *entry_point = load_file(&curr->task_info->vmi, execname_k);
+  void *usr_sp = usr_stack_init(&curr->task_info->vmi, argvec_k);
 
   /* Free copied parameters*/
   for (j = 0; j < i; ++j) free(argvec_k[j]);
@@ -169,7 +166,7 @@ void sys_task_vanish(int status)
 
 int sys_gettid(void)
 {
-  return curr_pcb->my_tcb.tid;
+  return curr->tid;
 }
 
 int sys_yield(int pid)

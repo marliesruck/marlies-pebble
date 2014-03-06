@@ -2,7 +2,7 @@
  **/
 #include <usr_stack.h>
 
-#include <process.h>
+#include <vm.h>
 #include <util.h>
 
 #include <malloc.h>

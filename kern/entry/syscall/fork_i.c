@@ -31,6 +31,7 @@
 #include <string.h>
 
 #include <process.h>
+#include <thread.h>
 #include <frame_alloc.h>
 #include <copy_vm.h>
 
@@ -88,17 +89,17 @@ void *mem_map_child(void)
 void *init_child_tcb(void *child_cr3)
 {
   /* Initialize vm struct */
-  pcb2.vmi = (vm_info_s) {
+  task2.vmi = (vm_info_s) {
     .pg_info = (pg_info_s) {
       .pg_dir = (pte_s *)(TBL_HIGH),
       .pg_tbls = (pt_t *)(DIR_HIGH),
     },
-    .mmap = CLL_LIST_INITIALIZER(pcb2.vmi.mmap)
+    .mmap = CLL_LIST_INITIALIZER(task2.vmi.mmap)
   };
 
   /* Initialize pg dir and tid in prototype tcb */
-  pcb2.cr3 = (uint32_t)(child_cr3);
-  pcb2.my_tcb.tid = 5;
+  task2.cr3 = (uint32_t)(child_cr3);
+  thread2.tid = 5;
 
   /* Set state to RUNNABLE */
 

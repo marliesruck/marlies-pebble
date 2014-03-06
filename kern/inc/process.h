@@ -10,29 +10,17 @@
 #include <stdint.h>
 
 
-#define KSTACK_SIZE PAGE_SIZE
-
-typedef struct tcb{
-  int tid;
-  void *sp;
-  void *pc;
-  char kstack[KSTACK_SIZE];
-}tcb_t;
-
-typedef struct pcb{
-  uint32_t cr3;  
-  vm_info_s vmi;
-  tcb_t my_tcb;  
-}pcb_t;
-
-/* For exec debugging */
-pcb_t pcb1;
-pcb_t pcb2;
-
-/* For fork debugging*/
-pcb_t child_pcb;
-
-/* There should also be a curr tcb so we only flush the tlb when task switching */
-pcb_t *curr_pcb;
+typedef struct task{
+  uint32_t cr3;         /* PTBR */
+  vm_info_s vmi;        /* Virtual Memory */
+  uint32_t num_threads; /* For knowing when vanish() should 
+                           deallocate ALL resources */
+  int exit_status;      /* Upon exiting write my status here and let my 
+                           parent or init() reap my pcb */
+  int exited;          /* Necessary in case exit status is 0 */
+  int orig_tid;         /* Wait() returns the TID of the origin thread of the 
+                           exiting tasks, not the tid of the last thread 
+                           to vanish */
+}task_t;
 
 #endif /* _PROCESS_H */

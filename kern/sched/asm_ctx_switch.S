@@ -52,6 +52,5 @@ store_and_switch:
   mov %edx, %esp       # Restore ESP
   mov %edi, %cr3       # Load correct PTBR
 
-  call sim_breakpoint
   jmp *%esi            # Jump to new thread's EIP
 

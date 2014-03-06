@@ -35,6 +35,7 @@
 #include <pg_table.h>
 #include <frame_alloc.h>
 #include <process.h>
+#include <thread.h>
 
 /* Usr stack init includes */
 #include <loader.h>
@@ -79,7 +80,7 @@ void disable_paging(void)
 /** This does not belong here... */
 void mode_switch(void *entry_point, void *sp);
 
-void load_task(void *pd, pcb_t *my_pcb, const char *fname);
+void load_task(void *pd, task_t *task, thread_t *thread, const char *fname);
 
 /** @brief Kernel entrypoint.
  *  
@@ -110,16 +111,12 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   enable_paging();
 
   /* Load the first executable */
-  load_task(pd, &pcb1, "introvert");
-  lprintf("parent stack = [%p, %p)", pcb1.my_tcb.kstack,
-          &pcb1.my_tcb.kstack[KSTACK_SIZE]);
-  lprintf("child stack = [%p, %p)", pcb2.my_tcb.kstack,
-          &pcb2.my_tcb.kstack[KSTACK_SIZE]);
+  load_task(pd, &task1, &thread1, "introvert");
 
   /* Give up the kernel stack that was given to us by the bootloader */
-  set_esp0((uint32_t)(&pcb1.my_tcb.kstack[KSTACK_SIZE - 1]));
+  set_esp0((uint32_t)(&thread1.kstack[KSTACK_SIZE - 1]));
 
-  mode_switch(pcb1.my_tcb.pc, pcb1.my_tcb.sp);
+  mode_switch(thread1.pc, thread1.sp);
 
   /* We should never reach here! */
   assert(0);
@@ -127,29 +124,29 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   return 0;
 }
 
-void load_task(void *pd, pcb_t *my_pcb, const char *fname)
+void load_task(void *pd, task_t *task, thread_t *thread, const char *fname)
 {
   /* Initialize vm struct */
-  my_pcb->vmi = (vm_info_s) {
+  task->vmi = (vm_info_s) {
     .pg_info = (pg_info_s) {
       .pg_dir = (pte_s *)(TBL_HIGH),
       .pg_tbls = (pt_t *)(DIR_HIGH),
     },
-    .mmap = CLL_LIST_INITIALIZER(my_pcb->vmi.mmap)
+    .mmap = CLL_LIST_INITIALIZER(task->vmi.mmap)
   };
 
   /* Initialize pg dir and tid in prototype tcb */
-  my_pcb->cr3 = (uint32_t)(pd);
-  my_pcb->my_tcb.tid = 123;
+  task->cr3 = (uint32_t)(pd);
+  thread->tid = 123;
+  thread->task_info = task;
   
-  /* Initialize running tcb */
-  curr_pcb = my_pcb;
+  /* Initialize currently running thread */
+  curr = thread;
 
-  /* Drop into user mode */
-  void *entry_point = load_file(&my_pcb->vmi, fname);
-  void *usr_sp = usr_stack_init(&my_pcb->vmi, NULL);
+  /* Prepare to drop into user mode */
+  thread->pc = load_file(&task->vmi, fname);
+  thread->sp = usr_stack_init(&task->vmi, NULL);
 
-  my_pcb->my_tcb.sp = usr_sp;
-  my_pcb->my_tcb.pc = entry_point;
+  return;
 }
 
