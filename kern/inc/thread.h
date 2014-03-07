@@ -5,12 +5,15 @@
 #define __THREAD_H__
 
 #include <process.h>
+#include <queue.h>
 #include <vm.h>
 
 #include <x86/page.h>
 #include <stdint.h>
 
 #define KSTACK_SIZE PAGE_SIZE
+
+queue_s naive_thrlist;
 
 typedef struct thread{
   task_t *task_info;
@@ -24,37 +27,22 @@ typedef struct thread{
 thread_t thread1;
 thread_t thread2;
 
-#include <process.h>
 task_t task1;
 task_t task2;
 
 /* For fork debugging*/
 thread_t child_pcb;
 
-/* There should also be a curr tcb so we only flush the tlb when task switching */
+/* Keep track of running thread */
 thread_t *curr;
 
-/*
-void tcb_init(tcb_s *tcb, int tid, void *stack);
-void tcb_final(tcb_s *tcb);
-inline void tcb_lock(tcb_s *tcb);
-inline void tcb_unlock(tcb_s *tcb);
+/* Initialization routines */
+thread_t *task_init(void);
+thread_t *thread_init(task_t *task);
+void thrlist_init(queue_s *q);
 
-void tcb_init(tcb_s *tcb, int tid, void *stack);
-void tcb_final(tcb_s *tcb);
-inline void tcb_lock(tcb_s *tcb);
-inline void tcb_unlock(tcb_s *tcb);
-
-void thrlist_init(tcb_s *tcb);
-void thrlist_add(tcb_s *tcb);
-void thrlist_del(tcb_s *tcb);
-tcb_s *thrlist_findtcb(int tid);
-tcb_s *thrlist_owntcb(void);
-inline void thrlist_lock(void);
-inline void thrlist_unlock(void);
-*/
-
-
-
+/* Manipulation routines */
+void thrlist_enqueue(thread_t *thread, queue_s *q);
+thread_t *thrlist_dequeue(queue_s *q);
 
 #endif /* _THREAD_H */

@@ -110,6 +110,9 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   set_cr3((uint32_t) pd);
   enable_paging();
 
+  /* Initialize naive thread list */
+  thrlist_init(&naive_thrlist);
+
   /* Load the first executable */
   load_task(pd, &task1, &thread1, "introvert");
 

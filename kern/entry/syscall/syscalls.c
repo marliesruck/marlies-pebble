@@ -85,7 +85,6 @@ int sys_fork(unsigned int esp)
   thread2.pc = finish_fork;
 
   /* Atomically insert child into runnable queue */
-
   return tid;
 }
 
