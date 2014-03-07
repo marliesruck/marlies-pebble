@@ -99,6 +99,7 @@ void *init_child_tcb(void *child_cr3)
 
   /* Initialize pg dir and tid in prototype tcb */
   task2.cr3 = (uint32_t)(child_cr3);
+  thread2.task_info = &task2;
   thread2.tid = 5;
 
   /* Set state to RUNNABLE */
