@@ -49,8 +49,8 @@ ord_e mreg_compare(mem_region_s *lhs, mem_region_s *rhs)
 
 mem_region_s *mreg_lookup(cll_list *map, mem_region_s *targ)
 {
-  mem_region_s *mreg;
   cll_node *n;
+  mem_region_s *mreg;
 
   cll_foreach(map, n) {
     mreg = cll_entry(mem_region_s *, n);
@@ -71,9 +71,25 @@ int mreg_insert(cll_list *map, mem_region_s *mreg)
 
   /* Insert the region into the mem map*/
   cll_init_node(n, mreg);
-  cll_insert(map->next, n);
+  cll_insert(map, n);
 
   return 0;
+}
+
+mem_region_s *mreg_extract_any(cll_list *map)
+{
+  cll_node *n;
+  mem_region_s *mreg;
+
+  if (cll_empty(map)) return NULL;
+
+  /* Extract the list node and grab it's data */
+  n = cll_extract(map, map->next);
+  mreg = cll_entry(mem_region_s *, n);
+
+  /* Free the node and return */
+  free(n);
+  return mreg;
 }
 
 
@@ -94,7 +110,8 @@ int mreg_insert(cll_list *map, mem_region_s *mreg)
  *
  *  The starting address, va_start, is rounded down to a page boundary to
  *  determine the actual starting address for the allocation.  Furthermore,
- *  only whole pages are allocated, so the actual allocation may be larger
+ *  only whole pages are allocated, so (va_start + len) is rounded up to a
+ *  page bondary as well.  Obviously, the actual allocation may be larger
  *  than the reqested space.  If the allocation succeeds, the actual
  *  starting address of the allocated region is returned; otherwise NULL is
  *  returned.
@@ -128,6 +145,7 @@ void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
     free(mreg);
     return NULL;
   } 
+
   /* Insert it into the memory map */
   if (mreg_insert(&vmi->mmap, mreg)) {
     free(mreg);
@@ -156,7 +174,7 @@ void vm_free(vm_info_s *vmi, void *va_start)
   void *addr;
 
   /* Find the allocated region */
-  mreg_init(&temp, va_start, 0, 0); 
+  mreg_init(&temp, va_start, va_start, 0); 
   mreg = mreg_lookup(&vmi->mmap, &temp);
   if (!mreg) return;
 
@@ -165,7 +183,53 @@ void vm_free(vm_info_s *vmi, void *va_start)
     free_page(&vmi->pg_info, addr);
   }
 
+  free(mreg);
   return;
+}
+
+/** @brief Copies an address space.
+ *
+ *  @param dst The destination vm_info struct.
+ *  @param src The source vm_info struct.
+ *
+ *  @return 0 on success; a negative integer error code on failure.
+ **/
+int vm_copy(vm_info_s *dst, const vm_info_s *src)
+{
+  mem_region_s *dreg;
+  const mem_region_s *sreg;
+  cll_node *n;
+  void *addr;
+
+  /* Don't copy unless the dest is empty */
+  if (!cll_empty(&dst->mmap)) return -1;
+
+  cll_foreach(&src->mmap, n)
+  {
+    sreg = cll_entry(mem_region_s *, n);
+
+    /* Allocate a dst region struct */
+    dreg = malloc(sizeof(mem_region_s));
+    if (!dreg) {
+      vm_final(dst);
+      return -1;
+    }
+
+    /* Allocate pages for the region */
+    for (addr = sreg->start; addr < sreg->limit; addr += PAGE_SIZE) {
+      copy_page(&dst->pg_info, &src->pg_info, addr, sreg->attrs);
+    }
+
+    /* Insert the new region into the dest */
+    mreg_init(dreg, sreg->start, sreg->limit, sreg->attrs);
+    if (mreg_insert(&dst->mmap, dreg)) {
+      vm_final(dst);
+      free(dreg);
+      return -1;
+    }
+  }
+
+  return 0;
 }
 
 /** @brief Frees a process' entire address space.
@@ -180,19 +244,17 @@ void vm_free(vm_info_s *vmi, void *va_start)
 void vm_final(vm_info_s *vmi)
 {
   mem_region_s *mreg;
-  cll_node *n;
   void *addr;
 
-  while (!cll_empty(&vmi->mmap))
+  while ( (mreg = mreg_extract_any(&vmi->mmap)) )
   {
-    /* Extract each region from the mem map */
-    n = cll_extract(&vmi->mmap, vmi->mmap.next);
-    mreg = cll_entry(mem_region_s *, n);
-
     /* Free all of each region's pages */
     for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE) {
       free_page(&vmi->pg_info, addr);
     }
+
+    /* Free the region's struct */
+    free(mreg);
   }
 
   return;

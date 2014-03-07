@@ -1,5 +1,4 @@
 .extern set_esp0
-.extern sim_breakpoint
 
 .global asm_ctx_switch
 asm_ctx_switch:

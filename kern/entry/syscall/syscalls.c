@@ -12,16 +12,15 @@
 
 #include <simics.h>
 
+#include <assert.h>
+#include <string.h>
+
 #include <process.h>
 #include <idt.h>
 #include <syscall_int.h>
 #include "syscall_wrappers.h"
 #include "sc_utils.h"
 
-/* Internal fork helper routines */
-#include "fork_i.h"
-
-#include <string.h>
 
 /** @brief Installs our system calls.
  *
@@ -61,35 +60,82 @@ void install_sys_handlers(void)
  *  Life cycle
  *************************************************************************/
 
+/* @brief Allocate memory for child's pcb
+ *
+ * This function is responsible for:
+ * -Grab a tid (atomically)
+ * -Store the tid/cr3 in the new pcb
+ *
+ * @bug For the sake of debugging I'm just using a global pcb2 declared in
+ * process.h.  However, this is certainly a function we should study when
+ * contemplating our locking strategy. We should probably add a state field to
+ * our tcb in case the parent forks and them immediately waits on the child.  I
+ * imagine the code might be reminiscent of thread_fork and setting the NASCENT
+ * state
+ *
+ * @param child_cr3 Physical address of child's page directory
+ * @return Address of malloced child pcb 
+ */
+#define CHILD_PDE (void *)(0xF0000000)
+void *init_child_tcb(void *child_cr3)
+{
+  /* Initialize vm struct */
+  pcb2.vmi = (vm_info_s) {
+    .pg_info = (pg_info_s) {
+      .pg_dir = ((pt_t *)(CHILD_PDE))[PG_TBL_ENTRIES - 1],
+      .pg_tbls = (pt_t *)(CHILD_PDE),
+    },
+    .mmap = CLL_LIST_INITIALIZER(pcb2.vmi.mmap)
+  };
+
+  /* Initialize pg dir and tid in prototype tcb */
+  pcb2.cr3 = (uint32_t) (child_cr3);
+  pcb2.my_tcb.tid = 5;
+
+  /* Set state to RUNNABLE */
+
+  return NULL;
+}
+
+int finish_fork(void);
 int sys_fork(unsigned int esp)
 {
-  /* Copy the parent's page directory and tables */
-  void *child_cr3 = mem_map_child();
+#include <frame_alloc.h>
+  pte_s pde;
+  pt_t *child_pg_tables = (pt_t *)(CHILD_PDE);
+  pte_s *child_pd = child_pg_tables[PG_TBL_ENTRIES - 1];
+  
+  /* Allocate a frame for the child PD */
+  void *child_cr3 = alloc_frame();
 
-  /* Initialize child tcb */
+  /* Map it into the parent's address space */
+  init_pte(&pde, child_cr3);
+  pde.present = 1;
+  pde.writable = 1;
+  set_pde(curr_pcb->vmi.pg_info.pg_dir, child_pd, &pde);
+  set_pte(curr_pcb->vmi.pg_info.pg_dir, curr_pcb->vmi.pg_info.pg_tbls,
+          child_pd, &pde);
+
+  /* Initialize child stuffs */
+  init_pd(child_pd, child_cr3);
   init_child_tcb(child_cr3);
-  lprintf("child's cr3=%p", child_cr3);
-
-  int tid = pcb2.my_tcb.tid;
-
-  /* Compute the parent's esp offstack from its kstack base */
-  unsigned int offset = esp - ((unsigned int) curr_pcb->my_tcb.kstack);
-  size_t len = ((unsigned int) &curr_pcb->my_tcb.kstack[KSTACK_SIZE]) - esp;
-//  unsigned int offset = KSTACK_LOW_OFFSET(esp,&curr_pcb->my_tcb.kstack[0]);
-//  size_t n = KSTACK_HIGH_OFFSET(esp,&curr_pcb->my_tcb.kstack[KSTACK_SIZE - 1]);
+  vm_copy(&pcb2.vmi, &curr_pcb->vmi);
 
   /* Copy the parent's kstack */
+  unsigned int offset = esp - ((unsigned int) curr_pcb->my_tcb.kstack);
+  size_t len = ((unsigned int) &curr_pcb->my_tcb.kstack[KSTACK_SIZE]) - esp;
   void *dest = &pcb2.my_tcb.kstack[offset];
   memcpy(dest, (void *)esp, len);
-  lprintf("copying (%p,%p) to dest=%p", (void *)esp, (void *)(esp + len), dest);
 
-  /* Set the child's pc to finish_fork and sp to its esp relative its own kstack */
+  /* Last touches to the child PCB */
+  pcb2.vmi.pg_info.pg_dir = (pte_s *)(TBL_HIGH);
+  pcb2.vmi.pg_info.pg_tbls = (pt_t *)(DIR_HIGH);
   pcb2.my_tcb.sp = &pcb2.my_tcb.kstack[offset];
   pcb2.my_tcb.pc = finish_fork;
 
   /* Atomically insert child into runnable queue */
 
-  return tid;
+  return pcb2.my_tcb.tid;
 }
 
 #include <loader.h>

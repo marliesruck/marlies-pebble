@@ -104,17 +104,13 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 
   /* First executable page directory */
   pte_s *pd = alloc_frame();
-  init_pd(pd);
+  init_pd(pd, pd);
 
   set_cr3((uint32_t) pd);
   enable_paging();
 
   /* Load the first executable */
   load_task(pd, &pcb1, "introvert");
-  lprintf("parent stack = [%p, %p)", pcb1.my_tcb.kstack,
-          &pcb1.my_tcb.kstack[KSTACK_SIZE]);
-  lprintf("child stack = [%p, %p)", pcb2.my_tcb.kstack,
-          &pcb2.my_tcb.kstack[KSTACK_SIZE]);
 
   /* Give up the kernel stack that was given to us by the bootloader */
   set_esp0((uint32_t)(&pcb1.my_tcb.kstack[KSTACK_SIZE - 1]));

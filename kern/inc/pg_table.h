@@ -1,7 +1,6 @@
 /** @file pg_table.h
  *
- *  @brief Delcares the page table API.
- *
+ *  @brief Delcares the page table API.  *
  *  @author Enrique Naudon (esn)
  *  @author Marlies Ruck (mruck) **/
 #ifndef __PG_TABLE_H__
@@ -108,6 +107,8 @@ typedef struct page_table_entry pte_s;
 #define PG_TBL_ENTRIES PAGE_SIZE/sizeof(pte_s)
 typedef pte_s pt_t[PG_TBL_ENTRIES];
 
+#define PG_SELFREF_INDEX (PG_TBL_ENTRIES - 1)
+
 /* Current process' page tables and page directory */
 extern pt_t *pg_tables;
 extern pte_s *pg_dir;
@@ -119,7 +120,7 @@ extern pte_s *kern_pt[KERN_PD_ENTRIES];
 void init_kern_pt(void);
 
 /* Page directory operations */
-void init_pd(pte_s *pd);
+void init_pd(pte_s *pd, void *frame);
 pte_s get_pde(pte_s *pd, void *addr);
 void set_pde(pte_s *pd, void *addr, pte_s *pt);
 
