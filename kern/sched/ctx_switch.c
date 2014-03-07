@@ -14,16 +14,20 @@ int i = 0;
 void ctx_switch(void)
 {
   thread_t *prev = curr;
+  thrlist_enqueue(prev, &naive_thrlist);
+  curr = thrlist_dequeue(&naive_thrlist);
+
   if(i%2 == 0){
     i++;
-    curr = &thread2;
+    curr = thread2;
     asm_ctx_switch(&prev->sp, &prev->pc, curr->sp, 
                     curr->pc, curr->task_info->cr3, 
                     (&curr->kstack[KSTACK_SIZE -1]));
+
   }
   else{
     i++;
-    curr = &thread1;
+    curr = thread1;
     asm_ctx_switch(&prev->sp, &prev->pc, curr->sp, 
                     curr->pc, curr->task_info->cr3, 
                     (&curr->kstack[KSTACK_SIZE -1]));

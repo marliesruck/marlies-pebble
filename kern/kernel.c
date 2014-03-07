@@ -80,7 +80,7 @@ void disable_paging(void)
 /** This does not belong here... */
 void mode_switch(void *entry_point, void *sp);
 
-void load_task(void *pd, task_t *task, thread_t *thread, const char *fname);
+void load_task(void *pd, const char *fname);
 
 /** @brief Kernel entrypoint.
  *  
@@ -114,12 +114,12 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   thrlist_init(&naive_thrlist);
 
   /* Load the first executable */
-  load_task(pd, &task1, &thread1, "introvert");
+  load_task(pd, "introvert");
 
   /* Give up the kernel stack that was given to us by the bootloader */
-  set_esp0((uint32_t)(&thread1.kstack[KSTACK_SIZE - 1]));
+  set_esp0((uint32_t)(&thread1->kstack[KSTACK_SIZE - 1]));
 
-  mode_switch(thread1.pc, thread1.sp);
+  mode_switch(thread1->pc, thread1->sp);
 
   /* We should never reach here! */
   assert(0);
@@ -127,28 +127,21 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   return 0;
 }
 
-void load_task(void *pd, task_t *task, thread_t *thread, const char *fname)
+void load_task(void *pd, const char *fname)
 {
-  /* Initialize vm struct */
-  task->vmi = (vm_info_s) {
-    .pg_info = (pg_info_s) {
-      .pg_dir = (pte_s *)(TBL_HIGH),
-      .pg_tbls = (pt_t *)(DIR_HIGH),
-    },
-    .mmap = CLL_LIST_INITIALIZER(task->vmi.mmap)
-  };
+  thread1 = task_init();
+  task_t *task = thread1->task_info;
 
   /* Initialize pg dir and tid in prototype tcb */
   task->cr3 = (uint32_t)(pd);
-  thread->tid = 123;
-  thread->task_info = task;
+  thread1->task_info = task;
   
   /* Initialize currently running thread */
-  curr = thread;
+  curr = thread1;
 
   /* Prepare to drop into user mode */
-  thread->pc = load_file(&task->vmi, fname);
-  thread->sp = usr_stack_init(&task->vmi, NULL);
+  thread1->pc = load_file(&task->vmi, fname);
+  thread1->sp = usr_stack_init(&task->vmi, NULL);
 
   return;
 }

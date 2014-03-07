@@ -28,7 +28,7 @@ asm_ctx_switch:
   call store_and_switch       
 
   popfl 
-  pop  %ebp
+  pop   %ebp
   popa                  # Restore gp
 
   # Epilogue

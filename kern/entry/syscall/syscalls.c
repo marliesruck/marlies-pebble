@@ -70,19 +70,22 @@ int sys_fork(unsigned int esp)
   /* Initialize child tcb */
   init_child_tcb(child_cr3);
 
-  int tid = thread2.tid;
+  int tid = thread2->tid;
 
   /* Compute the parent's esp offstack from its kstack base */
-  unsigned int offset = esp - ((unsigned int) curr->kstack);
+  unsigned int offset = esp - ((unsigned int) &curr->kstack);
   size_t len = ((unsigned int) &curr->kstack[KSTACK_SIZE]) - esp;
 
   /* Copy the parent's kstack */
-  void *dest = &thread2.kstack[offset];
+  void *dest = &thread2->kstack[offset];
   memcpy(dest, (void *)esp, len);
 
   /* Set the child's pc to finish_fork and sp to its esp relative its own kstack */
-  thread2.sp = &thread2.kstack[offset];
-  thread2.pc = finish_fork;
+  thread2->sp = &thread2->kstack[offset];
+  thread2->pc = finish_fork;
+
+  /* Add child to runnable queue */
+  thrlist_enqueue(thread2,&naive_thrlist);
 
   /* Atomically insert child into runnable queue */
   return tid;

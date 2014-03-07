@@ -24,11 +24,8 @@ typedef struct thread{
 }thread_t;
 
 /* For exec debugging */
-thread_t thread1;
-thread_t thread2;
-
-task_t task1;
-task_t task2;
+thread_t *thread1;
+thread_t *thread2;
 
 /* For fork debugging*/
 thread_t child_pcb;

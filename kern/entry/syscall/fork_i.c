@@ -89,20 +89,12 @@ void *mem_map_child(void)
 void *init_child_tcb(void *child_cr3)
 {
   /* Initialize vm struct */
-  task2.vmi = (vm_info_s) {
-    .pg_info = (pg_info_s) {
-      .pg_dir = (pte_s *)(TBL_HIGH),
-      .pg_tbls = (pt_t *)(DIR_HIGH),
-    },
-    .mmap = CLL_LIST_INITIALIZER(task2.vmi.mmap)
-  };
+  thread2 = task_init();
 
   /* Initialize pg dir and tid in prototype tcb */
-  task2.cr3 = (uint32_t)(child_cr3);
-  thread2.task_info = &task2;
-  thread2.tid = 5;
+  thread2->task_info->cr3 = (uint32_t)(child_cr3);
 
   /* Set state to RUNNABLE */
 
-  return NULL;
+  return thread2;
 }
