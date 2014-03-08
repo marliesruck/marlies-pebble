@@ -1,3 +1,13 @@
+/* @file usr_stack.h
+ *
+ * @brief User stack initialization routine
+ *
+ * @author Enrique Naudon (esn)
+ * @author Marlies Ruck (mruck)
+ *
+ * @bug USR_SP_HI should be moved down one tome and the tome its currently using
+ * should be reserved for the child PDE
+ */
 #ifndef _USR_STACK_H
 #define _USR_STACK_H
 

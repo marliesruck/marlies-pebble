@@ -36,10 +36,12 @@
 #include <frame_alloc.h>
 #include <process.h>
 #include <thread.h>
+#include <ctx_switch.h>
 
 /* Usr stack init includes */
 #include <loader.h>
 #include <usr_stack.h>
+
 
 
 /*************************************************************************

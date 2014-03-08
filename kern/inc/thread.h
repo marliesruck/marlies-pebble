@@ -1,5 +1,9 @@
 /* @file thread.h
  *
+ * @author Enrique Naudon (esn)
+ * @author Marlies Ruck (mruck)
+ *
+ * @bug No known bugs
  */
 #ifndef __THREAD_H__
 #define __THREAD_H__

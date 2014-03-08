@@ -14,6 +14,7 @@
 
 #include <process.h>
 #include <thread.h>
+#include <ctx_switch.h>
 #include <idt.h>
 #include <syscall_int.h>
 #include "syscall_wrappers.h"
