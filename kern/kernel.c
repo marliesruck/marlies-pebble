@@ -116,11 +116,10 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   thrlist_init(&naive_thrlist);
 
   /* Load the first executable */
-  thread_t *thread1 = load_task(pd, "introvert");
-
+  thread_t *thread1 = load_task(pd, "exec_nonexist");
 
   /* Give up the kernel stack that was given to us by the bootloader */
-  set_esp0((uint32_t)(&thread1->kstack[KSTACK_SIZE - 1]));
+  set_esp0((uint32_t)(&thread1->kstack[KSTACK_SIZE]));
 
   mode_switch(thread1->pc, thread1->sp);
 

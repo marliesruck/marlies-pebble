@@ -20,6 +20,9 @@
 #include "syscall_wrappers.h"
 #include "sc_utils.h"
 
+/* For validating the file for exec */
+#include <loader.h>
+
 /* Internal fork helper routines */
 #include "fork_i.h"
 
@@ -105,9 +108,12 @@ int sys_exec(char *execname, char *argvec[])
   /* Copy execname from user-space */
   execname_k = malloc(strlen(execname) + 1);
   if (!execname_k) return -1;
-  if (copy_from_user(execname_k, execname, strlen(execname) + 1)) {
-    free(execname_k);
-    return -1;
+
+  /* Invalid memory or filename */
+  if ((copy_from_user(execname_k, execname, strlen(execname) + 1)) || 
+      (validate_file(execname) < 0)){
+      free(execname_k);
+      return -1;
   }
 
   /* Copy argvec from user-space */
@@ -128,6 +134,8 @@ int sys_exec(char *execname, char *argvec[])
   /* Destroy the old address space; setup the new */
   vm_final(&curr->task_info->vmi);
   void *entry_point = load_file(&curr->task_info->vmi, execname_k);
+
+
   void *usr_sp = usr_stack_init(&curr->task_info->vmi, argvec_k);
 
   /* Free copied parameters*/

@@ -38,10 +38,12 @@
 #include <simics.h>
 
 /* @brief Copy the parent's page directory and tables to the child's address
- * space
+ * space.
  *
  * Map the child's page directory and tables into the parent's address space in
- * order to manipulate the entries
+ * order to manipulate the entries.
+ *
+ * @return Void.
  */
 void *mem_map_child(void)
 {
@@ -73,15 +75,7 @@ void *mem_map_child(void)
 /* @brief Allocate memory for child's pcb
  *
  * This function is responsible for:
- * -Grab a tid (atomically)
- * -Store the tid/cr3 in the new pcb
- *
- * @bug For the sake of debugging I'm just using a global pcb2 declared in
- * process.h.  However, this is certainly a function we should study when
- * contemplating our locking strategy. We should probably add a state field to
- * our tcb in case the parent forks and them immediately waits on the child.  I
- * imagine the code might be reminiscent of thread_fork and setting the NASCENT
- * state
+ * -Store the cr3 in the new pcb
  *
  * @param child_cr3 Physical address of child's page directory
  * @return Address of malloced child pcb 

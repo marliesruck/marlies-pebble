@@ -29,6 +29,8 @@ int copy_from_user(char *dst, const char *src, size_t bytes);
 
 #else /* ASSEMBLER */
 
+.extern sim_breakpoint
+
 /** @brief Wraps a nullary system call handler.
  *
  *  @param scname The name of the system call.
@@ -54,10 +56,10 @@ asm_\scname:
   call \scname                    # Call the system call handler
 
   # Epilogue
-  pop   %ds                       # Restore DS data segment
-  pop   %es                       # Restore ES data segment
-  pop   %fs                       # Restore FS data segment
   pop   %gs                       # Restore GS data segment
+  pop   %fs                       # Restore FS data segment
+  pop   %es                       # Restore ES data segment
+  pop   %ds                       # Restore DS data segment
   pop   %ebp                      # Restore old EBP
   iret                            # Return from the system call
 
@@ -89,10 +91,10 @@ asm_\scname:
   call \scname                    # Call the system call handler
 
   # Epilogue
-  pop   %ds                       # Restore DS data segment
-  pop   %es                       # Restore ES data segment
-  pop   %fs                       # Restore FS data segment
   pop   %gs                       # Restore GS data segment
+  pop   %fs                       # Restore FS data segment
+  pop   %es                       # Restore ES data segment
+  pop   %ds                       # Restore DS data segment
   pop   %ebp                      # Restore old EBP
   iret                            # Return from the system call
 
@@ -115,9 +117,12 @@ asm_\scname:
 asm_\scname:
 
   # Prologue
-  push  %ebp                      # Store old EBP
+  call sim_breakpoint
+  push  %ebp                      # Store USER EBP
   movl  %esp, %ebp                # Set up new EBP
-  push  %ecx                      # Save ECX
+
+  push  %edi                      # Save EDI
+
   push  %ds                       # Store DS data segment
   push  %es                       # Store ES data segment
   push  %fs                       # Store FS data segment
@@ -127,15 +132,27 @@ asm_\scname:
   movl \argc, %ecx                # ECX = argument count (for rep)
   movl %esp, %edi                 # EDI = kernel stack
   rep movsl                       # Copy args onto kernel stack
+
+  call sim_breakpoint
+
   call \scname                    # Call the system call handler
 
+  call sim_breakpoint
+
+  pop   %ecx
+  pop   %edi
+# leal  -8(%esp), %esp            # Clean up ESP
+
   # Epilogue
-  pop   %ds                       # Restore DS data segment
-  pop   %es                       # Restore ES data segment
-  pop   %fs                       # Restore FS data segment
   pop   %gs                       # Restore GS data segment
-  pop   %ecx                      # Restore ECX
-  pop   %ebp                      # Restore old EBP
+  pop   %fs                       # Restore FS data segment
+  pop   %es                       # Restore ES data segment
+  pop   %ds                       # Restore DS data segment
+
+  pop   %edi                      # Restore EDI
+
+  pop   %ebp                      # Restore USER EBP
+
   iret                            # Return from the system call
 
 .endm
