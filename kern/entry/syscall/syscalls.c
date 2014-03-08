@@ -84,7 +84,6 @@ int sys_fork(unsigned int esp)
   thread2->sp = &thread2->kstack[offset];
   thread2->pc = finish_fork;
 
-  /* Add child to runnable queue */
   thrlist_enqueue(thread2,&naive_thrlist);
 
   /* Atomically insert child into runnable queue */
