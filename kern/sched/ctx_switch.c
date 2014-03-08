@@ -1,12 +1,20 @@
+/** @files ctx_switch.c
+ *
+ *  @brief C routine for context switching.
+ *
+ *  Store out the running thread's context and add to the runnable queue.
+ *  Dequeue the head of the runnable queue.  
+ *
+ *  @author Enrique Naudon (esn)
+ *  @author Marlies Ruck (mruck)
+ *
+ *  @bug As of now we have only implemented a naive thread list
+ **/
 #include <ctx_switch.h>
 #include <process.h>
 #include <thread.h>
 
 #include <simics.h>
-
-void asm_ctx_switch(void *my_sp, void *my_pc, void *new_sp, void *new_pc,
-                    unsigned int new_cr3, void *kstack_high);
-void store_and_switch(void);
 
 void ctx_switch(void)
 {

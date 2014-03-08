@@ -86,10 +86,10 @@ void *mem_map_child(void)
  * @param child_cr3 Physical address of child's page directory
  * @return Address of malloced child pcb 
  */
-void *init_child_tcb(void *child_cr3)
+thread_t *init_child_tcb(void *child_cr3)
 {
   /* Initialize vm struct */
-  thread2 = task_init();
+  thread_t *thread2 = task_init();
 
   /* Initialize pg dir and tid in prototype tcb */
   thread2->task_info->cr3 = (uint32_t)(child_cr3);

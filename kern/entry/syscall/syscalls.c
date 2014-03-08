@@ -68,7 +68,7 @@ int sys_fork(unsigned int esp)
   void *child_cr3 = mem_map_child();
 
   /* Initialize child tcb */
-  init_child_tcb(child_cr3);
+  thread_t *thread2 = init_child_tcb(child_cr3);
 
   int tid = thread2->tid;
 

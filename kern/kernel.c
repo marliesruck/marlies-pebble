@@ -80,7 +80,7 @@ void disable_paging(void)
 /** This does not belong here... */
 void mode_switch(void *entry_point, void *sp);
 
-void load_task(void *pd, const char *fname);
+thread_t *load_task(void *pd, const char *fname);
 
 /** @brief Kernel entrypoint.
  *  
@@ -114,7 +114,8 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   thrlist_init(&naive_thrlist);
 
   /* Load the first executable */
-  load_task(pd, "introvert");
+  thread_t *thread1 = load_task(pd, "introvert");
+
 
   /* Give up the kernel stack that was given to us by the bootloader */
   set_esp0((uint32_t)(&thread1->kstack[KSTACK_SIZE - 1]));
@@ -127,9 +128,10 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   return 0;
 }
 
-void load_task(void *pd, const char *fname)
+thread_t *load_task(void *pd, const char *fname)
 {
-  thread1 = task_init();
+  thread_t *thread1 = task_init();
+
   task_t *task = thread1->task_info;
 
   /* Initialize pg dir and tid in prototype tcb */
@@ -143,6 +145,6 @@ void load_task(void *pd, const char *fname)
   thread1->pc = load_file(&task->vmi, fname);
   thread1->sp = usr_stack_init(&task->vmi, NULL);
 
-  return;
+  return thread1;
 }
 

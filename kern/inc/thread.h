@@ -23,13 +23,6 @@ typedef struct thread{
   char kstack[KSTACK_SIZE];
 }thread_t;
 
-/* For exec debugging */
-thread_t *thread1;
-thread_t *thread2;
-
-/* For fork debugging*/
-thread_t child_pcb;
-
 /* Keep track of running thread */
 thread_t *curr;
 
