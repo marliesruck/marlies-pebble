@@ -18,7 +18,6 @@
 #include <process.h>
 #include <queue.h>
 
-/* Atomically acquire a tid */
 #include <spin.h>
 
 #include <vm.h>
@@ -27,8 +26,17 @@
 #include <stdlib.h>
 #include <malloc.h>
 
+/* Atomically acquire a tid */
 static int tid = 0;
+static spin_s tid_lock;
 
+void init_naive_thrlist(void)
+{
+  /* Protect tids */
+  spin_init(&tid_lock);
+  thrlist_init(&naive_thrlist);
+  return;
+}
 /* @brief Initializae a task and its root thread.
  *
  * @return Address of the initializaed root thread.
@@ -74,7 +82,11 @@ thread_t *thread_init(task_t *task)
 
   thread_t *thread = malloc(sizeof(thread_t));
   thread->task_info = task;
+
+  /* Atomically acquire TID */
+  spin_lock(&tid_lock);
   thread->tid = ++tid;
+  spin_unlock(&tid_lock);
 
   thread->sp = NULL;
   thread->pc = NULL;
