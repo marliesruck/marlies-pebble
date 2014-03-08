@@ -23,9 +23,6 @@ typedef struct thread{
   char kstack[KSTACK_SIZE];
 }thread_t;
 
-/* Keep track of running thread */
-thread_t *curr;
-
 /* Initialization routines */
 thread_t *task_init(void);
 thread_t *thread_init(task_t *task);

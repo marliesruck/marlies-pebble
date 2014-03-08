@@ -5,12 +5,25 @@
  * @author Marlies Ruck(mruck)
  * @author Enrique Naudon (esn)
  *
+ * Note: I did the comments in the .h file since this API contains asm
+ * functions
+ *
  * @bug No known bugs
  **/
 #ifndef __CTX_SWITCH_H__
 #define __CTX_SWITCH_H__
 
+#include <thread.h>
+
+/* Keep track of running thread */
+thread_t *curr;
+
 /* @brief Ctx switching (C component).
+ *
+ *  Store out the running thread's context and add to the runnable queue.
+ *  Dequeue the head of the runnable queue.  
+ *
+ *  @return Void.
  */
 void ctx_switch(void);
 /* @brief Ctx switching (Asm component).
