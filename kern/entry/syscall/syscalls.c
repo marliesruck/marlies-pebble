@@ -104,11 +104,9 @@ int sys_fork(unsigned int esp)
   pte_s pde;
   pt_t *child_pg_tables = (pt_t *)(CHILD_PDE);
   pte_s *child_pd = child_pg_tables[PG_TBL_ENTRIES - 1];
-  
-  /* Allocate a frame for the child PD */
-  void *child_cr3 = alloc_frame();
 
-  /* Map it into the parent's address space */
+  /* Map the child's PD into the parent's address space */
+  void *child_cr3 = alloc_frame();
   init_pte(&pde, child_cr3);
   pde.present = 1;
   pde.writable = 1;
@@ -142,7 +140,6 @@ int sys_fork(unsigned int esp)
 #include <usr_stack.h>
 #include <vm.h>
 #include <malloc.h>
-#include <string.h>
 void mode_switch(void *entry_point, void *sp);
 int sys_exec(char *execname, char *argvec[])
 {
