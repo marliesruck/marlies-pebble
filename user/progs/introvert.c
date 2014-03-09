@@ -14,6 +14,8 @@ int main()
   }
   else
     lprintf("in child!");
+
+
   while(1){
     while(getchar() != 'r');
     lprintf("fork returned tid: %d",tid);

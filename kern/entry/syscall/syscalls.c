@@ -12,6 +12,9 @@
 
 #include <simics.h>
 
+#include <assert.h>
+#include <string.h>
+
 #include <process.h>
 #include <thread.h>
 #include <ctx_switch.h>
@@ -22,9 +25,6 @@
 
 /* For validating the file for exec */
 #include <loader.h>
-
-/* Internal fork helper routines */
-#include "fork_i.h"
 
 #include <string.h>
 
@@ -66,39 +66,82 @@ void install_sys_handlers(void)
  *  Life cycle
  *************************************************************************/
 
+/* @brief Allocate memory for child's pcb
+ *
+ * This function is responsible for:
+ * -Grab a tid (atomically)
+ * -Store the tid/cr3 in the new pcb
+ *
+ * @bug For the sake of debugging I'm just using a global pcb2 declared in
+ * process.h.  However, this is certainly a function we should study when
+ * contemplating our locking strategy. We should probably add a state field to
+ * our tcb in case the parent forks and them immediately waits on the child.  I
+ * imagine the code might be reminiscent of thread_fork and setting the NASCENT
+ * state
+ *
+ * @param child_cr3 Physical address of child's page directory
+ * @return Address of malloced child pcb 
+ */
+#define CHILD_PDE (void *)(0xF0000000)
+void *init_child_tcb(void *child_cr3)
+{
+  /* Initialize vm struct */
+  thread_t *thread = task_init();
+  task_t *task = thread->task_info;
+
+  /* Initialize pg dir */
+  task->cr3 = (uint32_t)(child_cr3);
+  task->vmi.pg_info.pg_tbls = (pt_t *)(CHILD_PDE);
+  task->vmi.pg_info.pg_dir = task->vmi.pg_info.pg_tbls[PG_SELFREF_INDEX];
+
+  return thread;
+}
+int finish_fork(void);
 int sys_fork(unsigned int esp)
 {
-  /* Copy the parent's page directory and tables */
-  void *child_cr3 = mem_map_child();
+#include <frame_alloc.h>
+  pte_s pde;
+  pt_t *child_pg_tables = (pt_t *)(CHILD_PDE);
+  pte_s *child_pd = child_pg_tables[PG_TBL_ENTRIES - 1];
 
-  /* Initialize child tcb */
-  thread_t *thread2 = init_child_tcb(child_cr3);
+  /* Map the child's PD into the parent's address space */
+  void *child_cr3 = alloc_frame();
+  init_pte(&pde, child_cr3);
+  pde.present = 1;
+  pde.writable = 1;
+  task_t *curr_task = curr->task_info;
+  set_pde(curr_task->vmi.pg_info.pg_dir, child_pd, &pde);
+  set_pte(curr_task->vmi.pg_info.pg_dir, curr_task->vmi.pg_info.pg_tbls,
+          child_pd, &pde);
 
-  int tid = thread2->tid;
-
-  /* Compute the parent's esp offstack from its kstack base */
-  unsigned int offset = esp - ((unsigned int) &curr->kstack);
-  size_t len = ((unsigned int) &curr->kstack[KSTACK_SIZE]) - esp;
+  /* Initialize child stuffs */
+  init_pd(child_pd, child_cr3);
+  thread_t *child_thread = init_child_tcb(child_cr3);
+  task_t *child_task = child_thread->task_info;
+  vm_copy(&child_task->vmi, &curr_task->vmi);
 
   /* Copy the parent's kstack */
-  void *dest = &thread2->kstack[offset];
+  unsigned int offset = esp - ((unsigned int) curr->kstack);
+  size_t len = ((unsigned int) &curr->kstack[KSTACK_SIZE]) - esp;
+  void *dest = &child_thread->kstack[offset];
   memcpy(dest, (void *)esp, len);
 
-  /* Set the child's pc to finish_fork and sp to its esp relative its own kstack */
-  thread2->sp = &thread2->kstack[offset];
-  thread2->pc = finish_fork;
+  /* Last touches to the child PCB */
+  child_task->vmi.pg_info.pg_dir = (pte_s *)(TBL_HIGH);
+  child_task->vmi.pg_info.pg_tbls = (pt_t *)(DIR_HIGH);
+  child_thread->sp = &child_thread->kstack[offset];
+  child_thread->pc = finish_fork;
 
-  thrlist_enqueue(thread2,&naive_thrlist);
+  /* Enqueue new tcb */
+  thrlist_enqueue(child_thread,&naive_thrlist);
 
-  /* Atomically insert child into runnable queue */
-  return tid;
+  return child_thread->tid;
 }
 
 #include <loader.h>
 #include <usr_stack.h>
 #include <vm.h>
 #include <malloc.h>
-#include <string.h>
 void mode_switch(void *entry_point, void *sp);
 int sys_exec(char *execname, char *argvec[])
 {

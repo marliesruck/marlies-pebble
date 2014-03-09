@@ -6,9 +6,13 @@
  *  @author Marlies Ruck (mruck)
  **/
 
+/* Page table includes */
 #include <pg_table.h>
+
+/* Pebbles includes */
 #include <frame_alloc.h>
 
+/* Libc includes */
 #include <stddef.h>
 #include <string.h>
 
@@ -49,23 +53,15 @@ void init_kern_pt(void)
  *  Page directory manipulation
  *************************************************************************/
 
-
-/*************************************************************************
- *  Page directory manipulation
- *************************************************************************/
-
 /** @brief Initialize a page directory.
  *
  *  @param pd The page table to initialize.
  *
  *  @return Void.
  **/
-void init_pd(pte_s *pd)
+void init_pd(pte_s *pd, void *frame)
 {
   int i;
-
-  /* Init the directory */
-  init_pt(pd);
 
   /* Map the kernel's page table */
   for (i = 0; i < KERN_PD_ENTRIES; i++) {
@@ -76,9 +72,15 @@ void init_pd(pte_s *pd)
   }
 
   /* The page directory is also a page table... */
-  init_pte(&pd[PG_TBL_ENTRIES - 1], pd);
-  pd[PG_TBL_ENTRIES - 1].present = 1;
-  pd[PG_TBL_ENTRIES - 1].writable = 1;
+  init_pte(&pd[PG_SELFREF_INDEX], frame);
+  pd[PG_SELFREF_INDEX].present = 1;
+  pd[PG_SELFREF_INDEX].writable = 1;
+
+  /* Init the directory */
+  for (i = KERN_PD_ENTRIES; i < PG_TBL_ENTRIES; i++) {
+    if (i == PG_SELFREF_INDEX) continue;
+    init_pte(&pd[i], NULL);
+  }
 
   return;
 }
@@ -142,7 +144,7 @@ void init_pt(pte_s *pt)
   int i;
 
   /* Init everything to absent */
-  for(i = 0; i < PAGE_SIZE; i++) {
+  for(i = 0; i < PG_TBL_ENTRIES; i++) {
     init_pte(&pt[i], NULL);
   }
 

@@ -10,10 +10,15 @@
 
 #define NUM_ARGS 5
 
-int main()
+int main(int argc, char **argv)
 {
-  char *bin = "introspective";
+  char *bin = "schizo";
   char *argvec[NUM_ARGS] = { bin, "-v", "-O2", "-ggdb", NULL };
+  int i;
+
+  lprintf("TID = %d", gettid());
+  for (i = 0; i < argc; ++i)
+    lprintf("  argv[%d] = %s", i, argv[i]);
 
   lprintf("exec'ing...");
   exec(bin, argvec);

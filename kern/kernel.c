@@ -107,7 +107,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 
   /* First executable page directory */
   pte_s *pd = alloc_frame();
-  init_pd(pd);
+  init_pd(pd, pd);
 
   set_cr3((uint32_t) pd);
   enable_paging();
@@ -116,7 +116,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   thrlist_init(&naive_thrlist);
 
   /* Load the first executable */
-  thread_t *thread1 = load_task(pd, "exec_nonexist");
+  thread_t *thread1 = load_task(pd, "knife");
 
   /* Give up the kernel stack that was given to us by the bootloader */
   set_esp0((uint32_t)(&thread1->kstack[KSTACK_SIZE]));

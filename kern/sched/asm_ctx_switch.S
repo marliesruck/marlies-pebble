@@ -8,7 +8,6 @@
  *  @bug We could pass the address of the prev and next tcb if we want to reduce
  *  the number of args we are passing to asm_ctx_switch
  **/
-.extern sim_breakpoint
 .extern set_esp0
 
 .global asm_ctx_switch
