@@ -42,10 +42,10 @@ asm_\handler:
   call \handler                   # Call the interrupt handler
 
   # Epilogue
-  pop %ds                         # Restore DS data segment
-  pop %es                         # Restore ES data segment
-  pop %fs                         # Restore FS data segment
   pop %gs                         # Restore GS data segment
+  pop %fs                         # Restore FS data segment
+  pop %es                         # Restore ES data segment
+  pop %ds                         # Restore DS data segment
   popa                            # Restore GP registers
 
   iret                            # Return from the interrupt
@@ -77,10 +77,11 @@ asm_\handler:
 
   call \handler                   # Call the interrupt handler
 
-  pop %ds                         # Restore DS data segment
-  pop %es                         # Restore ES data segment
-  pop %fs                         # Restore FS data segment
   pop %gs                         # Restore GS data segment
+  pop %fs                         # Restore FS data segment
+  pop %es                         # Restore ES data segment
+  pop %ds                         # Restore DS data segment
+  popa                            # Restore GP registers
 
   # Epilogue
   pop   %ebp                      # Restore old EBP
@@ -116,10 +117,11 @@ asm_\handler:
 
   call \handler                   # Call the interrupt handler
 
-  pop %ds                         # Restore DS data segment
-  pop %es                         # Restore ES data segment
-  pop %fs                         # Restore FS data segment
   pop %gs                         # Restore GS data segment
+  pop %fs                         # Restore FS data segment
+  pop %es                         # Restore ES data segment
+  pop %ds                         # Restore DS data segment
+  popa                            # Restore GP registers
 
   # Epilogue
   pop   %ebp                      # Restore old EBP

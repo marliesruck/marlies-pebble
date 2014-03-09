@@ -2,7 +2,7 @@
  **/
 #include <usr_stack.h>
 
-#include <process.h>
+#include <vm.h>
 #include <util.h>
 
 #include <malloc.h>
@@ -54,8 +54,6 @@ void *usr_stack_init(vm_info_s *vmi, char **arg_vec)
   PUSH(sp,argv);            /* argv */
   PUSH(sp,argc);            /* argc */
   PUSH(sp,0);               /* "return address" */
-
-//  set_esp0((uint32_t)(&my_pcb.my_tcb.kstack[KSTACK_SIZE - 1]));
 
   return sp;
 }

@@ -29,6 +29,8 @@ int copy_from_user(char *dst, const char *src, size_t bytes);
 
 #else /* ASSEMBLER */
 
+.extern sim_breakpoint
+
 /** @brief Wraps a nullary system call handler.
  *
  *  @param scname The name of the system call.
@@ -54,10 +56,10 @@ asm_\scname:
   call \scname                    # Call the system call handler
 
   # Epilogue
-  pop   %ds                       # Restore DS data segment
-  pop   %es                       # Restore ES data segment
-  pop   %fs                       # Restore FS data segment
   pop   %gs                       # Restore GS data segment
+  pop   %fs                       # Restore FS data segment
+  pop   %es                       # Restore ES data segment
+  pop   %ds                       # Restore DS data segment
   pop   %ebp                      # Restore old EBP
   iret                            # Return from the system call
 
@@ -88,11 +90,13 @@ asm_\scname:
   push %esi                       # Push single argument
   call \scname                    # Call the system call handler
 
+  add  $4, %esp                   # Clean up stack
+
   # Epilogue
-  pop   %ds                       # Restore DS data segment
-  pop   %es                       # Restore ES data segment
-  pop   %fs                       # Restore FS data segment
   pop   %gs                       # Restore GS data segment
+  pop   %fs                       # Restore FS data segment
+  pop   %es                       # Restore ES data segment
+  pop   %ds                       # Restore DS data segment
   pop   %ebp                      # Restore old EBP
   iret                            # Return from the system call
 
@@ -115,27 +119,35 @@ asm_\scname:
 asm_\scname:
 
   # Prologue
-  push  %ebp                      # Store old EBP
+  push  %ebp                      # Store USER EBP
   movl  %esp, %ebp                # Set up new EBP
-  push  %ecx                      # Save ECX
+
+  push  %edi                      # Save EDI
+
   push  %ds                       # Store DS data segment
   push  %es                       # Store ES data segment
   push  %fs                       # Store FS data segment
   push  %gs                       # Store GS data segment
-  
+
   # Invoke system call handler
   movl \argc, %ecx                # ECX = argument count (for rep)
+  sub  $8,   %esp                 # Make space on the stack for the args
   movl %esp, %edi                 # EDI = kernel stack
   rep movsl                       # Copy args onto kernel stack
+
   call \scname                    # Call the system call handler
+  add   $8, %esp                  # Clean up ESP from args pushed on by rep
 
   # Epilogue
-  pop   %ds                       # Restore DS data segment
-  pop   %es                       # Restore ES data segment
-  pop   %fs                       # Restore FS data segment
   pop   %gs                       # Restore GS data segment
-  pop   %ecx                      # Restore ECX
-  pop   %ebp                      # Restore old EBP
+  pop   %fs                       # Restore FS data segment
+  pop   %es                       # Restore ES data segment
+  pop   %ds                       # Restore DS data segment
+
+  pop   %edi                      # Restore EDI
+
+  pop   %ebp                      # Restore USER EBP
+
   iret                            # Return from the system call
 
 .endm
@@ -144,4 +156,5 @@ asm_\scname:
 
 
 #endif /* __SC_UTILS_H__ */
+
 

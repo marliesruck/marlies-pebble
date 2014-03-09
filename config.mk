@@ -1,27 +1,4 @@
 ###########################################################################
-#
-#    #####          #######         #######         ######            ###
-#   #     #            #            #     #         #     #           ###
-#   #                  #            #     #         #     #           ###
-#    #####             #            #     #         ######             #
-#         #            #            #     #         #
-#   #     #            #            #     #         #                 ###
-#    #####             #            #######         #                 ###
-#
-#
-# Please read the directions in README and in this config.mk carefully.
-# Do -N-O-T- just dump things randomly in here until your kernel builds.
-# If you do that, you run an excellent chance of turning in something
-# which can't be graded.  If you think the build infrastructure is
-# somehow restricting you from doing something you need to do, contact
-# the course staff--don't just hit it with a hammer and move on.
-#
-# [Once you've read this message, please edit it out of your config.mk]
-# [Once you've read this message, please edit it out of your config.mk]
-# [Once you've read this message, please edit it out of your config.mk]
-###########################################################################
-
-###########################################################################
 # This is the include file for the make file.
 # You should have to edit only this file to get things to build.
 ###########################################################################
@@ -43,7 +20,7 @@ TABSTOP = 8
 # "offline" is strongly not recommended as you may miss important project
 # updates.
 #
-UPDATE_METHOD = web
+UPDATE_METHOD = web 
 
 ###########################################################################
 # WARNING: When we test your code, the two TESTS variables below will be
@@ -57,7 +34,7 @@ UPDATE_METHOD = web
 # A list of the test programs you want compiled in from the 410user/progs
 # directory.
 #
-410TESTS = ck1 peon merchant
+410TESTS = ck1 merchant peon knife fork_test1 exec_basic_helper exec_basic exec_nonexist coolness 
 
 ###########################################################################
 # Test programs you have written which you wish to run
@@ -116,8 +93,7 @@ AUTOSTACK_OBJS = autostack.o
 #
 # Kernel object files you provide in from kern/
 #
-KERNEL_OBJS = kernel.o lib/cllist.o sched/ctx_switch.o sched/asm_ctx_switch.o lib/malloc_wrappers.o vm/vm.o vm/paging.o vm/page_alloc.o vm/frame_alloc.o vm/pg_table.o mode_switch.o loader/loader.o loader/usr_stack.o entry/drivers/keyboard.o entry/drivers/timer.o entry/idt.o entry/drivers/driver_wrappers.o entry/drivers/fake_console.o entry/syscall/sc_utils.o entry/syscall/syscall_wrappers.o entry/syscall/syscalls.o entry/faults/faults.o entry/faults/fault_wrappers.o entry/drivers/drivers.o
-
+KERNEL_OBJS = kernel.o lib/atomic.o lib/spin.o entry/syscall/finish_fork.o lib/cllist.o sched/ctx_switch.o sched/asm_ctx_switch.o lib/malloc_wrappers.o vm/vm.o vm/paging.o vm/page_alloc.o vm/frame_alloc.o vm/pg_table.o mode_switch.o loader/loader.o loader/usr_stack.o entry/drivers/keyboard.o entry/drivers/timer.o entry/idt.o entry/drivers/driver_wrappers.o entry/drivers/fake_console.o entry/syscall/sc_utils.o entry/syscall/syscall_wrappers.o entry/syscall/syscalls.o entry/faults/faults.o entry/faults/fault_wrappers.o entry/drivers/drivers.o sched/thread.o
 ###########################################################################
 # WARNING: Do not put **test** programs into the REQPROGS variables.  Your
 #          kernel will probably not build in the test harness and you will

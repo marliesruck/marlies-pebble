@@ -67,7 +67,7 @@ typedef cll_node queue_node_s;
  *
  *  @param q A pointer to the queue from which to dequeue an element.
  *
- *  @return Void.
+ *  @return void
  **/
 #define queue_dequeue(q)  \
   cll_extract((q), (q)->next)

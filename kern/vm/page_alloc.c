@@ -17,6 +17,9 @@
 #include <stddef.h>
 #include <string.h>
 
+/** TODO: tlb_inval_page(...) needs a header.
+ **/
+void tlb_inval_page(void *addr);
 
 /*************************************************************************
  *  Helper functions
@@ -46,13 +49,15 @@ void translate_attrs(pte_s *pte, unsigned int attrs)
  *
  *  @return Void.
  **/
-void alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs)
+void *alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs)
 {
+  void * frame;
   pte_s pde;
 
   /* If the PDE isn't valid, make it so */
   if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, NULL)) {
-    init_pte(&pde, alloc_frame());
+    frame = alloc_frame();
+    init_pte(&pde, frame);
     pde.present = 1;
     pde.writable = 1;
     pde.user = 1;
@@ -60,24 +65,22 @@ void alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs)
   }
 
   /* Back the requested vaddr with a page */
-  init_pte(&pde, alloc_frame());
+  frame = alloc_frame();
+  init_pte(&pde, frame);
   pde.present = 1;
   translate_attrs(&pde, attrs);
   assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pde) );
 
-  return;
+  return frame;
 }
 
 /** @brief Free a page.
- *
- *  TODO: tlb_inval_page(...) needs a header.
  *
  *  @param pgi Page table information.
  *  @param vaddr The virtual address to free.
  *
  *  @return Void.
  **/
-void tlb_inval_page(void *addr);
 void free_page(pg_info_s *pgi, void *vaddr)
 {
   pte_s pte;
@@ -94,5 +97,53 @@ void free_page(pg_info_s *pgi, void *vaddr)
   tlb_inval_page(vaddr);
 
   return;
+}
+
+/** @brief Copies an address page.
+ *
+ *  @param dst The destination page info struct.
+ *  @param src The source page info struct.
+ *  @param addr The vitual address of the page to copy.
+ *  @param attrs Attributes for the copied page.
+ *
+ *  @return 0 on success; a negative integer error code on failure.
+ **/
+/* TODO: make this dynamic */
+#define BUF (void *)(0xE0000000)
+int copy_page(pg_info_s *dst, const pg_info_s *src, void *vaddr, unsigned int attrs)
+{
+  void *frame;
+  pte_s pde;
+
+  /* Allocate a buffer page to map in the dest page */
+  if (get_pte(src->pg_dir, src->pg_tbls, BUF, NULL)) {
+    frame = alloc_frame();
+    init_pte(&pde, frame);
+    pde.present = 1;
+    pde.writable = 1;
+    set_pde(src->pg_dir, BUF, &pde);
+  }
+
+  /* Allocate the dest page */
+  if (get_pte(src->pg_dir, src->pg_tbls, vaddr, NULL))
+    return -1;
+  frame = alloc_page(dst, vaddr, attrs);
+
+  /* Map in the dest page for copying */
+  init_pte(&pde, frame);
+  pde.present = 1;
+  pde.writable = 1;
+  assert( !set_pte(src->pg_dir, src->pg_tbls, BUF, &pde) );
+
+  /* Copy data */
+  memcpy(BUF, vaddr, PAGE_SIZE);
+
+  /* Unmap the dest page */
+  init_pte(&pde, NULL);
+  pde.present = 0;
+  assert( !set_pte(src->pg_dir, src->pg_tbls, BUF, &pde) );
+  tlb_inval_page(BUF);
+
+  return 0;
 }
 

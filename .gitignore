@@ -3,6 +3,7 @@
 *.dep
 *.swp
 410user/
+410kern/
 # 410user/exec2obj
 # 410user/progs/idle
 # 410user/progs/init
@@ -19,3 +20,9 @@ user/progs/*
 *.ignore
 doc/
 doxygen.warn
+doxygen.conf
+Makefile
+spec/
+update.sh
+vq_challenge/
+wget-log

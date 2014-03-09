@@ -20,8 +20,9 @@ struct page_info {
 };
 typedef struct page_info pg_info_s;
 
-void alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs);
+void *alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs);
 void free_page(pg_info_s *pgi, void *vaddr);
+int copy_page(pg_info_s *dst, const pg_info_s *src, void *vaddr, unsigned int attrs);
 
 
 #endif /* __PAGE_ALLOC_H__ */

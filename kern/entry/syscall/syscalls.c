@@ -12,11 +12,21 @@
 
 #include <simics.h>
 
+#include <assert.h>
+#include <string.h>
+
 #include <process.h>
+#include <thread.h>
+#include <ctx_switch.h>
 #include <idt.h>
 #include <syscall_int.h>
 #include "syscall_wrappers.h"
 #include "sc_utils.h"
+
+/* For validating the file for exec */
+#include <loader.h>
+
+#include <string.h>
 
 /** @brief Installs our system calls.
  *
@@ -56,28 +66,98 @@ void install_sys_handlers(void)
  *  Life cycle
  *************************************************************************/
 
-int sys_fork(void)
+/* @brief Allocate memory for child's pcb
+ *
+ * This function is responsible for:
+ * -Grab a tid (atomically)
+ * -Store the tid/cr3 in the new pcb
+ *
+ * @bug For the sake of debugging I'm just using a global pcb2 declared in
+ * process.h.  However, this is certainly a function we should study when
+ * contemplating our locking strategy. We should probably add a state field to
+ * our tcb in case the parent forks and them immediately waits on the child.  I
+ * imagine the code might be reminiscent of thread_fork and setting the NASCENT
+ * state
+ *
+ * @param child_cr3 Physical address of child's page directory
+ * @return Address of malloced child pcb 
+ */
+#define CHILD_PDE (void *)(0xF0000000)
+void *init_child_tcb(void *child_cr3)
 {
-  return -1;
+  /* Initialize vm struct */
+  thread_t *thread = task_init();
+  task_t *task = thread->task_info;
+
+  /* Initialize pg dir */
+  task->cr3 = (uint32_t)(child_cr3);
+  task->vmi.pg_info.pg_tbls = (pt_t *)(CHILD_PDE);
+  task->vmi.pg_info.pg_dir = task->vmi.pg_info.pg_tbls[PG_SELFREF_INDEX];
+
+  return thread;
+}
+int finish_fork(void);
+int sys_fork(unsigned int esp)
+{
+#include <frame_alloc.h>
+  pte_s pde;
+  pt_t *child_pg_tables = (pt_t *)(CHILD_PDE);
+  pte_s *child_pd = child_pg_tables[PG_TBL_ENTRIES - 1];
+
+  /* Map the child's PD into the parent's address space */
+  void *child_cr3 = alloc_frame();
+  init_pte(&pde, child_cr3);
+  pde.present = 1;
+  pde.writable = 1;
+  task_t *curr_task = curr->task_info;
+  set_pde(curr_task->vmi.pg_info.pg_dir, child_pd, &pde);
+  set_pte(curr_task->vmi.pg_info.pg_dir, curr_task->vmi.pg_info.pg_tbls,
+          child_pd, &pde);
+
+  /* Initialize child stuffs */
+  init_pd(child_pd, child_cr3);
+  thread_t *child_thread = init_child_tcb(child_cr3);
+  task_t *child_task = child_thread->task_info;
+  vm_copy(&child_task->vmi, &curr_task->vmi);
+
+  /* Copy the parent's kstack */
+  unsigned int offset = esp - ((unsigned int) curr->kstack);
+  size_t len = ((unsigned int) &curr->kstack[KSTACK_SIZE]) - esp;
+  void *dest = &child_thread->kstack[offset];
+  memcpy(dest, (void *)esp, len);
+
+  /* Last touches to the child PCB */
+  child_task->vmi.pg_info.pg_dir = (pte_s *)(TBL_HIGH);
+  child_task->vmi.pg_info.pg_tbls = (pt_t *)(DIR_HIGH);
+  child_thread->sp = &child_thread->kstack[offset];
+  child_thread->pc = finish_fork;
+
+  /* Enqueue new tcb */
+  thrlist_enqueue(child_thread,&naive_thrlist);
+
+  return child_thread->tid;
 }
 
 #include <loader.h>
 #include <usr_stack.h>
 #include <vm.h>
 #include <malloc.h>
-#include <string.h>
 void mode_switch(void *entry_point, void *sp);
 int sys_exec(char *execname, char *argvec[])
 {
   char *execname_k, **argvec_k;
   int i, j;
+  simple_elf_t se;
 
   /* Copy execname from user-space */
   execname_k = malloc(strlen(execname) + 1);
   if (!execname_k) return -1;
-  if (copy_from_user(execname_k, execname, strlen(execname) + 1)) {
-    free(execname_k);
-    return -1;
+
+  /* Invalid memory or filename */
+  if ((copy_from_user(execname_k, execname, strlen(execname) + 1)) || 
+      (validate_file(&se, execname) < 0)){
+      free(execname_k);
+      return -1;
   }
 
   /* Copy argvec from user-space */
@@ -96,9 +176,11 @@ int sys_exec(char *execname, char *argvec[])
   argvec_k[i] = NULL;
 
   /* Destroy the old address space; setup the new */
-  vm_final(&curr_pcb->vmi);
-  void *entry_point = load_file(&curr_pcb->vmi, execname_k);
-  void *usr_sp = usr_stack_init(&curr_pcb->vmi, argvec_k);
+  vm_final(&curr->task_info->vmi);
+  void *entry_point = load_file(&curr->task_info->vmi, execname_k);
+
+
+  void *usr_sp = usr_stack_init(&curr->task_info->vmi, argvec_k);
 
   /* Free copied parameters*/
   for (j = 0; j < i; ++j) free(argvec_k[j]);
@@ -138,7 +220,7 @@ void sys_task_vanish(int status)
 
 int sys_gettid(void)
 {
-  return curr_pcb->my_tcb.tid;
+  return curr->tid;
 }
 
 int sys_yield(int pid)

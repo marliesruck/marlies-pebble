@@ -4,6 +4,7 @@
  *
  *  @author Enrique Naudon (esn)
  **/
+#include <simics.h>
 
 #include <cllist.h>
 
