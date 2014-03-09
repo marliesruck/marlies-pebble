@@ -22,15 +22,12 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#include <simics.h>
-
 /*
  * This function is called by the assert() macro defined in assert.h;
  * it's also a nice simple general-purpose panic function.
  */
 void panic(const char *fmt, ...)
 {
-  lprintf("PANIC");
 	va_list vl;
 
 	va_start(vl, fmt);

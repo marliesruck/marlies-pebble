@@ -90,6 +90,8 @@ asm_\scname:
   push %esi                       # Push single argument
   call \scname                    # Call the system call handler
 
+  add  $4, %esp                   # Clean up stack
+
   # Epilogue
   pop   %gs                       # Restore GS data segment
   pop   %fs                       # Restore FS data segment
@@ -117,7 +119,6 @@ asm_\scname:
 asm_\scname:
 
   # Prologue
-  call sim_breakpoint
   push  %ebp                      # Store USER EBP
   movl  %esp, %ebp                # Set up new EBP
 
@@ -127,21 +128,15 @@ asm_\scname:
   push  %es                       # Store ES data segment
   push  %fs                       # Store FS data segment
   push  %gs                       # Store GS data segment
-  
+
   # Invoke system call handler
   movl \argc, %ecx                # ECX = argument count (for rep)
+  sub  $8,   %esp                 # Make space on the stack for the args
   movl %esp, %edi                 # EDI = kernel stack
   rep movsl                       # Copy args onto kernel stack
 
-  call sim_breakpoint
-
   call \scname                    # Call the system call handler
-
-  call sim_breakpoint
-
-  pop   %ecx
-  pop   %edi
-# leal  -8(%esp), %esp            # Clean up ESP
+  add   $8, %esp                  # Clean up ESP from args pushed on by rep
 
   # Epilogue
   pop   %gs                       # Restore GS data segment
@@ -161,4 +156,5 @@ asm_\scname:
 
 
 #endif /* __SC_UTILS_H__ */
+
 
