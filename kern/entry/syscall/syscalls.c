@@ -104,6 +104,7 @@ int sys_exec(char *execname, char *argvec[])
 {
   char *execname_k, **argvec_k;
   int i, j;
+  simple_elf_t se;
 
   /* Copy execname from user-space */
   execname_k = malloc(strlen(execname) + 1);
@@ -111,7 +112,7 @@ int sys_exec(char *execname, char *argvec[])
 
   /* Invalid memory or filename */
   if ((copy_from_user(execname_k, execname, strlen(execname) + 1)) || 
-      (validate_file(execname) < 0)){
+      (validate_file(&se, execname) < 0)){
       free(execname_k);
       return -1;
   }

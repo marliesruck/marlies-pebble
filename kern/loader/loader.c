@@ -70,25 +70,16 @@ int getbytes(const char* filename, int offset, int size, char *buf )
  *  2) File is executable ELF binary
  *  3) File is actually in the ELF
  *
+ *  @param se Elf struct to populate
  *  @param filename Name of file to be validated
- *  @return int -1 on error otherwise 0
- *
- *  @bug This function is redundant with the work done in get_bytes() and
- *  load_file(), however get_bytes has a predefined prototype that 410kern/elf
- *  functions expect, and while we could parameterize validate file to take an
- *  se and be called from load_file, I don't want to because I wrote this
- *  function in order to validate the file given to exec before it dumps the
- *  existing program's memory and don't really want exec to be dealing with elf
- *  structs, although that could be changed at some point...
+ *  @return int -1 on error otherwise the index into the table of contents
  */
-int validate_file(const char* filename)
+int validate_file(simple_elf_t *se, const char* filename)
 {
-  simple_elf_t se;
   int i;
-
   /* Validate header and populate elf struct */
   if((elf_check_header(filename) == ELF_NOTELF) || 
-      (elf_load_helper(&se,filename) == ELF_NOTELF)){
+      (elf_load_helper(se,filename) == ELF_NOTELF)){
       return -1;
   }
 
@@ -121,22 +112,9 @@ void *load_file(vm_info_s *vmi, const char* filename)
 {
   simple_elf_t se;
   void *ret;
-  int i;
 
-  /* Validate header and populate elf struct */
-  if((elf_check_header(filename) == ELF_NOTELF) || 
-      (elf_load_helper(&se,filename) == ELF_NOTELF)){
-      return NULL;
-  }
-
-  /* Search table of contents for file */
-  for(i = 0; i < exec2obj_userapp_count; i++){
-    if (0 == strcmp(filename,exec2obj_userapp_TOC[i].execname))
-      break;
-  }
-
-  /* Error if we didn't find the file */
-  if (i >= exec2obj_userapp_count)
+  /* Validate file and populate elf struct */
+  if(validate_file(&se,filename) < 0)
     return NULL;
 
   /* For simplicity, we assume text < rodata and data < bss */

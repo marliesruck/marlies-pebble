@@ -16,7 +16,6 @@
 #include <stdint.h>
 
 #define KSTACK_SIZE PAGE_SIZE
-#define NUM_ELEM    (KSTACK_SIZE/sizeof(unsigned int))
 
 queue_s naive_thrlist;
 
@@ -25,7 +24,7 @@ typedef struct thread{
   int tid;
   void *sp;
   void *pc;
-  unsigned int kstack[NUM_ELEM];
+  char kstack[KSTACK_SIZE];
 }thread_t;
 
 /* Initialization routines */
