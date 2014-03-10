@@ -3,6 +3,12 @@
  *
  *  You should initialize things in kernel_main(),
  *  and then run stuff.
+ *  
+ *  A note on enabling interrupts: we do this relatively late in kernel main,
+ *  and consequently accumulate some drift.  However, an invariant of our
+ *  context switcher is that there is at least one running/runnable thread.  In
+ *  order to guarantee this invariant, we need to initialize the first thread
+ *  before enabling interrupts.
  *
  *  @author Harry Q. Bovik (hqbovik)
  *  @author Fred Hacker (fhacker)
@@ -115,7 +121,6 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   /* Load the first executable */
   thread_t *thread = load_task(pd, "exec_nonexist");
 
-  /* Enable interrupts */
   enable_interrupts();
 
   /* Give up the kernel stack that was given to us by the bootloader */

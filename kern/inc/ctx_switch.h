@@ -23,6 +23,8 @@ thread_t *curr;
  *  Store out the running thread's context and add to the runnable queue.
  *  Dequeue the head of the runnable queue.  
  *
+ *  Invariant: There is always a running or runnable thread.  
+ *
  *  @return Void.
  */
 void ctx_switch(void);
