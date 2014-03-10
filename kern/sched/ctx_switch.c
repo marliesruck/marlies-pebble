@@ -21,7 +21,9 @@ void ctx_switch(void)
   curr = next;
 
   asm_ctx_switch(&prev->sp, &prev->pc, next->sp, 
-                  next->pc, next->task_info->cr3, 
-                  (&next->kstack[KSTACK_SIZE]));
+                 next->pc, next->task_info->cr3, 
+                 &next->kstack[KSTACK_SIZE]);
+
   return;
 }
+

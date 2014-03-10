@@ -35,7 +35,7 @@ asm_ctx_switch:
   mov     0x14(%ebp), %esi    # next_pc
   mov     0x18(%ebp), %edi    # next_cr3
 
-  call store_and_switch       
+  call store_and_switch
 
   # Restore CPU state
   popfl                       # Restore GP

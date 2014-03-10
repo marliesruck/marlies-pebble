@@ -132,7 +132,6 @@ int copy_page(pg_info_s *dst, const pg_info_s *src, void *vaddr, unsigned int at
   /* Map in the dest page for copying */
   init_pte(&pde, frame);
   pde.present = 1;
-  pde.writable = 1;
   assert( !set_pte(src->pg_dir, src->pg_tbls, BUF, &pde) );
 
   /* Copy data */

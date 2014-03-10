@@ -17,7 +17,7 @@
 
 #define KSTACK_SIZE PAGE_SIZE
 
-queue_s naive_thrlist;
+extern queue_s naive_thrlist;
 
 typedef struct thread{
   task_t *task_info;
@@ -30,10 +30,9 @@ typedef struct thread{
 /* Initialization routines */
 thread_t *task_init(void);
 thread_t *thread_init(task_t *task);
-void thrlist_init(queue_s *q);
 
 /* Manipulation routines */
 void thrlist_enqueue(thread_t *thread, queue_s *q);
 thread_t *thrlist_dequeue(queue_s *q);
 
-#endif /* _THREAD_H */
+#endif /* __THREAD_H__ */

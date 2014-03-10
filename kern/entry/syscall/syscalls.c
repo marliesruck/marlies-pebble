@@ -83,7 +83,7 @@ void install_sys_handlers(void)
  * @return Address of malloced child pcb 
  */
 #define CHILD_PDE (void *)(0xF0000000)
-void *init_child_tcb(void *child_cr3)
+void *init_child_tcb(void *child_cr3, pte_s *pd, pt_t *pt)
 {
   /* Initialize vm struct */
   thread_t *thread = task_init();
@@ -91,18 +91,22 @@ void *init_child_tcb(void *child_cr3)
 
   /* Initialize pg dir */
   task->cr3 = (uint32_t)(child_cr3);
-  task->vmi.pg_info.pg_tbls = (pt_t *)(CHILD_PDE);
-  task->vmi.pg_info.pg_dir = task->vmi.pg_info.pg_tbls[PG_SELFREF_INDEX];
+  task->vmi.pg_info.pg_tbls = pt;
+  task->vmi.pg_info.pg_dir = pd;
+  lprintf("child pd: %p, pt: %p",
+          task->vmi.pg_info.pg_tbls,
+          task->vmi.pg_info.pg_dir); 
 
   return thread;
 }
 int finish_fork(void);
+void tlb_inval_page(void *addr);
 int sys_fork(unsigned int esp)
 {
 #include <frame_alloc.h>
   pte_s pde;
   pt_t *child_pg_tables = (pt_t *)(CHILD_PDE);
-  pte_s *child_pd = child_pg_tables[PG_TBL_ENTRIES - 1];
+  pte_s *child_pd = child_pg_tables[PG_SELFREF_INDEX];
 
   /* Map the child's PD into the parent's address space */
   void *child_cr3 = alloc_frame();
@@ -116,9 +120,16 @@ int sys_fork(unsigned int esp)
 
   /* Initialize child stuffs */
   init_pd(child_pd, child_cr3);
-  thread_t *child_thread = init_child_tcb(child_cr3);
+  thread_t *child_thread = init_child_tcb(child_cr3, child_pd, child_pg_tables);
   task_t *child_task = child_thread->task_info;
   vm_copy(&child_task->vmi, &curr_task->vmi);
+
+  /* Unmap child PD */
+  init_pte(&pde, NULL);
+  pde.present = 0;
+  set_pde(curr_task->vmi.pg_info.pg_dir, child_pd, &pde);
+#include <x86/cr.h>
+  set_cr3(curr_task->cr3);
 
   /* Copy the parent's kstack */
   unsigned int offset = esp - ((unsigned int) curr->kstack);
@@ -126,14 +137,14 @@ int sys_fork(unsigned int esp)
   void *dest = &child_thread->kstack[offset];
   memcpy(dest, (void *)esp, len);
 
-  /* Last touches to the child PCB */
+  /* Last touches to the child */
   child_task->vmi.pg_info.pg_dir = (pte_s *)(TBL_HIGH);
   child_task->vmi.pg_info.pg_tbls = (pt_t *)(DIR_HIGH);
   child_thread->sp = &child_thread->kstack[offset];
   child_thread->pc = finish_fork;
 
   /* Enqueue new tcb */
-  thrlist_enqueue(child_thread,&naive_thrlist);
+  thrlist_enqueue(child_thread, &naive_thrlist);
 
   return child_thread->tid;
 }

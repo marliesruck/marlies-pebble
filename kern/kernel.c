@@ -113,11 +113,8 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   set_cr3((uint32_t) pd);
   enable_paging();
 
-  /* Initialize naive thread list */
-  thrlist_init(&naive_thrlist);
-
   /* Load the first executable */
-  thread_t *thread1 = load_task(pd, "knife");
+  thread_t *thread1 = load_task(pd, "coolness");
 
   /* Give up the kernel stack that was given to us by the bootloader */
   set_esp0((uint32_t)(&thread1->kstack[KSTACK_SIZE]));
