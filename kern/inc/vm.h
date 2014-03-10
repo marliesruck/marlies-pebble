@@ -15,6 +15,7 @@
 /* Memory region attribute flags */
 #define VM_ATTR_RDWR  0x001    /* 0: read/execute; 1: read/write */
 #define VM_ATTR_USER  0x002    /* 0: priviledged; 1: user-accessible */
+#define VM_ATTR_ZFOD  0x200    /* 0: page is note ZFOD; 1: page is ZFOD */
 
 /** @struct mem_region
  *  @brief A contiguous region in memory.
@@ -37,6 +38,8 @@ typedef struct vm_info vm_info_s;
 
 void vm_init(vm_info_s *vmi, pte_s *pd, pt_t *pt);
 void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
+               unsigned int attrs);
+void *vm_region(vm_info_s *vmi, void *va_start, size_t len,
                unsigned int attrs);
 void vm_free(vm_info_s *vmi, void *va_start);
 int vm_copy(vm_info_s *dst, const vm_info_s *src);

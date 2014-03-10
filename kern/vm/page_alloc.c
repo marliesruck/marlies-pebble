@@ -124,6 +124,7 @@ int copy_page(pg_info_s *dst, const pg_info_s *src, void *vaddr, unsigned int at
   /* Allocate the dest page */
   if (get_pte(src->pg_dir, src->pg_tbls, vaddr, NULL))
     return -1;
+
   frame = alloc_page(dst, vaddr, attrs);
 
   /* Map in the dest page for copying */

@@ -21,9 +21,11 @@
 #include <exec2obj.h>
 #include <loader.h>
 #include <elf_410.h>
+#include <util.h>
 
 #include <pg_table.h>
 #include <frame_alloc.h>
+#include <page_alloc.h>
 
 /* --- Debugging --- */
 #include <assert.h>
@@ -96,6 +98,51 @@ int validate_file(simple_elf_t *se, const char* filename)
   return 0;
 
 }
+void copy_data_bss(vm_info_s *vmi, const char *filename, simple_elf_t *se)
+{
+  void *ret;
+  unsigned int bss_start = FLOOR(se->e_bssstart, PAGE_SIZE);
+
+  /* Data and BSS share a page */
+  if(bss_start <= (se->e_datstart + se->e_datlen)){
+    /* Allocate 1 region for data and BSS */
+    ret = vm_alloc(vmi, (void *)se->e_datstart, se->e_datlen, 
+                   VM_ATTR_USER | VM_ATTR_RDWR);
+    assert(ret != NULL);
+    /* Zero non-data part of page (which is BSS and possibly a 'hole' between
+     * regions  */
+    unsigned int dat_limit = CEILING(se->e_datstart + se->e_datlen, PAGE_SIZE);
+    memset((void *)(se->e_datstart + se->e_datlen), 0,dat_limit - 
+            (se->e_datstart + se->e_datlen));
+    unsigned int bss_limit = CEILING(se->e_bssstart + se->e_bsslen, PAGE_SIZE);
+    lprintf("datstart: %lu data end: %lu bss start: %lu bss end: %lu",
+             se->e_datstart, se->e_datstart + se->e_datlen, se->e_bssstart, se->e_bssstart + se->e_bsslen);
+    lprintf("dat floor: %x data ceiling: %x bss floor: %x bss ceiling: %x",
+             FLOOR(se->e_datstart, PAGE_SIZE), 
+             CEILING(se->e_datstart + se->e_datlen, PAGE_SIZE), 
+             FLOOR(se->e_bssstart, PAGE_SIZE), 
+             CEILING(se->e_bssstart + se->e_bsslen, PAGE_SIZE));
+    /* Allocate a ZFOD region for remaining BSS */
+    if(dat_limit != bss_limit){
+      unsigned int bss_ceiling = CEILING(se->e_bssstart, PAGE_SIZE);
+      ret = vm_region(vmi, (void *)bss_ceiling, bss_limit - bss_ceiling, 
+                     VM_ATTR_ZFOD | VM_ATTR_USER | VM_ATTR_RDWR);
+      assert(ret != NULL);
+    }
+  }
+  else{
+    /* zero out the memory in between data and bss */
+    memset((void *)(se->e_datstart + se->e_datlen), 0,bss_start - 
+            se->e_datstart + se->e_datlen);
+    /* Allocate a ZFOD region for BSS */
+    ret = vm_region(vmi, (void *)bss_start, se->e_bsslen, 
+                    VM_ATTR_ZFOD | VM_ATTR_USER | VM_ATTR_RDWR);
+    assert(ret != NULL);
+  }
+
+  /* Load read/execute sections (data) */
+  getbytes(filename, se->e_datoff, se->e_datlen, (void *)se->e_datstart);
+}
 
 /** @brief Loads file into memory 
  *
@@ -133,18 +180,10 @@ void *load_file(vm_info_s *vmi, const char* filename)
 
   memset((void *)(se.e_txtstart + se.e_txtlen), 0,
          se.e_rodatstart - (se.e_txtstart + se.e_txtlen));
+
   getbytes(filename, se.e_rodatoff, se.e_rodatlen, (void *)se.e_rodatstart);
 
-  /* Allocate read/write memory */
-  ret = vm_alloc(vmi, (void *)se.e_datstart,
-                 se.e_bssstart - se.e_datstart + se.e_bsslen,
-                 VM_ATTR_USER | VM_ATTR_RDWR);
-  assert(ret != NULL);
-
-  /* Load read/execute sections (data and bss) */
-  getbytes(filename, se.e_datoff, se.e_datlen, (void *)se.e_datstart);
-  memset((void *)(se.e_datstart + se.e_datlen), 0,
-         (se.e_bssstart + se.e_bsslen) - (se.e_datstart + se.e_datlen));
+  copy_data_bss(vmi, filename, &se);
 
   return (void *)(se.e_entry);
 }
