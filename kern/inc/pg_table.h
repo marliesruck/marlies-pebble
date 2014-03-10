@@ -82,9 +82,6 @@
   ( (unsigned int)(addr) | (attrs) )
 
 #define KERN_PD_ENTRIES PG_DIR_INDEX(USER_MEM_START)
-#define MEM_HIGH 0xFFFFFFFF
-#define DIR_HIGH (MEM_HIGH & PG_DIR_MASK)
-#define TBL_HIGH (MEM_HIGH & PG_ADDR_MASK)
 
 /** @struct page_table_entry
  *  @brief An x86 page table/directory entry.
@@ -107,13 +104,15 @@ typedef struct page_table_entry pte_s;
 #define PG_TBL_ENTRIES PAGE_SIZE/sizeof(pte_s)
 typedef pte_s pt_t[PG_TBL_ENTRIES];
 
-#define PG_SELFREF_INDEX (PG_TBL_ENTRIES - 1)
-
-/* Current process' page tables and page directory */
-extern pt_t *pg_tables;
-extern pte_s *pg_dir;
-
 extern pte_s *kern_pt[KERN_PD_ENTRIES];
+
+typedef char page_t[PAGE_SIZE];
+extern page_t *pages;
+typedef page_t tome_t[PG_TBL_ENTRIES];
+extern tome_t *tomes;
+
+#define PG_SELFREF_INDEX (PG_TBL_ENTRIES - 1)
+#define PG_TBL_ADDR ( (pt_t *)tomes[PG_SELFREF_INDEX] )
 
 
 /* Stuff that shouldn't be here */

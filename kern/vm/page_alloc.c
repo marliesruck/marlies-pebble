@@ -10,16 +10,13 @@
 
 /* Pebbles */
 #include <frame_alloc.h>
+#include <tlb.h>
 #include <vm.h>
 
 /* Libc includes */
 #include <assert.h>
 #include <stddef.h>
 #include <string.h>
-
-/** TODO: tlb_inval_page(...) needs a header.
- **/
-void tlb_inval_page(void *addr);
 
 /*************************************************************************
  *  Helper functions
@@ -109,7 +106,7 @@ void free_page(pg_info_s *pgi, void *vaddr)
  *  @return 0 on success; a negative integer error code on failure.
  **/
 /* TODO: make this dynamic */
-#define BUF (void *)(0xE0000000)
+#define BUF ( (void *)&tomes[PG_TBL_ENTRIES - 3][PG_TBL_ENTRIES - 2])
 int copy_page(pg_info_s *dst, const pg_info_s *src, void *vaddr, unsigned int attrs)
 {
   void *frame;
@@ -132,7 +129,6 @@ int copy_page(pg_info_s *dst, const pg_info_s *src, void *vaddr, unsigned int at
   /* Map in the dest page for copying */
   init_pte(&pde, frame);
   pde.present = 1;
-  pde.writable = 1;
   assert( !set_pte(src->pg_dir, src->pg_tbls, BUF, &pde) );
 
   /* Copy data */

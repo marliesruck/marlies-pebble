@@ -18,7 +18,6 @@
 #include <malloc.h>
 #include <stddef.h>
 
-
 /*************************************************************************
  *  Memory map and region manipulation
  *************************************************************************/
@@ -101,6 +100,23 @@ mem_region_s *mreg_extract_any(cll_list *map)
 /*************************************************************************
  *  The actual vm allocator
  *************************************************************************/
+
+/** @brief Initialize a VM info struct.
+ *
+ *  @param vmi The vm info struct to initialize.
+ *  @param pd Pointer to the page directory.
+ *  @param pt Pointer to the page tables.
+ *
+ *  @return Void.
+ **/
+void vm_init(vm_info_s *vmi, pte_s *pd, pt_t *pt)
+{
+  vmi->pg_info.pg_dir = pd;
+  vmi->pg_info.pg_tbls = pt;
+  cll_init_list(&vmi->mmap);
+
+  return;
+}
 
 /** @brief Allocate a contiguous region in memory.
  *
@@ -217,7 +233,7 @@ int vm_copy(vm_info_s *dst, const vm_info_s *src)
 
     /* Allocate pages for the region */
     for (addr = sreg->start; addr < sreg->limit; addr += PAGE_SIZE) {
-      copy_page(&dst->pg_info, &src->pg_info, addr, sreg->attrs);
+      assert( !copy_page(&dst->pg_info, &src->pg_info, addr, sreg->attrs) );
     }
 
     /* Insert the new region into the dest */

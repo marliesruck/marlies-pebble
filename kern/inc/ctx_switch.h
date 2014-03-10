@@ -28,6 +28,7 @@ thread_t *curr;
  *  @return Void.
  */
 void ctx_switch(void);
+
 /* @brief Ctx switching (Asm component).
  * 
  * Stores all CPU state on the currently executing thread's stack except for the
