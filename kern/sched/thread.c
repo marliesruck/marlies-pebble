@@ -9,6 +9,7 @@
  *      queue vs list?
  *      Should vm initialization be here?
  *      should thread init be responsible for acquiring the tid lock?
+ *      extern thrlist and initialize here
  *
  */
 #include <simics.h>
@@ -140,4 +141,9 @@ thread_t *thrlist_dequeue(queue_s *q)
   free(n);
 
   return thread;
+}
+
+int thrlist_empty(queue_s *q)
+{
+  return queue_empty(q);
 }

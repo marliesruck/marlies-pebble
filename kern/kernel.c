@@ -99,9 +99,6 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   install_fault_handlers(); 
   install_sys_handlers(); 
 
-  /* Enable interrupts */
-  enable_interrupts();
-
   /* Initialized kernel page tables */
   init_kern_pt();
 
@@ -109,7 +106,6 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   pte_s *pd = alloc_frame();
   init_pd(pd, pd);
 
-  /* Load the first executable */
   set_cr3((uint32_t) pd);
   enable_paging();
 
@@ -117,12 +113,16 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   thrlist_init(&naive_thrlist);
 
   /* Load the first executable */
-  thread_t *thread1 = load_task(pd, "knife");
+  thread_t *thread = load_task(pd, "exec_nonexist");
+
+  /* Enable interrupts */
+  enable_interrupts();
 
   /* Give up the kernel stack that was given to us by the bootloader */
-  set_esp0((uint32_t)(&thread1->kstack[KSTACK_SIZE]));
+  set_esp0((uint32_t)(&thread->kstack[KSTACK_SIZE]));
 
-  mode_switch(thread1->pc, thread1->sp);
+  /* Upon being interrupted we should return right here */
+  mode_switch(thread->pc, thread->sp);
 
   /* We should never reach here! */
   assert(0);
@@ -132,21 +132,21 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 
 thread_t *load_task(void *pd, const char *fname)
 {
-  thread_t *thread1 = task_init();
+  thread_t *thread = task_init();
 
-  task_t *task = thread1->task_info;
+  task_t *task = thread->task_info;
 
   /* Initialize pg dir and tid in prototype tcb */
   task->cr3 = (uint32_t)(pd);
-  thread1->task_info = task;
+  thread->task_info = task;
   
   /* Initialize currently running thread */
-  curr = thread1;
+  curr = thread;
 
   /* Prepare to drop into user mode */
-  thread1->pc = load_file(&task->vmi, fname);
-  thread1->sp = usr_stack_init(&task->vmi, NULL);
+  thread->pc = load_file(&task->vmi, fname);
+  thread->sp = usr_stack_init(&task->vmi, NULL);
 
-  return thread1;
+  return thread;
 }
 

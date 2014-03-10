@@ -1,6 +1,9 @@
+#include <simics.h>
+
 #include <interrupt_defines.h>
 #include <timer_defines.h>
 #include <x86/asm.h>
+#include <ctx_switch.h>
 #include "timer.h"
 #include "driver_wrappers.h"
 
@@ -8,6 +11,11 @@
 #define LSB(x)  (x & 0xFF)
 #define MSB(x)  ((x & 0xFF00) >> 8)
 
+void tick(unsigned int ticks)
+{
+  ctx_switch();
+  return;
+}
 void init_timer(void)
 {
     outb(TIMER_MODE_IO_PORT, TIMER_SQUARE_WAVE);
@@ -18,7 +26,7 @@ void init_timer(void)
 
 void int_timer(void)
 {
-  ++numTicks;
   outb(INT_CTL_PORT,INT_ACK_CURRENT);
+  tick(++numTicks);
   return;
 }

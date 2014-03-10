@@ -20,6 +20,10 @@ void ctx_switch(void)
   thread_t *next = thrlist_dequeue(&naive_thrlist);
   curr = next;
 
+  /* Only one thread is runnable */
+  if(prev == next)
+    return;
+
   asm_ctx_switch(&prev->sp, &prev->pc, next->sp, 
                   next->pc, next->task_info->cr3, 
                   (&next->kstack[KSTACK_SIZE]));

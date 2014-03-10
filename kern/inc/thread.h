@@ -36,4 +36,6 @@ void thrlist_init(queue_s *q);
 void thrlist_enqueue(thread_t *thread, queue_s *q);
 thread_t *thrlist_dequeue(queue_s *q);
 
+int thrlist_empty(queue_s *q);
+
 #endif /* _THREAD_H */
