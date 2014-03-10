@@ -16,10 +16,10 @@
 #include <stddef.h>
 #include <string.h>
 
-pte_s *kern_pt[KERN_PD_ENTRIES];
+page_t *pages = (page_t *)NULL;
+tome_t *tomes = (tome_t *)NULL;
 
-pt_t *pg_tables = (pt_t *)(DIR_HIGH);
-pte_s *pg_dir = (pte_s *)(TBL_HIGH);
+pte_s *kern_pt[KERN_PD_ENTRIES];
 
 /** @brief Initialize kernel pages.
  *
@@ -36,7 +36,7 @@ void init_kern_pt(void)
   /* Direct map kernel memory */
   for (i = 0; i < KERN_PD_ENTRIES; i++) {
     kern_pt[i] = alloc_frame();
-    for (j = 0; j < PAGE_SIZE; j++) {
+    for (j = 0; j < PG_TBL_ENTRIES; j++) {
       init_pte(&kern_pt[i][j],
                (void *)(i * PAGE_SIZE * 1024 + j * PAGE_SIZE));
       kern_pt[i][j].present = 1;

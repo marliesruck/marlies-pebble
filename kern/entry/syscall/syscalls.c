@@ -82,6 +82,8 @@ void install_sys_handlers(void)
  * @param child_cr3 Physical address of child's page directory
  * @return Address of malloced child pcb 
  */
+#include <tlb.h>
+#include <frame_alloc.h>
 #define CHILD_PDE (void *)(0xF0000000)
 void *init_child_tcb(void *child_cr3, pte_s *pd, pt_t *pt)
 {
@@ -93,17 +95,12 @@ void *init_child_tcb(void *child_cr3, pte_s *pd, pt_t *pt)
   task->cr3 = (uint32_t)(child_cr3);
   task->vmi.pg_info.pg_tbls = pt;
   task->vmi.pg_info.pg_dir = pd;
-  lprintf("child pd: %p, pt: %p",
-          task->vmi.pg_info.pg_tbls,
-          task->vmi.pg_info.pg_dir); 
 
   return thread;
 }
 int finish_fork(void);
-void tlb_inval_page(void *addr);
 int sys_fork(unsigned int esp)
 {
-#include <frame_alloc.h>
   pte_s pde;
   pt_t *child_pg_tables = (pt_t *)(CHILD_PDE);
   pte_s *child_pd = child_pg_tables[PG_SELFREF_INDEX];
@@ -128,8 +125,8 @@ int sys_fork(unsigned int esp)
   init_pte(&pde, NULL);
   pde.present = 0;
   set_pde(curr_task->vmi.pg_info.pg_dir, child_pd, &pde);
-#include <x86/cr.h>
-  set_cr3(curr_task->cr3);
+  tlb_inval_tome(child_pg_tables);
+  tlb_inval_page((void *)0xFFFC0000);
 
   /* Copy the parent's kstack */
   unsigned int offset = esp - ((unsigned int) curr->kstack);
@@ -138,8 +135,8 @@ int sys_fork(unsigned int esp)
   memcpy(dest, (void *)esp, len);
 
   /* Last touches to the child */
-  child_task->vmi.pg_info.pg_dir = (pte_s *)(TBL_HIGH);
-  child_task->vmi.pg_info.pg_tbls = (pt_t *)(DIR_HIGH);
+  child_task->vmi.pg_info.pg_dir = PG_TBL_ADDR[PG_SELFREF_INDEX];
+  child_task->vmi.pg_info.pg_tbls = PG_TBL_ADDR;
   child_thread->sp = &child_thread->kstack[offset];
   child_thread->pc = finish_fork;
 

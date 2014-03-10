@@ -1,9 +1,10 @@
-/** @file mode_switch.S
+/** @file tlb.S
  *
- *  @brief Implements various paging-related assembly routines.
+ *  @brief Implements TLB-related assembly routines.
  *
  *  @author Enrique Naudon (esn)
  **/
+
 
 .global tlb_inval_page
 tlb_inval_page:
@@ -19,4 +20,5 @@ tlb_inval_page:
   # Epilogue
   popl  %ebp                      # Restore old EBP
   ret                             # Return to caller
+
 

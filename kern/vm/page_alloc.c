@@ -10,16 +10,13 @@
 
 /* Pebbles */
 #include <frame_alloc.h>
+#include <tlb.h>
 #include <vm.h>
 
 /* Libc includes */
 #include <assert.h>
 #include <stddef.h>
 #include <string.h>
-
-/** TODO: tlb_inval_page(...) needs a header.
- **/
-void tlb_inval_page(void *addr);
 
 /*************************************************************************
  *  Helper functions

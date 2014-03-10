@@ -40,7 +40,7 @@ thread_t *task_init(void)
   task_t *task = malloc(sizeof(task_t));
 
   /* Initialize vm? */
-  vm_init(&task->vmi, (pte_s *)TBL_HIGH, (pt_t *)DIR_HIGH);
+  vm_init(&task->vmi, PG_TBL_ADDR[PG_SELFREF_INDEX], PG_TBL_ADDR);
 
   /* Keep track of the number of threads in a task */
   task->num_threads = 1;
