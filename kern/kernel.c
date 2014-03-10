@@ -116,7 +116,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   enable_paging();
 
   /* Load the first executable */
-  thread_t *thread1 = load_task(pd, "coolness");
+  thread_t *thread = load_task(pd, "exec_basic");
 
   enable_interrupts();
 
