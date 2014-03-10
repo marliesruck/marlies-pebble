@@ -116,7 +116,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   enable_paging();
 
   /* Load the first executable */
-  thread_t *thread = load_task(pd, "exec_basic");
+  thread_t *thread = load_task(pd, "new_pages");
 
   enable_interrupts();
 
@@ -128,7 +128,6 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 
   /* We should never reach here! */
   assert(0);
-
   return 0;
 }
 

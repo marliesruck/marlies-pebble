@@ -263,7 +263,13 @@ int sys_sleep(int ticks)
 
 int sys_new_pages(void *addr, int len)
 {
-  return -1;
+  if (!vm_alloc(&curr->task_info->vmi, addr, len,
+                VM_ATTR_RDWR|VM_ATTR_USER|VM_ATTR_NEWPG))
+  {
+    return -1;
+  }
+
+  return 0;
 }
 
 int sys_remove_pages(void *addr)

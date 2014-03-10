@@ -15,6 +15,7 @@
 /* Memory region attribute flags */
 #define VM_ATTR_RDWR  0x001    /* 0: read/execute; 1: read/write */
 #define VM_ATTR_USER  0x002    /* 0: priviledged; 1: user-accessible */
+#define VM_ATTR_NEWPG  0x004
 
 /** @struct mem_region
  *  @brief A contiguous region in memory.

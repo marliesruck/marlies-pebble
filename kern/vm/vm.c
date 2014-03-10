@@ -11,6 +11,7 @@
 
 /* Pebbles includes */
 #include <page_alloc.h>
+#include <frame_alloc.h>
 #include <util.h>
 
 /* Libc includes */
@@ -139,17 +140,25 @@ void vm_init(vm_info_s *vmi, pte_s *pd, pt_t *pt)
  *
  *  @return The actual starting address of the allocation.
  **/
+#include <simics.h>
 void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
                unsigned int attrs)
 {
   void *pg_start, *pg_limit;
+  int pg_count;
   mem_region_s *mreg;
-  void *addr;
+  void *addr, *addr2;
 
   pg_start = (void *)FLOOR(va_start, PAGE_SIZE);
   pg_limit = (void *)CEILING(va_start + len, PAGE_SIZE);
   assert( (((unsigned int) pg_start) & (PAGE_SIZE-1)) == 0 );
   assert( (((unsigned int) pg_limit) & (PAGE_SIZE-1)) == 0 );
+
+  /* Check that the system has enough frames */
+  pg_count = (pg_limit - pg_start)/PAGE_SIZE;
+  if (pg_count > frame_remaining()) {
+    return NULL;
+  }
 
   /* Initialize the memory region */
   mreg = malloc(sizeof(mem_region_s));
@@ -162,15 +171,19 @@ void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
     return NULL;
   } 
 
+  /* Allocate frames for the requested memory */
+  for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE) {
+    if (!alloc_page(&vmi->pg_info, addr, attrs)) {
+      for (addr2 = mreg->start; addr < addr; addr += PAGE_SIZE)
+        free_page(&vmi->pg_info, addr);
+      return NULL;
+    }
+  }
+
   /* Insert it into the memory map */
   if (mreg_insert(&vmi->mmap, mreg)) {
     free(mreg);
     return NULL;
-  }
-
-  /* Allocate frames for the requested memory */
-  for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE) {
-    alloc_page(&vmi->pg_info, addr, attrs);
   }
 
   /* Return the ACTUAL start of the allocation */

@@ -54,6 +54,7 @@ void *alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs)
   /* If the PDE isn't valid, make it so */
   if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, NULL)) {
     frame = alloc_frame();
+    if (!frame) return NULL;
     init_pte(&pde, frame);
     pde.present = 1;
     pde.writable = 1;
@@ -63,6 +64,7 @@ void *alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs)
 
   /* Back the requested vaddr with a page */
   frame = alloc_frame();
+  if (!frame) return NULL;
   init_pte(&pde, frame);
   pde.present = 1;
   translate_attrs(&pde, attrs);
@@ -115,6 +117,7 @@ int copy_page(pg_info_s *dst, const pg_info_s *src, void *vaddr, unsigned int at
   /* Allocate a buffer page to map in the dest page */
   if (get_pte(src->pg_dir, src->pg_tbls, BUF, NULL)) {
     frame = alloc_frame();
+    if (!frame) return -1;
     init_pte(&pde, frame);
     pde.present = 1;
     pde.writable = 1;
@@ -125,6 +128,7 @@ int copy_page(pg_info_s *dst, const pg_info_s *src, void *vaddr, unsigned int at
   if (get_pte(src->pg_dir, src->pg_tbls, vaddr, NULL))
     return -1;
   frame = alloc_page(dst, vaddr, attrs);
+  if (!frame) return -1;
 
   /* Map in the dest page for copying */
   init_pte(&pde, frame);
