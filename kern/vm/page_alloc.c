@@ -106,7 +106,7 @@ void free_page(pg_info_s *pgi, void *vaddr)
  *  @return 0 on success; a negative integer error code on failure.
  **/
 /* TODO: make this dynamic */
-#define BUF (void *)(0xE0000000)
+#define BUF ( (void *)&tomes[PG_TBL_ENTRIES - 3][PG_TBL_ENTRIES - 2])
 int copy_page(pg_info_s *dst, const pg_info_s *src, void *vaddr, unsigned int attrs)
 {
   void *frame;

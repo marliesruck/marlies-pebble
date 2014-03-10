@@ -16,10 +16,12 @@
 #include <stddef.h>
 #include <string.h>
 
+
 page_t *pages = (page_t *)NULL;
 tome_t *tomes = (tome_t *)NULL;
 
 pte_s *kern_pt[KERN_PD_ENTRIES];
+
 
 /** @brief Initialize kernel pages.
  *

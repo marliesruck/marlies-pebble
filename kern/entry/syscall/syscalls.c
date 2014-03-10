@@ -84,7 +84,7 @@ void install_sys_handlers(void)
  */
 #include <tlb.h>
 #include <frame_alloc.h>
-#define CHILD_PDE (void *)(0xF0000000)
+#define CHILD_PDE ( (void *)tomes[PG_TBL_ENTRIES - 2] )
 void *init_child_tcb(void *child_cr3, pte_s *pd, pt_t *pt)
 {
   /* Initialize vm struct */
@@ -126,7 +126,7 @@ int sys_fork(unsigned int esp)
   pde.present = 0;
   set_pde(curr_task->vmi.pg_info.pg_dir, child_pd, &pde);
   tlb_inval_tome(child_pg_tables);
-  tlb_inval_page((void *)0xFFFC0000);
+  tlb_inval_page(curr_task->vmi.pg_info.pg_tbls[PG_DIR_INDEX(child_pd)]);
 
   /* Copy the parent's kstack */
   unsigned int offset = esp - ((unsigned int) curr->kstack);

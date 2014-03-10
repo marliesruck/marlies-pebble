@@ -17,7 +17,7 @@
 
 
 #define USR_STACK_SIZE PAGE_SIZE
-#define USR_SP_HI ( (void *)tomes[PG_TBL_ENTRIES - 1] )
+#define USR_SP_HI ( (void *)tomes[PG_TBL_ENTRIES - 2] )
 
 typedef unsigned int esp_t;
 
