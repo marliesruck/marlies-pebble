@@ -34,7 +34,7 @@ UPDATE_METHOD = web
 # A list of the test programs you want compiled in from the 410user/progs
 # directory.
 #
-410TESTS = ck1 merchant peon knife fork_test1 exec_basic_helper exec_basic exec_nonexist coolness new_pages mem_permissions
+410TESTS = ck1 merchant peon knife fork_test1 exec_basic_helper exec_basic exec_nonexist coolness new_pages mem_permissions print_basic
 
 ###########################################################################
 # Test programs you have written which you wish to run
@@ -42,7 +42,7 @@ UPDATE_METHOD = web
 # A list of the test programs you want compiled in from the user/progs
 # directory.
 #
-STUDENTTESTS =
+STUDENTTESTS =  introspective schizo introvert garrulous
 
 ###########################################################################
 # Data files provided by course staff to build into the RAM disk
@@ -126,4 +126,4 @@ KERNEL_OBJS = kernel.o lib/atomic.o lib/spin.o entry/syscall/finish_fork.o lib/c
 # kernel in, or else your tweaked version will run and the test harness
 # won't.
 #
-STUDENTREQPROGS = introspective schizo introvert
+STUDENTREQPROGS =

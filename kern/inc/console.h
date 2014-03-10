@@ -1,34 +1,20 @@
-/*
- *
- *  #     #
- *  ##    #   ####    #####     #     ####   ######
- *  # #   #  #    #     #       #    #    #  #
- *  #  #  #  #    #     #       #    #       #####
- *  #   # #  #    #     #       #    #       #
- *  #    ##  #    #     #       #    #    #  #
- *  #     #   ####      #       #     ####   ######
- *
- * Now that it's P3 instead of P1 you are allowed
- * to edit this file if it suits you.
- *
- * Please delete this notice.
- *
- */
-
 /** @file console.h
+ *
  *  @brief Function prototypes for the console driver.
  *
  *  This contains the prototypes and global variables for the console
- *  driver
+ *  driver.
  *
  *  @author Michael Berman (mberman)
+ *
  *  @bug No known bugs.
  */
 
-#ifndef _CONSOLE_H
-#define _CONSOLE_H
+#ifndef __CONSOLE_H__
+#define __CONSOLE_H__
 
 #include <video_defines.h>
+
 
 /** @brief Prints character ch at the current location
  *         of the cursor.
@@ -155,5 +141,6 @@ void draw_char(int row, int col, int ch, int color);
  *  @return The character at (row, col).
  */
 char get_char(int row, int col);
+
 
 #endif /* _CONSOLE_H */

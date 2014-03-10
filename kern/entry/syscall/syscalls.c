@@ -282,6 +282,7 @@ int sys_remove_pages(void *addr)
  *  Console I/O
  *************************************************************************/
 
+#include <console.h>
 /* REMOVED FOR DEBUGGING, REVERT THIS
 char sys_getchar(void)
 {
@@ -296,22 +297,42 @@ int sys_readline(int size, char *buf)
 
 int sys_print(int size, char *buf)
 {
-  return -1;
+  char *buf_k;
+
+  /* Copy buf_k from user-space */
+  buf_k = malloc(size);
+  if (!buf_k) return -1;
+  if (copy_from_user(buf_k, buf, size)) {
+    free(buf_k);
+    return -1;
+  }
+
+  putbytes(buf, size);
+
+  free(buf_k);
+  return 0;
 }
 
 int sys_set_term_color(int color)
 {
-  return -1;
+  return set_term_color(color);
 }
 
 int sys_set_cursor_pos(int row, int col)
 {
-  return -1;
+  return set_cursor(row, col);
 }
 
 int sys_get_cursor_pos(int *row, int *col)
 {
-  return -1;
+  int krow, kcol;
+
+  get_cursor(&krow, &kcol);
+
+  *row = krow;
+  *col = kcol;
+
+  return 0;
 }
 
 
