@@ -43,6 +43,7 @@
 #include <process.h>
 #include <thread.h>
 #include <ctx_switch.h>
+#include <console.h>
 
 /* Usr stack init includes */
 #include <loader.h>
@@ -104,6 +105,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   install_device_handlers();
   install_fault_handlers(); 
   install_sys_handlers(); 
+  clear_console();
 
   /* Initialized kernel page tables */
   init_kern_pt();
@@ -116,7 +118,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   enable_paging();
 
   /* Load the first executable */
-  thread_t *thread = load_task(pd, "readline_basic");
+  thread_t *thread = load_task(pd, "shell");
 
   enable_interrupts();
 
@@ -148,6 +150,7 @@ thread_t *load_task(void *pd, const char *fname)
   thread->pc = load_file(&task->vmi, fname);
   thread->sp = usr_stack_init(&task->vmi, NULL);
 
+  sim_reg_process(pd, fname);
   return thread;
 }
 

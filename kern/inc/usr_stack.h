@@ -16,7 +16,7 @@
 #include <x86/page.h>
 
 
-#define USR_STACK_SIZE PAGE_SIZE
+#define USR_STACK_SIZE ( PAGE_SIZE * PG_TBL_ENTRIES)
 #define USR_SP_HI ( (void *)tomes[PG_TBL_ENTRIES - 2] )
 
 typedef unsigned int esp_t;
