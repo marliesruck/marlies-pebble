@@ -33,14 +33,13 @@
  *  @return The next character in the keyboard buffer, or -1 if the
  *          keyboard buffer is currently empty.
  **/
-
-int sys_getchar(void)
+int kbd_getchar(void)
 {
   int res;
   char scancode;
   kh_type k;
 
-  while ((res = __buffer_read(&scancode)) != -1)
+  while ((res = __buffer_read_uninterruptible(&scancode)) != -1)
   {
     k = process_scancode(scancode);
     if (KH_HASDATA(k) && KH_ISMAKE(k))
@@ -49,6 +48,28 @@ int sys_getchar(void)
 
   return -1;
 }
+
+/** @brief Writes a character into the keyboard buffer.
+ *
+ *  This function allows the caller to write arbitrary character values
+ *  into the keyboard buffer.  This function is intended for use as a
+ *  debugging tool.
+ *
+ *  @param scancode The scancode to write into the buffer
+ *
+ *  @return Void.
+ **/
+void kbd_putchar(char scancode)
+{
+  /* Disable interrupts to ensure the keyboard callback isn't writing into
+   * the buffer at the same time.
+   */
+  disable_interrupts();
+  __buffer_write(scancode);
+  enable_interrupts();
+  return;
+}
+
 /** @brief Handles keyboard interrupts.
  *
  *  Simply read a scancode from the keyboard and write it into the keyboard
@@ -66,17 +87,6 @@ void int_keyboard(void)
 
   outb(INT_CTL_PORT, INT_ACK_CURRENT);
 
-  /* Only ctx_switch on 'c' */
-  /*
-  int k = process_scancode(scancode);
-  if (KH_HASDATA(k) && KH_ISMAKE(k)){
-    if(KH_GETCHAR(k) == 'c') {
-      lprintf("c");
-      sys_getchar();  
-      ctx_switch(); 
-    }
-  }
-  */
   return;
 }
 
@@ -152,29 +162,22 @@ static int __buffer_read(char *scancode)
   return lost;
 }
 
-
-/*************************************************************************/
-/* Debugg Functions                                                      */
-/*************************************************************************/
-
-/** @brief Writes a character into the keyboard buffer.
+/** @brief Read a scancode from the keyboard buffer, with interrupts
+ *  disabled.
  *
- *  This function allows the caller to write arbitrary character values
- *  into the keyboard buffer.  This function is intended for use as a
- *  debugging tool.
+ *  @param scancode Destination pointer for read scancode
  *
- *  @param scancode The scancode to write into the buffer
- *
- *  @return Void.
+ *  @return The number of lost entries since the last read, or -1 if the
+ *          keyboard buffer is currently empty.
  **/
-void write_scancode(char scancode)
+static int __buffer_read_uninterruptible(char *scancode)
 {
-  /* Disable interrupts to ensure the keyboard callback isn't writing into
-   * the buffer at the same time.
-   */
+  int lost;
+  
   disable_interrupts();
-  __buffer_write(scancode);
+  lost = __buffer_read(scancode);
   enable_interrupts();
-  return;
+
+  return lost;
 }
 

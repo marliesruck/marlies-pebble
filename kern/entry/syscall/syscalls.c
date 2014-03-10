@@ -283,16 +283,38 @@ int sys_remove_pages(void *addr)
  *************************************************************************/
 
 #include <console.h>
-/* REMOVED FOR DEBUGGING, REVERT THIS
+#include <keyboard.h>
+
+
 char sys_getchar(void)
 {
-  return -1;
+  char ch;
+  while ((ch = kbd_getchar()) == -1) continue;
+  return ch;
 }
-*/
 
 int sys_readline(int size, char *buf)
 {
-  return -1;
+  int count = 0;
+  char ch = '\0';
+
+  while (count < size && ch != '\n')
+  {
+    /* Read characters from the keyboard */
+    while ((ch = kbd_getchar()) == -1) continue;
+
+    /* Write to user buffer and console*/
+    buf[count] = ch;
+    putbyte(ch);
+
+    /* Inc/Decrement read count */
+    if (ch == '\b')
+      --count;
+    else
+      ++count;
+  }
+
+  return count;
 }
 
 int sys_print(int size, char *buf)
@@ -307,6 +329,7 @@ int sys_print(int size, char *buf)
     return -1;
   }
 
+  /* Write to the console */
   putbytes(buf, size);
 
   free(buf_k);
@@ -327,8 +350,10 @@ int sys_get_cursor_pos(int *row, int *col)
 {
   int krow, kcol;
 
+  /* Get cursor coords */
   get_cursor(&krow, &kcol);
 
+  /* Copy coords to user */
   *row = krow;
   *col = kcol;
 
