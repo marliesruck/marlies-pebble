@@ -123,14 +123,21 @@ void vm_init(vm_info_s *vmi, pte_s *pd, pt_t *pt)
 }
 /*  @brief Allocates region struct but no physical frames to back it
  *
- *  Used by ZFOD
+ *  This function allocates a region of virtual memory in the address-space
+ *  specified by vmi,
+ *
+ *  The starting address, va_start, is rounded down to a page boundary to
+ *  determine the actual starting address for the allocation.  Furthermore,
+ *  only whole pages are allocated, so (va_start + len) is rounded up to a
+ *  page bondary as well.  Obviously, the actual allocation may be larger
+ *  than the reqested space.  
  *
  *  @param vmi The vm_info struct for this allocation.
  *  @param va_start The requested starting address for the allocation.
  *  @param len The length (in bytes) of the allocation.
  *  @param attrs Attributes the allocated region will have.
  *
- *  @return NULL on error or the actual starting address of the allocation.
+ *  @return NULL on error or the region allocated
  **/
 void *vm_region(vm_info_s *vmi, void *va_start, size_t len,
                 unsigned attrs)
@@ -165,17 +172,12 @@ void *vm_region(vm_info_s *vmi, void *va_start, size_t len,
  
 /** @brief Allocate a contiguous region in memory.
  *
- *  This function allocates a region of virtual memory in the address-space
- *  specified by vmi,  The new region will starting at va_start, extending
- *  for len bytes, and have the protections specified by attrs.
+ *  The new region will starting at va_start, extending for len bytes, and have
+ *  the protections specified by attrs. The region struct is allocated by
+ *  vm_region(), and the region is backed by physical frames in this function.
  *
- *  The starting address, va_start, is rounded down to a page boundary to
- *  determine the actual starting address for the allocation.  Furthermore,
- *  only whole pages are allocated, so (va_start + len) is rounded up to a
- *  page bondary as well.  Obviously, the actual allocation may be larger
- *  than the reqested space.  If the allocation succeeds, the actual
- *  starting address of the allocated region is returned; otherwise NULL is
- *  returned.
+ *  If the allocation succeeds, the actual starting address of the allocated
+ *  region is returned; otherwise NULL is returned.
  *
  *  @param vmi The vm_info struct for this allocation.
  *  @param va_start The requested starting address for the allocation.
@@ -190,6 +192,7 @@ void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
   void *addr;
   mem_region_s *mreg;
 
+  /* Allocate a region */
   assert(mreg = vm_region(vmi, va_start,len,attrs));
 
   /* Allocate frames for the requested memory */
