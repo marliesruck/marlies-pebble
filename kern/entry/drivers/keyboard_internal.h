@@ -45,5 +45,6 @@ typedef struct keyboard_buffer kbd_buffer;
 /* Read and write from the scancode buffer */
 static void __buffer_write(char scancode);
 static int __buffer_read(char *scancode);
+static int __buffer_read_uninterruptible(char *scancode);
 
 #endif

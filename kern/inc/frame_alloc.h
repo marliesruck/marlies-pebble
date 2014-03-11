@@ -11,6 +11,7 @@
 
 void *alloc_frame(void);
 void free_frame(void *frame);
+int frame_remaining(void);
 
 
 #endif /* __FRAME_ALLOC_H__ */

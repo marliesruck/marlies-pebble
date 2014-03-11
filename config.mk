@@ -20,7 +20,7 @@ TABSTOP = 8
 # "offline" is strongly not recommended as you may miss important project
 # updates.
 #
-UPDATE_METHOD = web 
+UPDATE_METHOD = web
 
 ###########################################################################
 # WARNING: When we test your code, the two TESTS variables below will be
@@ -34,7 +34,7 @@ UPDATE_METHOD = web
 # A list of the test programs you want compiled in from the 410user/progs
 # directory.
 #
-410TESTS = ck1 merchant peon knife fork_test1 exec_basic_helper exec_basic exec_nonexist coolness 
+410TESTS = ck1 merchant peon knife fork_test1 exec_basic_helper exec_basic exec_nonexist coolness new_pages mem_permissions print_basic readline_basic
 
 ###########################################################################
 # Test programs you have written which you wish to run
@@ -42,7 +42,7 @@ UPDATE_METHOD = web
 # A list of the test programs you want compiled in from the user/progs
 # directory.
 #
-STUDENTTESTS =
+STUDENTTESTS =  introspective schizo introvert garrulous mimic zfod
 
 ###########################################################################
 # Data files provided by course staff to build into the RAM disk
@@ -93,7 +93,7 @@ AUTOSTACK_OBJS = autostack.o
 #
 # Kernel object files you provide in from kern/
 #
-KERNEL_OBJS = kernel.o lib/atomic.o lib/spin.o entry/syscall/finish_fork.o lib/cllist.o sched/ctx_switch.o sched/asm_ctx_switch.o lib/malloc_wrappers.o vm/vm.o vm/asm_tlb.o vm/tlb.o vm/page_alloc.o vm/frame_alloc.o vm/pg_table.o mode_switch.o loader/loader.o loader/usr_stack.o entry/drivers/keyboard.o entry/drivers/timer.o entry/idt.o entry/drivers/driver_wrappers.o entry/drivers/fake_console.o entry/syscall/sc_utils.o entry/syscall/syscall_wrappers.o entry/syscall/syscalls.o entry/faults/faults.o entry/faults/fault_wrappers.o entry/drivers/drivers.o sched/thread.o
+KERNEL_OBJS = kernel.o lib/atomic.o lib/spin.o entry/syscall/finish_fork.o lib/cllist.o sched/ctx_switch.o sched/asm_ctx_switch.o lib/malloc_wrappers.o vm/vm.o vm/asm_tlb.o vm/tlb.o vm/page_alloc.o vm/frame_alloc.o vm/pg_table.o mode_switch.o loader/loader.o loader/usr_stack.o entry/drivers/keyboard.o entry/drivers/timer.o entry/idt.o entry/drivers/driver_wrappers.o entry/drivers/console.o entry/drivers/cursor.o entry/syscall/sc_utils.o entry/syscall/syscall_wrappers.o entry/syscall/syscalls.o entry/faults/faults.o entry/faults/fault_wrappers.o entry/drivers/drivers.o sched/thread.o
 
 ###########################################################################
 # WARNING: Do not put **test** programs into the REQPROGS variables.  Your
@@ -126,4 +126,4 @@ KERNEL_OBJS = kernel.o lib/atomic.o lib/spin.o entry/syscall/finish_fork.o lib/c
 # kernel in, or else your tweaked version will run and the test harness
 # won't.
 #
-STUDENTREQPROGS = introspective schizo introvert zfod
+STUDENTREQPROGS = 

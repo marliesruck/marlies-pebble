@@ -28,13 +28,24 @@ int frame_index = USER_MEM_START/sizeof(frame_t);
 void *alloc_frame(void)
 {
   void *base;
+
+  /* Make sure we have frames */
+  if (frame_index > machine_phys_frames())
+    return NULL;
+
   base = (void *)&frames[frame_index];
   ++frame_index;
+
   return base;
 }
 
 void free_frame(void *frame)
 {
   return;
+}
+
+int frame_remaining(void)
+{
+  return machine_phys_frames() - frame_index;
 }
 

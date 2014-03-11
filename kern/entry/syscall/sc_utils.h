@@ -14,12 +14,6 @@
 #define __SC_UTILS_H__
 
 
-/* System call arity constants */
-#define SC_NULLARY  0
-#define SC_UNARY    1
-#define SC_N_ARY    2
-
-
 #ifndef ASSEMBLER
 
 #include <types.h>
@@ -129,12 +123,12 @@ asm_\scname:
   push  %fs                       # Store FS data segment
   push  %gs                       # Store GS data segment
 
-  # Invoke system call handler
   movl \argc, %ecx                # ECX = argument count (for rep)
   sub  $8,   %esp                 # Make space on the stack for the args
   movl %esp, %edi                 # EDI = kernel stack
   rep movsl                       # Copy args onto kernel stack
 
+  # Invoke system call handler
   call \scname                    # Call the system call handler
   add   $8, %esp                  # Clean up ESP from args pushed on by rep
 
