@@ -132,7 +132,8 @@ void vm_init(vm_info_s *vmi, pte_s *pd, pt_t *pt)
  *
  *  @return NULL on error or the actual starting address of the allocation.
  **/
-void *vm_region(vm_info_s *vmi, void *va_start, size_t len)
+void *vm_region(vm_info_s *vmi, void *va_start, size_t len,
+                unsigned attrs)
 {
   void *pg_start, *pg_limit;
   mem_region_s *mreg;
@@ -146,7 +147,7 @@ void *vm_region(vm_info_s *vmi, void *va_start, size_t len)
   /* Initialize the memory region */
   mreg = malloc(sizeof(mem_region_s));
   if (!mreg) return NULL;
-  mreg_init(mreg, pg_start, pg_limit-1, VM_ATTR_ZFOD | VM_ATTR_USER);
+  mreg_init(mreg, pg_start, pg_limit-1, attrs);
 
   /* Check that the requested memory is available */
   if (mreg_lookup(&vmi->mmap, mreg)) {
@@ -186,32 +187,10 @@ void *vm_region(vm_info_s *vmi, void *va_start, size_t len)
 void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
                unsigned int attrs)
 {
-  void *pg_start, *pg_limit;
-  mem_region_s *mreg;
   void *addr;
+  mem_region_s *mreg;
 
-  pg_start = (void *)FLOOR(va_start, PAGE_SIZE);
-  pg_limit = (void *)CEILING(va_start + len, PAGE_SIZE);
-
-  assert( (((unsigned int) pg_start) & (PAGE_SIZE-1)) == 0 );
-  assert( (((unsigned int) pg_limit) & (PAGE_SIZE-1)) == 0 );
-
-  /* Initialize the memory region */
-  mreg = malloc(sizeof(mem_region_s));
-  if (!mreg) return NULL;
-  mreg_init(mreg, pg_start, pg_limit-1, attrs);
-
-  /* Check that the requested memory is available */
-  if (mreg_lookup(&vmi->mmap, mreg)) {
-    free(mreg);
-    return NULL;
-  } 
-
-  /* Insert it into the memory map */
-  if (mreg_insert(&vmi->mmap, mreg)) {
-    free(mreg);
-    return NULL;
-  }
+  assert(mreg = vm_region(vmi, va_start,len,attrs));
 
   /* Allocate frames for the requested memory */
   for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE) {
@@ -219,7 +198,7 @@ void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
   }
 
   /* Return the ACTUAL start of the allocation */
-  return pg_start;
+  return mreg->start;
 }
 
 /** @brief Frees a region previously allocated by vm_alloc(...).

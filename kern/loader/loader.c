@@ -98,9 +98,19 @@ int validate_file(simple_elf_t *se, const char* filename)
   return 0;
 
 }
-/* @bug If bss spans multiple tomes we need to make sure the PDE is initialized
- * to read only
+/* @brief Loads data and bss.
  *
+ * Data and bss have a separate because data's location in memory will affect
+ * bss.  If data and bss overlap on a page, then the bss portion is simply
+ * initialized to zeroes. Moreover, if bss spans multiple pages, then those
+ * remaining PTE should be ZFOD.  
+ *
+ * @bug Right now memory between regions is zeroed out but also user accessible
+ * when in fact this should cause a page fault.  More fine grained permissions?
+ *
+ * @param vmi Struct for keeping track of task's VM.
+ * @param filename File to be loaded.
+ * @param se ELF information for loading file.
  */
 void copy_data_bss(vm_info_s *vmi, const char *filename, simple_elf_t *se)
 {
@@ -112,27 +122,41 @@ void copy_data_bss(vm_info_s *vmi, const char *filename, simple_elf_t *se)
   unsigned int bss_limit = CEILING(se->e_bssstart + se->e_bsslen, PAGE_SIZE);
 
   /* Data and BSS share a page */
-  if(bss_start <= (se->e_datstart + se->e_datlen)){
+  if(bss_start <= dat_limit){
+
     /* Allocate 1 region for data and BSS */
     ret = vm_alloc(vmi, (void *)se->e_datstart, se->e_datlen, 
                    VM_ATTR_USER | VM_ATTR_RDWR);
     assert(ret != NULL);
+
     /* Zero non-data part of page (which is BSS and possibly a 'hole' between
      * regions  */
     memset((void *)(se->e_datstart + se->e_datlen), 0,dat_limit - 
             (se->e_datstart + se->e_datlen));
+
     /* Allocate a ZFOD region for remaining BSS */
     if(dat_limit != bss_limit){
       unsigned int bss_ceiling = CEILING(se->e_bssstart, PAGE_SIZE);
-      mreg = vm_region(vmi, (void *)bss_ceiling, bss_limit - bss_ceiling);
+      mreg = vm_region(vmi, (void *)bss_ceiling, bss_limit - bss_ceiling,
+                       VM_ATTR_USER | VM_ATTR_ZFOD);
       assert(mreg != NULL);
+
+      /* Set PTEs to ZFOD */
       vm_zfod(mreg,&vmi->pg_info);
     }
   }
   else{
-    /* Allocate a ZFOD region for bss starting with the end of data*/
-    mreg = vm_region(vmi, (void *)dat_limit, bss_limit - dat_limit);
+    /* Allocate 1 region for ONLY data */
+    ret = vm_alloc(vmi, (void *)se->e_datstart, se->e_datlen, 
+                   VM_ATTR_USER | VM_ATTR_RDWR);
+    assert(ret != NULL);
+
+    /* Allocate a region for bss starting with the end of data*/
+    mreg = vm_region(vmi, (void *)dat_limit, bss_limit - dat_limit,
+                     VM_ATTR_USER | VM_ATTR_ZFOD);
     assert(mreg != NULL);
+
+    /* Set PTEs to ZFOD */
     vm_zfod(mreg,&vmi->pg_info);
   }
 
