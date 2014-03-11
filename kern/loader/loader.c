@@ -98,6 +98,10 @@ int validate_file(simple_elf_t *se, const char* filename)
   return 0;
 
 }
+/* @bug If bss spans multiple tomes we need to make sure the PDE is initialized
+ * to read only
+ *
+ */
 void copy_data_bss(vm_info_s *vmi, const char *filename, simple_elf_t *se)
 {
   void *ret;

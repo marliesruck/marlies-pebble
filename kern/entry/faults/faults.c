@@ -200,10 +200,37 @@ void int_gen_prot(void)
  *
  *  @return Void.
  **/
-void int_page_fault(void)
+/* Pebbles specific includes */
+#include <process.h>
+#include <thread.h>
+#include <vm.h>
+#include <ctx_switch.h>
+#include <util.h>
+/* x86 specific includes */
+#include <x86/cr.h>
+
+#include <string.h>
+void int_page_fault(void *error_code)
 {
-  lprintf("Error: Page fault!");
-  panic("Error: Page fault!");
+  /* Retrieve current process's vm */
+  pg_info_s *pg_info = &curr->task_info->vmi.pg_info;
+  pt_t *pg_tbles = pg_info->pg_tbls;
+
+  /* Retrieve address that caused fault */
+  void *addr = (void *)get_cr2();
+
+  /* Retrieve PTE for faulting address */
+  pte_s *pte = &pg_tbles[PG_DIR_INDEX(addr)][PG_TBL_INDEX(addr)];
+  /* oooops...ZFOD */
+  if(pte->zfod){
+    pte->zfod = 0;
+    alloc_page(pg_info, addr, VM_ATTR_USER | VM_ATTR_RDWR);
+    memset((void *)(FLOOR(addr, PAGE_SIZE)), 0, PAGE_SIZE);
+  }
+  else{
+    lprintf("Error: Page fault!");
+    panic("Error: Page fault!");
+  }
   return;
 }
 

@@ -31,8 +31,10 @@
 .extern \handler
 .global asm_\handler
 asm_\handler:
-
   # Prologue
+  push  %ebp                      # Store old EBP
+  movl  %esp, %ebp                # Set up new EBP
+
   pusha                           # Store GP registers
   push %ds                        # Store DS data segment
   push %es                        # Store ES data segment
@@ -48,6 +50,8 @@ asm_\handler:
   pop %ds                         # Restore DS data segment
   popa                            # Restore GP registers
 
+  # Epilogue
+  pop   %ebp                      # Restore old EBP
   iret                            # Return from the interrupt
 
 .endm

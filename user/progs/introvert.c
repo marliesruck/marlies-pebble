@@ -8,8 +8,9 @@ int test[4096];
 
 int main()
 {
-  //lprintf("test[0]: %d", test[0]);
   lprintf("&test[4095]:%p test[4095]: %d",&test[4095], test[4095]);
+  test[4095] = 123;
+  lprintf("test[4095] = %d",test[4095]);
   //MAGIC_BREAK;
   while(1);
   /*
