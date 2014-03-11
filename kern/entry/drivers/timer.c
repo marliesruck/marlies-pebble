@@ -1,11 +1,21 @@
-#include <simics.h>
+/* @file timer.c
+ *
+ * @author Enrique Naudon (esn)
+ * @author Marlies Ruck (mruck)
+ *
+ * @bug No known bugs
+ */
 
-#include <interrupt_defines.h>
-#include <timer_defines.h>
-#include <x86/asm.h>
-#include <ctx_switch.h>
+/* Timer includes */
 #include "timer.h"
-#include "driver_wrappers.h"
+
+/* Pebbles includes */
+#include <interrupt_defines.h>
+#include <sched.h>
+#include <timer_defines.h>
+
+/* Libc includes */
+#include <x86/asm.h>
 
 #define CYCLES  (TIMER_RATE/100) /* 10 ms resolution */
 #define LSB(x)  (x & 0xFF)
@@ -13,9 +23,10 @@
 
 void tick(unsigned int ticks)
 {
-  ctx_switch();
+  schedule();
   return;
 }
+
 void init_timer(void)
 {
     outb(TIMER_MODE_IO_PORT, TIMER_SQUARE_WAVE);

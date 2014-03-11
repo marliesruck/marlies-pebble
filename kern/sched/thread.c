@@ -30,7 +30,6 @@
 /* Atomically acquire a tid */
 static int tid = 0;
 static spin_s tid_lock = SPIN_INITIALIZER();
-queue_s naive_thrlist = CLL_LIST_INITIALIZER(naive_thrlist);
 
 /* @brief Initializae a task and its root thread.
  *
@@ -68,6 +67,7 @@ thread_t *thread_init(task_t *task)
 
   thread_t *thread = malloc(sizeof(thread_t));
   thread->task_info = task;
+  thread->state = THR_NASCENT;
 
   /* Atomically acquire TID */
   spin_lock(&tid_lock);
@@ -75,7 +75,7 @@ thread_t *thread_init(task_t *task)
   spin_unlock(&tid_lock);
 
   thread->sp = NULL;
-    thread->pc = NULL;
+  thread->pc = NULL;
     
     return thread;
 }

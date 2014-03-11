@@ -83,6 +83,7 @@ void install_sys_handlers(void)
  * @return Address of malloced child pcb 
  */
 #include <tlb.h>
+#include <sched.h>
 #include <frame_alloc.h>
 #define CHILD_PDE ( (void *)tomes[PG_TBL_ENTRIES - 2] )
 void *init_child_tcb(void *child_cr3, pte_s *pd, pt_t *pt)
@@ -141,7 +142,7 @@ int sys_fork(unsigned int esp)
   child_thread->pc = finish_fork;
 
   /* Enqueue new tcb */
-  thrlist_enqueue(child_thread, &naive_thrlist);
+  thrlist_enqueue(child_thread, &runnable);
 
   return child_thread->tid;
 }

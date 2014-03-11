@@ -17,10 +17,20 @@
 
 #define KSTACK_SIZE PAGE_SIZE
 
-extern queue_s naive_thrlist;
+/** @enum thread_state
+ *  @brief Flag values for thread state.
+ **/
+enum thread_state {
+  THR_NASCENT,    /**< The thread is still being initialized **/
+  THR_RUNNING,    /**< The thread is currently runnable **/
+  THR_BLOCKED,    /**< The thread is currently not runnable **/
+  THR_EXITED,     /**< The thread has exited **/
+};
+typedef enum thread_state thr_state_e;
 
 typedef struct thread{
   task_t *task_info;
+  thr_state_e state;
   int tid;
   void *sp;
   void *pc;
@@ -38,3 +48,4 @@ thread_t *thrlist_dequeue(queue_s *q);
 int thrlist_empty(queue_s *q);
 
 #endif /* _THREAD_H */
+
