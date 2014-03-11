@@ -8,6 +8,11 @@ int test[4096];
 
 int main()
 {
+  int tid = fork();
+  if(tid)
+    lprintf("parent");
+  else
+    lprintf("child");
   lprintf("&test[4095]:%p test[4095]: %d",&test[4095], test[4095]);
   test[4095] = 123;
   lprintf("test[4095] = %d",test[4095]);
