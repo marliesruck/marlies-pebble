@@ -47,5 +47,10 @@ thread_t *thrlist_dequeue(queue_s *q);
 
 int thrlist_empty(queue_s *q);
 
+/* Thread list manipulation */
+int thrlist_add(thread_t *t);
+int thrlist_del(thread_t *t);
+thread_t *thrlist_find(int tid);
+
 #endif /* _THREAD_H */
 

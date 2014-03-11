@@ -125,7 +125,8 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   /* Give up the kernel stack that was given to us by the bootloader */
   set_esp0((uint32_t)(&thread->kstack[KSTACK_SIZE]));
 
-  /* Upon being interrupted we should return right here */
+  /* Mark the thread runnable and head to user-space */
+  thread->state = THR_RUNNING;
   mode_switch(thread->pc, thread->sp);
 
   /* We should never reach here! */
@@ -149,6 +150,9 @@ thread_t *load_task(void *pd, const char *fname)
   /* Prepare to drop into user mode */
   thread->pc = load_file(&task->vmi, fname);
   thread->sp = usr_stack_init(&task->vmi, NULL);
+
+  /* Insert the thread into the thread list */
+  thrlist_add(thread);
 
   sim_reg_process(pd, fname);
   return thread;

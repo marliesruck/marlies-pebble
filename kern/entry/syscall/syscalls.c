@@ -142,7 +142,9 @@ int sys_fork(unsigned int esp)
   child_thread->pc = finish_fork;
 
   /* Enqueue new tcb */
-  thrlist_enqueue(child_thread, &runnable);
+  assert( thrlist_add(child_thread) == 0 );
+  assert( sched_unblock(child_thread->tid) == 0 );
+  //thrlist_enqueue(child_thread, &runnable);
 
   return child_thread->tid;
 }

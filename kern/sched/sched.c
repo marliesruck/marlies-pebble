@@ -13,6 +13,7 @@
 #include <thread.h>
 
 #include <assert.h>
+#include <malloc.h>
 #include <simics.h>
 
 
@@ -20,11 +21,6 @@
  *  @brief The queue of runnable threads.
  **/
 queue_s runnable = QUEUE_INITIALIZER(runnable);
-
-/** @var blocked
- *  @brief A list of currently un-runnable threads
- **/
-cll_list blocked = CLL_LIST_INITIALIZER(blocked);
 
 int sched_block(int tid)
 {
@@ -40,35 +36,49 @@ int sched_block(int tid)
   }
   if (n == &runnable) return -1;
 
-  /* Add the blockee node to the blocked list
+  /* Remove the blockee node from the runnable queue
    * We must use cll_extract(...) here as the queue API only allows
-   * dequeueing.
+   * dequeueing
    */
-  n = cll_extract(&runnable, n);
-  cll_insert(&blocked, n);
+  assert(cll_extract(&runnable, n) == n);
+  free(n);
+
+  thr->state = THR_BLOCKED;
 
   return 0;
 }
 
 int sched_unblock(int tid)
 {
-  cll_node *n;
+  queue_node_s *n;
   thread_t *thr;
 
-  /* Find the blockee in the blocked list */
-  cll_foreach(&blocked, n) {
-    thr = cll_entry(thread_t *, n);
-    if (thr->tid == tid) break;
-  }
-  if (n == &blocked) return -1;
+  /* Find the blocked node */
+  thr = thrlist_find(tid);
+  if (!thr) return -1;
 
   /* Add the blocked node to the runnable queue */
-  n = cll_extract(&blocked, n);
-  queue_enqueue(runnable.prev, n);
+  n = malloc(sizeof(cll_node));
+  if (!n) return -1;
+  queue_init_node(n, thr);
+  queue_enqueue(&runnable, n);
+
+  thr->state = THR_RUNNING;
 
   return 0;
 }
 
+/** @brief Maybe run someone new for a while.
+ *
+ *  This is our main scheduling function.  It selects a thread from the
+ *  runnable queue and switches to that thread.
+ *
+ *  We avoid malloc'ing in this function by reusing the dequeue'd (i.e.
+ *  about-to-be-run) thread's queue node to enqueue the thread we remove
+ *  from the CPU.
+ *
+ *  @return Void.
+ **/
 void schedule(void)
 {
   thread_t *prev, *next;
@@ -79,6 +89,7 @@ void schedule(void)
   /* Dequeue the lucky thread */
   q = queue_dequeue(&runnable);
   next = queue_entry(thread_t *, q);
+  assert(next->state == THR_RUNNING);
 
   /* Enqueue the currently running thread */
   prev = curr;

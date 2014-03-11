@@ -15,6 +15,7 @@
 
 #include <assert.h>
 
+#include <cllist.h>
 #include <thread.h>
 #include <process.h>
 #include <queue.h>
@@ -30,6 +31,7 @@
 /* Atomically acquire a tid */
 static int tid = 0;
 static spin_s tid_lock = SPIN_INITIALIZER();
+static cll_list thread_list = CLL_LIST_INITIALIZER(thread_list);
 
 /* @brief Initializae a task and its root thread.
  *
@@ -80,44 +82,73 @@ thread_t *thread_init(task_t *task)
     return thread;
 }
 
-/* @brief Enqueue a thread.
+
+/*************************************************************************
+ *  Thread List Functions
+ *************************************************************************/
+
+/** @brief Add a thread to the thread lust.
  *
- * @param thread Thread to be enqueued.
- * @param q Queue to enqueue thread in.
+ *  @param t The thread to add.
  *
- * @return Void. 
- */
-void thrlist_enqueue(thread_t *thread, queue_s *q)
+ *  @return Void.
+ **/
+int thrlist_add(thread_t *t)
 {
-  assert(thread);
-  assert(q);
+  cll_node *n;
 
-  queue_node_s *n = malloc(sizeof(queue_node_s));
-  queue_init_node(n, thread);
+  /* Allocate a node for the new thread */
+	n = malloc(sizeof(cll_node));
+  if (!n) return -1;
+  cll_init_node(n, t);
 
-  queue_enqueue(q, n);
+  cll_insert(thread_list.next, n);
 
-  return;
+  return 0;
 }
 
-/* @brief Dequeue head thread
+/** @brief Remove a thread from the thread list.
  *
- * @param q Queue to enqueue thread in.
+ *  @param t The thread to delete.
  *
- * @return Address of dequeued thread
- */
-thread_t *thrlist_dequeue(queue_s *q)
+ *  @return Void.
+ **/
+int thrlist_del(thread_t *t)
 {
-  assert(q);
+  cll_node *n;
 
-  queue_node_s *n = queue_dequeue(q);
-  thread_t *thread = queue_entry(thread_t *, n);
+  /* Find our thread in the thread list */
+  cll_foreach(&thread_list, n)
+    if (cll_entry(thread_t *,n) == t) break;
+  if (cll_entry(thread_t *,n) != t)
+    return -1;
 
+  /* Extract and free it */
+  assert(cll_extract(&thread_list, n));
   free(n);
-  return thread;
+
+  return 0;
 }
 
-int thrlist_empty(queue_s *q)
+/** @brief Search the thread list by TID for a specific thread.
+ *
+ *  @param tid The TID of the thread to look for.
+ *
+ *  @return A pointer to the thread, or NULL if not found.
+ **/
+thread_t *thrlist_find(int tid)
 {
-  return queue_empty(q);
+  cll_node *n;
+  thread_t *t;
+
+  /* Iteratively search the thread list */
+  cll_foreach(&thread_list, n) {
+    t = cll_entry(thread_t *,n);
+    if (t->tid == tid) {
+      return t;
+    }
+  }
+
+  return NULL;
 }
+
