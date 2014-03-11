@@ -19,6 +19,9 @@
 #include <malloc.h>
 #include <stddef.h>
 
+/* ZFOD includes */
+#include <frame_alloc.h>
+
 /*************************************************************************
  *  Memory map and region manipulation
  *************************************************************************/
@@ -129,10 +132,9 @@ void vm_init(vm_info_s *vmi, pte_s *pd, pt_t *pt)
  *
  *  @return NULL on error or the actual starting address of the allocation.
  **/
-void *vm_region(vm_info_s *vmi, void *va_start, size_t len,
-               unsigned int attrs)
+void *vm_region(vm_info_s *vmi, void *va_start, size_t len)
 {
-  void *pg_start, *pg_limit, *addr;
+  void *pg_start, *pg_limit;
   mem_region_s *mreg;
 
   pg_start = (void *)FLOOR(va_start, PAGE_SIZE);
@@ -157,18 +159,7 @@ void *vm_region(vm_info_s *vmi, void *va_start, size_t len,
     free(mreg);
     return NULL;
   }
-
-  /* Allocate frames for the requested memory */
-  pte_s pte;
-  pte.present = 1;
-  pte.user = 1;
-  pte.zfod = 1;
-  pte.addr = SHIFT_ADDR(zfod);  
-
-  for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE) 
-    set_pte(vmi->pg_info.pg_dir,vmi->pg_info.pg_tbls, addr,&pte);
-
-  return pg_start;
+  return mreg;
 }
  
 /** @brief Allocate a contiguous region in memory.
@@ -340,3 +331,40 @@ void vm_final(vm_info_s *vmi)
   return;
 }
 
+/* @brief Makes PTEs in region ZFOD.
+ *
+ * @param mreg Region to set PTEs to ZFOD.
+ * @param pg_info Information necessary for manipulating the process's page
+ * directory and tables.
+ *
+ * @return Void.
+ */
+void vm_zfod(mem_region_s *mreg, pg_info_s *pg_info)
+{
+  void *addr;
+
+  /* In case PDE is invalid */
+  pte_s pde;
+  void *frame; 
+
+  /* Craft a ZFOD PTE */
+  pte_s pte;
+  pte.present = 1;
+  pte.user = 1;
+  pte.zfod = 1;
+  pte.addr = SHIFT_ADDR(zfod);  
+
+  for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE){
+    if(set_pte(pg_info->pg_dir,pg_info->pg_tbls, addr,&pte) < 0){
+      /* If the PDE isn't valid, make it so */
+      frame = alloc_frame();
+      init_pte(&pde, frame);
+      pde.present = 1;
+      pde.writable = 1;
+      pde.user = 1;
+      set_pde(pg_info->pg_dir, addr, &pde);
+      /* Now that the PDE is initialized, try again */
+      set_pte(pg_info->pg_dir,pg_info->pg_tbls, addr,&pte);
+    }
+  }
+}

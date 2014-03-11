@@ -126,4 +126,4 @@ KERNEL_OBJS = kernel.o lib/atomic.o lib/spin.o entry/syscall/finish_fork.o lib/c
 # kernel in, or else your tweaked version will run and the test harness
 # won't.
 #
-STUDENTREQPROGS = introspective schizo introvert
+STUDENTREQPROGS = introspective schizo introvert zfod

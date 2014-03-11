@@ -122,7 +122,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   memset(zfod,0,PAGE_SIZE);
 
   /* Load the first executable */
-  thread_t *thread = load_task(pd, "introvert");
+  thread_t *thread = load_task(pd, "zfod");
 
   enable_interrupts();
 
