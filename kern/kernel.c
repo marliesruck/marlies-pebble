@@ -49,7 +49,9 @@
 #include <loader.h>
 #include <usr_stack.h>
 
-
+/* ZFOD includes */
+#include <malloc.h>
+#include <string.h>
 
 /*************************************************************************
  *  Random paging stuff that should really be elsewhere
@@ -116,6 +118,10 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 
   set_cr3((uint32_t) pd);
   enable_paging();
+
+  /* Allocate dummy frame for admiring zeroes */
+  zfod = smemalign(PAGE_SIZE, PAGE_SIZE);
+  memset(zfod,0,PAGE_SIZE);
 
   /* Load the first executable */
   thread_t *thread = load_task(pd, "coolness");

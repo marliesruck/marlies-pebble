@@ -35,6 +35,7 @@
 #define PG_ADDR_MASK  (PG_DIR_MASK|PG_TBL_MASK)
 #define PG_ATTR_MASK  (~PG_ADDR_MASK)
 
+
 /** @brief Calculate an address' page table index.
  *
  *  @param addr The address.
@@ -81,6 +82,15 @@
 #define PACK_PTE(addr,attrs)  \
   ( (unsigned int)(addr) | (attrs) )
 
+/** @brief Shifts an address for storing in a page table entry
+ *
+ *  @param pte The address
+ *
+ *  @return The shifted address
+ **/
+#define SHIFT_ADDR(addr)   \
+  ((unsigned int)(addr) >> (PG_TBL_SHIFT))
+
 #define KERN_PD_ENTRIES PG_DIR_INDEX(USER_MEM_START)
 
 /** @struct page_table_entry
@@ -96,7 +106,8 @@ struct page_table_entry {
   unsigned int dirty    : 1;    /**< Set by HW on write **/
   unsigned int attr     : 1;    /**< Should be unset **/
   unsigned int global   : 1;    /**< Set stops TLB flush on ctx switch **/
-  unsigned int avail    : 3;    /**< Available for programmer use **/
+  unsigned int zfod     : 1;    /**< Set if page is ZFOD **/
+  unsigned int avail    : 2;    /**< Available for programmer use **/
   unsigned int addr     : 20;   /**< The frame backing this page **/
 };
 typedef struct page_table_entry pte_s;
@@ -113,7 +124,6 @@ extern tome_t *tomes;
 
 #define PG_SELFREF_INDEX (PG_TBL_ENTRIES - 1)
 #define PG_TBL_ADDR ( (pt_t *)tomes[PG_SELFREF_INDEX] )
-
 
 /* Stuff that shouldn't be here */
 void init_kern_pt(void);

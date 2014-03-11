@@ -5,6 +5,7 @@
  *  @author Enrique Naudon (esn)
  *  @author Marlies Ruck (mruck)
  **/
+#include <simics.h>
 
 /* VM includes */
 #include <vm.h>
@@ -18,6 +19,9 @@
 #include <assert.h>
 #include <malloc.h>
 #include <stddef.h>
+
+/* ZFOD includes */
+#include <frame_alloc.h>
 
 /*************************************************************************
  *  Memory map and region manipulation
@@ -118,39 +122,34 @@ void vm_init(vm_info_s *vmi, pte_s *pd, pt_t *pt)
 
   return;
 }
-
-/** @brief Allocate a contiguous region in memory.
+/*  @brief Allocates region struct but no physical frames to back it
  *
  *  This function allocates a region of virtual memory in the address-space
- *  specified by vmi,  The new region will starting at va_start, extending
- *  for len bytes, and have the protections specified by attrs.
+ *  specified by vmi,
  *
  *  The starting address, va_start, is rounded down to a page boundary to
  *  determine the actual starting address for the allocation.  Furthermore,
  *  only whole pages are allocated, so (va_start + len) is rounded up to a
  *  page bondary as well.  Obviously, the actual allocation may be larger
- *  than the reqested space.  If the allocation succeeds, the actual
- *  starting address of the allocated region is returned; otherwise NULL is
- *  returned.
+ *  than the reqested space.  
  *
  *  @param vmi The vm_info struct for this allocation.
  *  @param va_start The requested starting address for the allocation.
  *  @param len The length (in bytes) of the allocation.
  *  @param attrs Attributes the allocated region will have.
  *
- *  @return The actual starting address of the allocation.
+ *  @return NULL on error or the region allocated
  **/
-#include <simics.h>
-void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
-               unsigned int attrs)
+void *vm_region(vm_info_s *vmi, void *va_start, size_t len,
+                unsigned attrs)
 {
   void *pg_start, *pg_limit;
   int pg_count;
   mem_region_s *mreg;
-  void *addr, *addr2;
 
   pg_start = (void *)FLOOR(va_start, PAGE_SIZE);
   pg_limit = (void *)CEILING(va_start + len, PAGE_SIZE);
+
   assert( (((unsigned int) pg_start) & (PAGE_SIZE-1)) == 0 );
   assert( (((unsigned int) pg_limit) & (PAGE_SIZE-1)) == 0 );
 
@@ -171,6 +170,40 @@ void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
     return NULL;
   } 
 
+  /* Insert it into the memory map */
+  if (mreg_insert(&vmi->mmap, mreg)) {
+    free(mreg);
+    return NULL;
+  }
+  return mreg;
+}
+ 
+/** @brief Allocate a contiguous region in memory.
+ *
+ *  The new region will starting at va_start, extending for len bytes, and have
+ *  the protections specified by attrs. The region struct is allocated by
+ *  vm_region(), and the region is backed by physical frames in this function.
+ *
+ *  If the allocation succeeds, the actual starting address of the allocated
+ *  region is returned; otherwise NULL is returned.
+ *
+ *  @param vmi The vm_info struct for this allocation.
+ *  @param va_start The requested starting address for the allocation.
+ *  @param len The length (in bytes) of the allocation.
+ *  @param attrs Attributes the allocated region will have.
+ *
+ *  @return The actual starting address of the allocation.
+ **/
+void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
+               unsigned int attrs)
+{
+  void *addr, *addr2;
+  mem_region_s *mreg;
+
+  /* Allocate a region */
+  if(!(mreg = vm_region(vmi, va_start,len,attrs)))
+    return NULL;
+
   /* Allocate frames for the requested memory */
   for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE) {
     if (!alloc_page(&vmi->pg_info, addr, attrs)) {
@@ -180,14 +213,8 @@ void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
     }
   }
 
-  /* Insert it into the memory map */
-  if (mreg_insert(&vmi->mmap, mreg)) {
-    free(mreg);
-    return NULL;
-  }
-
   /* Return the ACTUAL start of the allocation */
-  return pg_start;
+  return mreg->start;
 }
 
 /** @brief Frees a region previously allocated by vm_alloc(...).
@@ -229,6 +256,7 @@ int vm_copy(vm_info_s *dst, const vm_info_s *src)
   const mem_region_s *sreg;
   cll_node *n;
   void *addr;
+  pte_s pte;
 
   /* Don't copy unless the dest is empty */
   if (!cll_empty(&dst->mmap)) return -1;
@@ -246,7 +274,16 @@ int vm_copy(vm_info_s *dst, const vm_info_s *src)
 
     /* Allocate pages for the region */
     for (addr = sreg->start; addr < sreg->limit; addr += PAGE_SIZE) {
-      assert( !copy_page(&dst->pg_info, &src->pg_info, addr, sreg->attrs) );
+      /* Check if page is ZFOD */
+      if (get_pte(src->pg_info.pg_dir, src->pg_info.pg_tbls, addr, &pte))
+        return -1;
+      /* If so map dummy frame in */
+      if(pte.zfod){
+        if(set_pte(dst->pg_info.pg_dir, dst->pg_info.pg_tbls,addr,&pte)< 0)
+          return -1;
+      }
+      else
+        assert( !copy_page(&dst->pg_info, &src->pg_info, addr, sreg->attrs) );
     }
 
     /* Insert the new region into the dest */
@@ -289,3 +326,40 @@ void vm_final(vm_info_s *vmi)
   return;
 }
 
+/* @brief Makes PTEs in region ZFOD.
+ *
+ * @param mreg Region to set PTEs to ZFOD.
+ * @param pg_info Information necessary for manipulating the process's page
+ * directory and tables.
+ *
+ * @return Void.
+ */
+void vm_zfod(mem_region_s *mreg, pg_info_s *pg_info)
+{
+  void *addr;
+
+  /* In case PDE is invalid */
+  pte_s pde;
+  void *frame; 
+
+  /* Craft a ZFOD PTE */
+  pte_s pte;
+  pte.present = 1;
+  pte.user = 1;
+  pte.zfod = 1;
+  pte.addr = SHIFT_ADDR(zfod);  
+
+  for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE){
+    if(set_pte(pg_info->pg_dir,pg_info->pg_tbls, addr,&pte) < 0){
+      /* If the PDE isn't valid, make it so */
+      frame = alloc_frame();
+      init_pte(&pde, frame);
+      pde.present = 1;
+      pde.writable = 1;
+      pde.user = 1;
+      set_pde(pg_info->pg_dir, addr, &pde);
+      /* Now that the PDE is initialized, try again */
+      set_pte(pg_info->pg_dir,pg_info->pg_tbls, addr,&pte);
+    }
+  }
+}

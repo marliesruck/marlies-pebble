@@ -42,7 +42,7 @@ UPDATE_METHOD = web
 # A list of the test programs you want compiled in from the user/progs
 # directory.
 #
-STUDENTTESTS =  introspective schizo introvert garrulous mimic
+STUDENTTESTS =  introspective schizo introvert garrulous mimic zfod
 
 ###########################################################################
 # Data files provided by course staff to build into the RAM disk
@@ -126,4 +126,4 @@ KERNEL_OBJS = kernel.o lib/atomic.o lib/spin.o entry/syscall/finish_fork.o lib/c
 # kernel in, or else your tweaked version will run and the test harness
 # won't.
 #
-STUDENTREQPROGS =
+STUDENTREQPROGS = 

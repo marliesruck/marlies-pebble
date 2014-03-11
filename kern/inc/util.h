@@ -10,10 +10,10 @@
 
 
 #define CEILING(val,align)  \
-  ( ((unsigned int) (val) + (align) - 1) & ~((align) - 1) )
+  ( ((unsigned int) (val) + (align) - 1) & ~((align) - 1))
 
 #define FLOOR(val,align)  \
-  ( ((unsigned int) (val)) & ~((align) - 1) )
+  ( ((unsigned int) (val)) & ~((align) - 1))
 
 
 #endif /* __UTIL_H__ */
