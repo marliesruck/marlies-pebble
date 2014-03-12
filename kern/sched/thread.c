@@ -71,6 +71,8 @@ thread_t *thread_init(task_t *task)
   thread->task_info = task;
   thread->state = THR_NASCENT;
 
+  mutex_init(&thread->lock);
+
   /* Atomically acquire TID */
   spin_lock(&tid_lock);
   thread->tid = ++tid;

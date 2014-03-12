@@ -1,6 +1,6 @@
 /** @files asm_ctx_switch.S
  *
- *  @brief Assembly routine for context switches
+ *  @brief Assembly routines for context switching.
  *
  *  @author Enrique Naudon (esn)
  *  @author Marlies Ruck (mruck)
@@ -10,9 +10,8 @@
  **/
 .extern set_esp0
 
-.global asm_ctx_switch
-
-asm_ctx_switch:
+.global ctx_switch
+ctx_switch:
   # Prologue
   push    %ebp
   mov     %esp, %ebp
@@ -46,10 +45,8 @@ asm_ctx_switch:
   pop     %ebp
   ret
 
-.global store_and_switch
 
 store_and_switch:
-
   # Prologue
   push    %ebp
   mov     %esp, %ebp

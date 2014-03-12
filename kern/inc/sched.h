@@ -11,13 +11,17 @@
 #define __SCHED_H__
 
 #include <queue.h>
+#include <thread.h>
 
 
-extern queue_s runnable;
+/* The currently running thread */
+thread_t *curr;
 
+/* Scheduling API */
+int sched_block(thread_t *thr);
+int sched_unblock(thread_t *thr);
 void schedule(void);
-int sched_block(int tid);
-int sched_unblock(int tid);
 
 
 #endif /* __SCHED_H__ */
+

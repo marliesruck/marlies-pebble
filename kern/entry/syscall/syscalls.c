@@ -43,6 +43,7 @@ void install_sys_handlers(void)
   install_trap_gate(GETTID_INT, asm_sys_gettid, IDT_USER_DPL);
   install_trap_gate(YIELD_INT, asm_sys_yield, IDT_USER_DPL);
   install_trap_gate(DESCHEDULE_INT, asm_sys_deschedule, IDT_USER_DPL);
+  install_trap_gate(MAKE_RUNNABLE_INT, asm_sys_make_runnable, IDT_USER_DPL);
   install_trap_gate(GET_TICKS_INT, asm_sys_get_ticks, IDT_USER_DPL);
   install_trap_gate(SLEEP_INT , asm_sys_sleep, IDT_USER_DPL);
   install_trap_gate(NEW_PAGES_INT, asm_sys_new_pages, IDT_USER_DPL);
@@ -143,8 +144,7 @@ int sys_fork(unsigned int esp)
 
   /* Enqueue new tcb */
   assert( thrlist_add(child_thread) == 0 );
-  assert( sched_unblock(child_thread->tid) == 0 );
-  //thrlist_enqueue(child_thread, &runnable);
+  assert( sched_unblock(child_thread) == 0 );
 
   return child_thread->tid;
 }
@@ -229,6 +229,10 @@ void sys_task_vanish(int status)
  *  Thread management
  *************************************************************************/
 
+#include <sched.h>
+#include <thread.h>
+
+
 int sys_gettid(void)
 {
   return curr->tid;
@@ -239,14 +243,36 @@ int sys_yield(int pid)
   return -1;
 }
 
-int sys_deschedule(int *flag)
+int sys_deschedule(int *reject)
 {
-  return -1;
+  mutex_lock(&curr->lock);
+
+  /*  TODO: check that reject is valid. */
+  if (*reject) return 0;
+
+  sched_block(curr);
+  mutex_unlock(&curr->lock);
+  schedule();
+
+  return 0;
 }
 
-int sys_make_runnable(int pid)
+int sys_make_runnable(int tid)
 {
-  return -1;
+  thread_t *thr;
+  int ret;
+
+  /* Find and lock the target */
+  thr = thrlist_find(tid);
+  mutex_lock(&thr->lock);
+
+  if (!thr || thr->state == THR_RUNNING)
+    return -1;
+
+  ret = sched_unblock(thr);
+  mutex_unlock(&thr->lock);
+
+  return ret;
 }
 
 unsigned int sys_get_ticks(void)
@@ -263,6 +289,9 @@ int sys_sleep(int ticks)
 /*************************************************************************
  *  Memory management
  *************************************************************************/
+
+#include <vm.h>
+
 
 int sys_new_pages(void *addr, int len)
 {
