@@ -347,15 +347,18 @@ void vm_zfod(mem_region_s *mreg, pg_info_s *pg_info)
   pte.present = 1;
   pte.user = 1;
   pte.zfod = 1;
+  pte.writable = 0;
   pte.addr = SHIFT_ADDR(zfod);  
 
   for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE){
+  //  lprintf("addr before: %p",addr);
+   // MAGIC_BREAK;
     if(set_pte(pg_info->pg_dir,pg_info->pg_tbls, addr,&pte) < 0){
       /* If the PDE isn't valid, make it so */
       frame = alloc_frame();
       init_pte(&pde, frame);
       pde.present = 1;
-      pde.writable = 1;
+//      pde.writable = 1;
       pde.user = 1;
       set_pde(pg_info->pg_dir, addr, &pde);
       /* Now that the PDE is initialized, try again */

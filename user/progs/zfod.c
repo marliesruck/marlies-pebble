@@ -6,8 +6,10 @@
 #include <syscall.h>
 #include <simics.h>
 
+/*
 char *program = "peon";
 char *args[2];
+*/
 
 /* Make this big enough to span multiple pages */
 int test[4096];
@@ -15,7 +17,9 @@ int test[4096];
 int main() {
 
   if(fork() == 0){
-    lprintf("in child modifying test...");
+    lprintf("in child with test[4095] at addr: %p and test[2048] at addr: %p", 
+              &test[4095], &test[2048]);
+    MAGIC_BREAK;
     test[4095] = 798;
     lprintf("in child test[4095] should be 789 and is %d and test[2048] should "
             "be 0 and is %d", test[4095], test[2048]);

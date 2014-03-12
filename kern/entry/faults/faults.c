@@ -223,9 +223,11 @@ void int_page_fault(void *error_code)
   pte_s *pte = &pg_tbles[PG_DIR_INDEX(addr)][PG_TBL_INDEX(addr)];
   /* oooops...ZFOD */
   if(pte->zfod){
+    lprintf("handling zfod!");
     pte->zfod = 0;
     alloc_page(pg_info, addr, VM_ATTR_USER | VM_ATTR_RDWR);
     memset((void *)(FLOOR(addr, PAGE_SIZE)), 0, PAGE_SIZE);
+    MAGIC_BREAK;
   }
   else{
     lprintf("Error: Page fault!");

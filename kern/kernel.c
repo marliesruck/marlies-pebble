@@ -122,9 +122,10 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   /* Allocate dummy frame for admiring zeroes */
   zfod = smemalign(PAGE_SIZE, PAGE_SIZE);
   memset(zfod,0,PAGE_SIZE);
+  lprintf("zfod: %p",zfod);
 
   /* Load the first executable */
-  thread_t *thread = load_task(pd, "coolness");
+  thread_t *thread = load_task(pd, "zfod");
 
   enable_interrupts();
 
