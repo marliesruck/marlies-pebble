@@ -23,7 +23,7 @@ thread_t *curr;
 int sched_block(thread_t *thr);
 int sched_mutex_unlock_and_block(thread_t *thr, mutex_s *lock);
 int sched_spin_unlock_and_block(thread_t *thr, spin_s *lock);
-int sched_unblock(thread_t *thr);
+int sched_unblock(thread_t *thr, int atomic);
 void schedule(void);
 
 

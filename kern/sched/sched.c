@@ -9,27 +9,12 @@
 #include <sched.h>
 
 #include <ctx_switch.h>
-#include <spin.h>
 
+#include <asm.h>
 #include <assert.h>
 #include <malloc.h>
 #include <simics.h>
 
-
-/** @var rq_lock
- *  @brief A lock for the run queue.
- *
- *  The decision to protect the runnable queue with a spinlock was a
- *  deliberate one.  We cannot use a mutex here because our mutex
- *  implementation relies on the scheduler to block waiting threads.  We
- *  could disable interrupts, but that would not port well to an SMP
- *  system, and various lab handouts have noted that previous P4s have been
- *  implementing SMP support.
- *
- *  TODO: Think harder about whether or not we should disable interrupts
- *  instead...
- **/
-spin_s rq_lock = SPIN_INITIALIZER();
 
 /** @var runnable
  *  @brief The queue of runnable threads.
@@ -75,9 +60,9 @@ int sched_block(thread_t *thr)
   int ret;
 
   /* Lock, block, unlock */
-  spin_lock(&rq_lock);
+  disable_interrupts();
   ret = raw_block(thr);
-  spin_unlock(&rq_lock);
+  enable_interrupts();
 
   return ret;
 }
@@ -99,13 +84,13 @@ int sched_spin_unlock_and_block(thread_t *thr, spin_s *lock)
   int ret;
 
   /* Lock the run queue, unlock the world lock */
-  spin_lock(&rq_lock);
+  disable_interrupts();
   if (lock) spin_unlock(lock);
 
   ret = raw_block(thr);
 
   /* Unlock and return */
-  spin_unlock(&rq_lock);
+  enable_interrupts();
   return ret;
 }
 
@@ -126,23 +111,24 @@ int sched_mutex_unlock_and_block(thread_t *thr, mutex_s *lock)
   int ret;
 
   /* Lock the run queue, unlock the world lock */
-  spin_lock(&rq_lock);
+  disable_interrupts();
   if (lock) mutex_unlock(lock);
 
   ret = raw_block(thr);
 
   /* Unlock and return */
-  spin_unlock(&rq_lock);
+  enable_interrupts();
   return ret;
 }
 
 /** @brief Make a thread eligible for CPU time.
  *
  *  @param thr The thread to make runnable.
+ *  @param atomic Flag indicating atomaticity of enqueue.
  *
  *  @return 0 on success; a negative integer error code on failure.
  **/
-int sched_unblock(thread_t *thr)
+int sched_unblock(thread_t *thr, int atomic)
 {
   queue_node_s *n;
 
@@ -152,10 +138,10 @@ int sched_unblock(thread_t *thr)
   queue_init_node(n, thr);
 
   /* Lock, enqueue, unlock */
-  spin_lock(&rq_lock);
+  if (atomic) disable_interrupts();
   queue_enqueue(&runnable, n);
   thr->state = THR_RUNNING;
-  spin_unlock(&rq_lock);
+  if (atomic) enable_interrupts();
   return 0;
 }
 
@@ -179,12 +165,10 @@ void schedule(void)
   assert( !queue_empty(&runnable) );
 
   /* Move the lucky thread to the back of the queue */
-  spin_lock(&rq_lock);
   q = queue_dequeue(&runnable);
   next = queue_entry(thread_t *, q);
   assert(next->state == THR_RUNNING);
   queue_enqueue(&runnable, q);
-  spin_unlock(&rq_lock);
 
   /* Only switch if the next thread is different */
   if (next != curr) {

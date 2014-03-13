@@ -124,7 +124,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   memset(zfod,0,PAGE_SIZE);
 
   /* Load the first executable */
-  thread_t *thread = load_task(pd, "coolness");
+  thread_t *thread = load_task(pd, "cooperative");
 
   /* Init curr and enable interrupts */
   curr = thread;
@@ -157,7 +157,7 @@ thread_t *load_task(void *pd, const char *fname)
 
   /* Insert the thread into the thread list */
   assert( thrlist_add(thread) == 0 );
-  assert( sched_unblock(thread) == 0 );
+  assert( sched_unblock(thread, 0) == 0 );
 
   sim_reg_process(pd, fname);
   return thread;

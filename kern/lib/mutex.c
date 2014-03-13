@@ -126,7 +126,7 @@ void mutex_unlock(mutex_s *mp)
 
     /* Unlock and awaken that guy */
     spin_unlock(&mp->lock);
-    sched_unblock(thr);
+    sched_unblock(thr, 1);
   }
 
   /* No one wants the lock */

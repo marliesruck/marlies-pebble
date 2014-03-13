@@ -144,7 +144,7 @@ int sys_fork(unsigned int esp)
 
   /* Enqueue new tcb */
   assert( thrlist_add(child_thread) == 0 );
-  assert( sched_unblock(child_thread) == 0 );
+  assert( sched_unblock(child_thread, 1) == 0 );
 
   return child_thread->tid;
 }
@@ -268,7 +268,7 @@ int sys_make_runnable(int tid)
   if (!thr || thr->state == THR_RUNNING)
     return -1;
 
-  ret = sched_unblock(thr);
+  ret = sched_unblock(thr, 1);
   mutex_unlock(&thr->lock);
 
   return ret;
