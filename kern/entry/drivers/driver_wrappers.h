@@ -5,11 +5,13 @@
  *  @author Enrique Naudon (esn)
  *  @author Marlies Ruck (esn)
  **/
-
 #ifndef __DRIVER_WRAPPERS_H__
 #define __DRIVER_WRAPPERS_H__
 
-void asm_int_keyboard(void);
-void asm_int_timer(void);
+
+void asm_kbd_int_handler(void);
+void asm_tmr_int_handler(void);
+
 
 #endif
+

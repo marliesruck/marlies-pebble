@@ -10,5 +10,7 @@
 
 #include <asm/intwrappers.h>
 
-VOID_INTERRUPT int_keyboard 
-VOID_INTERRUPT int_timer
+
+VOID_INTERRUPT tmr_int_handler
+VOID_INTERRUPT kbd_int_handler
+
