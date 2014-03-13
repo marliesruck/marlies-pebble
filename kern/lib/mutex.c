@@ -76,9 +76,8 @@ void mutex_lock(mutex_s *mp)
     queue_init_node(&n, curr);
     queue_enqueue(&mp->queue, &n);
 
-    /* Unlock, block and deschedule */
-    spin_unlock(&mp->lock);
-    sched_block(curr);
+    /* Unlock-and-block and deschedule */
+    sched_spin_unlock_and_block(curr, &mp->lock);
     schedule();
 
     /* Clean-up your cll node */

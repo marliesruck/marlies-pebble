@@ -25,6 +25,9 @@
  *  could disable interrupts, but that would not port well to an SMP
  *  system, and various lab handouts have noted that previous P4s have been
  *  implementing SMP support.
+ *
+ *  TODO: Think harder about whether or not we should disable interrupts
+ *  instead...
  **/
 spin_s rq_lock = SPIN_INITIALIZER();
 
@@ -43,12 +46,9 @@ queue_s runnable = QUEUE_INITIALIZER(runnable);
  *
  *  @return 0 on success; a negative integer error code on failure.
  **/
-int sched_block(thread_t *thr)
+int raw_block(thread_t *thr)
 {
   cll_node *n;
-
-  /* Lock the run queue */
-  spin_lock(&rq_lock);
 
   /* Ensure the blockee is runnable */
   cll_foreach(&runnable, n) {
@@ -61,8 +61,79 @@ int sched_block(thread_t *thr)
   free(n);
   thr->state = THR_BLOCKED;
 
-  spin_unlock(&rq_lock);
   return 0;
+}
+
+/** @brief Make a thread ineligible for CPU time.
+ *
+ *  @param thr The thread to make unrunnable.
+ *
+ *  @return 0 on success; a negative integer error code on failure.
+ **/
+int sched_block(thread_t *thr)
+{
+  int ret;
+
+  /* Lock, block, unlock */
+  spin_lock(&rq_lock);
+  ret = raw_block(thr);
+  spin_unlock(&rq_lock);
+
+  return ret;
+}
+
+/** @brief Atomically unlock and make a thread ineligible for CPU time.
+ *
+ *  If the lock paramter is non-NULL, it will be unlocked before blocking.
+ *  The process of unlocking and blocking is atomic with respect to other
+ *  atempts to block/unblock, and with respect to attempts to schedule
+ *  another process.
+ * 
+ *  @param thr The thread to make unrunnable.
+ *  @param lock The spinlock to unlock.
+ *
+ *  @return 0 on success; a negative integer error code on failure.
+ **/
+int sched_spin_unlock_and_block(thread_t *thr, spin_s *lock)
+{
+  int ret;
+
+  /* Lock the run queue, unlock the world lock */
+  spin_lock(&rq_lock);
+  if (lock) spin_unlock(lock);
+
+  ret = raw_block(thr);
+
+  /* Unlock and return */
+  spin_unlock(&rq_lock);
+  return ret;
+}
+
+/** @brief Atomically unlock and make a thread ineligible for CPU time.
+ *
+ *  If the lock paramter is non-NULL, it will be unlocked before blocking.
+ *  The process of unlocking and blocking is atomic with respect to other
+ *  atempts to block/unblock, and with respect to attempts to schedule
+ *  another process.
+ *
+ *  @param thr The thread to make unrunnable.
+ *  @param lock The mutex to unlock.
+ *
+ *  @return 0 on success; a negative integer error code on failure.
+ **/
+int sched_mutex_unlock_and_block(thread_t *thr, mutex_s *lock)
+{
+  int ret;
+
+  /* Lock the run queue, unlock the world lock */
+  spin_lock(&rq_lock);
+  if (lock) mutex_unlock(lock);
+
+  ret = raw_block(thr);
+
+  /* Unlock and return */
+  spin_unlock(&rq_lock);
+  return ret;
 }
 
 /** @brief Make a thread eligible for CPU time.

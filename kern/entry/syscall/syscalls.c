@@ -250,8 +250,7 @@ int sys_deschedule(int *reject)
   /*  TODO: check that reject is valid. */
   if (*reject) return 0;
 
-  sched_block(curr);
-  mutex_unlock(&curr->lock);
+  sched_mutex_unlock_and_block(curr, &curr->lock);
   schedule();
 
   return 0;
