@@ -14,9 +14,12 @@
 
 /* @brief A light-weight spin-lock object. */
  
+/** @struct spin_lock
+ *  @brief A non-blocking lock.
+ **/
 struct spin_lock {
-  unsigned int ticket;
-  volatile unsigned int turn;
+  unsigned int ticket;          /**< Imposeses an order on CS entries **/
+  volatile unsigned int turn;   /**< Currently serving **/
 };
 typedef struct spin_lock spin_s;
 
@@ -29,6 +32,7 @@ typedef struct spin_lock spin_s;
   .turn = 0,                  \
 }
 
+/* Spinlock operations */
 void spin_init(spin_s *sp);
 void spin_lock(spin_s *sp);
 void spin_unlock(spin_s *sp);

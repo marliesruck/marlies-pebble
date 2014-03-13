@@ -21,8 +21,10 @@
 #define LSB(x)  (x & 0xFF)
 #define MSB(x)  ((x & 0xFF00) >> 8)
 
+#include <simics.h>
 void tick(unsigned int ticks)
 {
+  lprintf("timer tick!");
   schedule();
   return;
 }

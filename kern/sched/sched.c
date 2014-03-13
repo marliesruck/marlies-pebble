@@ -9,9 +9,8 @@
 #include <sched.h>
 
 #include <ctx_switch.h>
-#include <process.h>
-#include <thread.h>
 
+#include <asm.h>
 #include <assert.h>
 #include <malloc.h>
 #include <simics.h>
@@ -22,49 +21,127 @@
  **/
 queue_s runnable = QUEUE_INITIALIZER(runnable);
 
-int sched_block(int tid)
+/** @brief Make a thread ineligible for CPU time.
+ *
+ *  In this function we use the linked list functions instead of the queue
+ *  interface; this is because the queue API does not allow searching or
+ *  extraction of arbitrary nodes.
+ * 
+ *  @param thr The thread to make unrunnable.
+ *
+ *  @return 0 on success; a negative integer error code on failure.
+ **/
+int raw_block(thread_t *thr)
 {
   cll_node *n;
-  thread_t *thr;
 
-  /* Find the blockee in the runnable queue
-   * We don't need to check curr; that's us
-   */
+  /* Ensure the blockee is runnable */
   cll_foreach(&runnable, n) {
-    thr = queue_entry(thread_t *, n);
-    if (thr->tid == tid) break;
+    if (thr == queue_entry(thread_t *, n)) break;
   }
-  if (n == &runnable) return -1;
+  if (thr != queue_entry(thread_t *, n)) return -1;
 
-  /* Remove the blockee node from the runnable queue
-   * We must use cll_extract(...) here as the queue API only allows
-   * dequeueing
-   */
+  /* Remove the blockee node from the runnable queue */
   assert(cll_extract(&runnable, n) == n);
   free(n);
-
   thr->state = THR_BLOCKED;
 
   return 0;
 }
 
-int sched_unblock(int tid)
+/** @brief Make a thread ineligible for CPU time.
+ *
+ *  @param thr The thread to make unrunnable.
+ *
+ *  @return 0 on success; a negative integer error code on failure.
+ **/
+int sched_block(thread_t *thr)
+{
+  int ret;
+
+  /* Lock, block, unlock */
+  disable_interrupts();
+  ret = raw_block(thr);
+  enable_interrupts();
+
+  return ret;
+}
+
+/** @brief Atomically unlock and make a thread ineligible for CPU time.
+ *
+ *  If the lock paramter is non-NULL, it will be unlocked before blocking.
+ *  The process of unlocking and blocking is atomic with respect to other
+ *  atempts to block/unblock, and with respect to attempts to schedule
+ *  another process.
+ * 
+ *  @param thr The thread to make unrunnable.
+ *  @param lock The spinlock to unlock.
+ *
+ *  @return 0 on success; a negative integer error code on failure.
+ **/
+int sched_spin_unlock_and_block(thread_t *thr, spin_s *lock)
+{
+  int ret;
+
+  /* Lock the run queue, unlock the world lock */
+  disable_interrupts();
+  if (lock) spin_unlock(lock);
+
+  ret = raw_block(thr);
+
+  /* Unlock and return */
+  enable_interrupts();
+  return ret;
+}
+
+/** @brief Atomically unlock and make a thread ineligible for CPU time.
+ *
+ *  If the lock paramter is non-NULL, it will be unlocked before blocking.
+ *  The process of unlocking and blocking is atomic with respect to other
+ *  atempts to block/unblock, and with respect to attempts to schedule
+ *  another process.
+ *
+ *  @param thr The thread to make unrunnable.
+ *  @param lock The mutex to unlock.
+ *
+ *  @return 0 on success; a negative integer error code on failure.
+ **/
+int sched_mutex_unlock_and_block(thread_t *thr, mutex_s *lock)
+{
+  int ret;
+
+  /* Lock the run queue, unlock the world lock */
+  disable_interrupts();
+  if (lock) mutex_unlock(lock);
+
+  ret = raw_block(thr);
+
+  /* Unlock and return */
+  enable_interrupts();
+  return ret;
+}
+
+/** @brief Make a thread eligible for CPU time.
+ *
+ *  @param thr The thread to make runnable.
+ *  @param atomic Flag indicating atomaticity of enqueue.
+ *
+ *  @return 0 on success; a negative integer error code on failure.
+ **/
+int sched_unblock(thread_t *thr, int atomic)
 {
   queue_node_s *n;
-  thread_t *thr;
 
-  /* Find the blocked node */
-  thr = thrlist_find(tid);
-  if (!thr) return -1;
-
-  /* Add the blocked node to the runnable queue */
+  /* Allocate and init a queue node */
   n = malloc(sizeof(cll_node));
   if (!n) return -1;
   queue_init_node(n, thr);
+
+  /* Lock, enqueue, unlock */
+  if (atomic) disable_interrupts();
   queue_enqueue(&runnable, n);
-
   thr->state = THR_RUNNING;
-
+  if (atomic) enable_interrupts();
   return 0;
 }
 
@@ -84,25 +161,22 @@ void schedule(void)
   thread_t *prev, *next;
   queue_node_s *q;
 
-  if (queue_empty(&runnable)) return;
+  /* The runnable queue should never be empty */
+  assert( !queue_empty(&runnable) );
 
-  /* Dequeue the lucky thread */
+  /* Move the lucky thread to the back of the queue */
   q = queue_dequeue(&runnable);
   next = queue_entry(thread_t *, q);
   assert(next->state == THR_RUNNING);
-
-  /* Enqueue the currently running thread */
-  prev = curr;
-  queue_init_node(q,prev);
   queue_enqueue(&runnable, q);
 
-  /* Keep track of who's running */
-  assert(next != curr);
-  curr = next;
-
-  asm_ctx_switch(&prev->sp, &prev->pc, next->sp, 
-                 next->pc, next->task_info->cr3, 
-                 &next->kstack[KSTACK_SIZE]);
+  /* Only switch if the next thread is different */
+  if (next != curr) {
+    prev = curr;
+    curr = next;
+    ctx_switch(&prev->sp, &prev->pc, next->sp, next->pc,
+               next->task_info->cr3, &next->kstack[KSTACK_SIZE]);
+  }
 
   return;
 }
