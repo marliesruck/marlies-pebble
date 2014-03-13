@@ -22,7 +22,7 @@ typedef struct cvar cvar_s;
 
 /* condition variable functions */
 int cond_init( cvar_s *cv );
-void cond_destroy( cvar_s *cv );
+void cond_final( cvar_s *cv );
 void cond_wait( cvar_s *cv, mutex_s *mp );
 void cond_signal( cvar_s *cv );
 void cond_broadcast( cvar_s *cv );

@@ -38,16 +38,17 @@ int cvar_init(cvar_s *cv)
 
   return 0;
 }
+
 /* @brief "deactive" cond var
  *
  * It is illegal for an application to use a condition variable after it has
  * been destroyed(unless and until it is later re-initialized).  It is illegal
- * for an application to invoke cvar_destroy() on a condition variable while
+ * for an application to invoke cvar_final() on a condition variable while
  * threads are blocked waiting on it.
  *
- * @param cv Cond var to destroy
+ * @param cv Cond var to finalize.
  */
-void cvar_destroy(cvar_s *cv)
+void cvar_final(cvar_s *cv)
 {
   assert(cv);
   assert(queue_empty(&cv->queue));
@@ -90,6 +91,7 @@ void cvar_wait(cvar_s *cv, mutex_s *mp)
   mutex_lock(mp);
   return;
 }
+
 /* @brief Wake up a thread waiting on the condition variable
  *
  * @param cv Condition variable with queue of threads to awaken
