@@ -42,7 +42,7 @@
 #include <frame_alloc.h>
 #include <process.h>
 #include <thread.h>
-#include <ctx_switch.h>
+#include <sched.h>
 #include <console.h>
 
 /* Usr stack init includes */
@@ -125,15 +125,16 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   lprintf("zfod: %p",zfod);
 
   /* Load the first executable */
-  thread_t *thread = load_task(pd, "zfod");
+  thread_t *thread = load_task(pd, "cooperative");
 
+  /* Init curr and enable interrupts */
+  curr = thread;
   enable_interrupts();
 
   /* Give up the kernel stack that was given to us by the bootloader */
   set_esp0((uint32_t)(&thread->kstack[KSTACK_SIZE]));
 
-  /* Mark the thread runnable and head to user-space */
-  thread->state = THR_RUNNING;
+  /* Head to user-space */
   mode_switch(thread->pc, thread->sp);
 
   /* We should never reach here! */
@@ -150,16 +151,14 @@ thread_t *load_task(void *pd, const char *fname)
   /* Initialize pg dir and tid in prototype tcb */
   task->cr3 = (uint32_t)(pd);
   thread->task_info = task;
-  
-  /* Initialize currently running thread */
-  curr = thread;
 
   /* Prepare to drop into user mode */
   thread->pc = load_file(&task->vmi, fname);
   thread->sp = usr_stack_init(&task->vmi, NULL);
 
   /* Insert the thread into the thread list */
-  thrlist_add(thread);
+  assert( thrlist_add(thread) == 0 );
+  assert( sched_unblock(thread, 0) == 0 );
 
   sim_reg_process(pd, fname);
   return thread;

@@ -8,10 +8,13 @@
 #ifndef __THREAD_H__
 #define __THREAD_H__
 
+/* Pebble includes */
+#include <mutex.h>
 #include <process.h>
 #include <queue.h>
 #include <vm.h>
 
+/* Libc includes */
 #include <x86/page.h>
 #include <stdint.h>
 
@@ -28,14 +31,16 @@ enum thread_state {
 };
 typedef enum thread_state thr_state_e;
 
-typedef struct thread{
+struct thread {
   task_t *task_info;
   thr_state_e state;
+  mutex_s lock;
   int tid;
   void *sp;
   void *pc;
   char kstack[KSTACK_SIZE];
-}thread_t;
+};
+typedef struct thread thread_t;
 
 /* Initialization routines */
 thread_t *task_init(void);

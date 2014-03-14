@@ -204,11 +204,11 @@ void int_gen_prot(void)
 #include <process.h>
 #include <thread.h>
 #include <vm.h>
-#include <ctx_switch.h>
+#include <sched.h>
 #include <util.h>
 /* x86 specific includes */
 #include <x86/cr.h>
-
+/* Libc includes */
 #include <string.h>
 void int_page_fault(void *error_code)
 {
