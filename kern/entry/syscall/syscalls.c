@@ -253,28 +253,7 @@ void sys_set_status(int status)
  */
 void sys_vanish(void)
 {
-  /* Function is not ctx switch safe beyond this point */
-  //mutex_lock(&sched_lock);
-  disable_interrupts();
-
-  /* Remove yourself from the runnable queue */
-  remove_from_runnable(curr);
-
-  /* There should still be someone to switch to */
-  assert( !queue_empty(&runnable) );
-
-  /* A little bit of scheduler logic so we can switch to the next thread */
-  queue_node_s *q = queue_dequeue(&runnable);
-  thread_t *next = queue_entry(thread_t *, q);
-
-  /* Move the thread to the back of the queue */
-  assert(next->state == THR_RUNNING);
-  queue_enqueue(&runnable, q);
-
-  curr = next; 
-
-  half_ctx_switch(next->sp, next->pc, next->task_info->cr3,
-                  &next->kstack[KSTACK_SIZE]);
+  half_ctx_switch_wrapper();
 
   assert(0); /* Should never reach here */
   return;

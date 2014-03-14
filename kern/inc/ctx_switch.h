@@ -63,5 +63,7 @@ void ctx_switch(void *prev_sp, void *prev_pc, void *next_sp, void *next_pc,
  */
 void half_ctx_switch(void *next_sp, void *next_pc, uint32_t next_cr3, void *esp0);
 
+void half_ctx_switch_wrapper(void);
+
 #endif /* __CTX_SWITCH_H__ */
 
