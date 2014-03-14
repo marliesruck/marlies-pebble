@@ -28,16 +28,14 @@ typedef enum mutex_state mutex_state_e;
  *  @brief A heavier-weight possibly-blocking lock.
  **/
 struct mutex {
-  spin_s lock;
-  mutex_state_e state;
-  queue_s queue;
-  int owner;
+  spin_s lock;          /**< Portects mutex struct fields **/
+  mutex_state_e state;  /**< Current mutex state **/
+  queue_s queue;        /**< Queue of waiting threads **/
+  int owner;            /**< Current lock holder (-1 = no one) **/
 };
 typedef struct mutex mutex_s;
 
 /** @brief Statically initialize a mutex.
- *
- *  NOTE: This should go in mutex.h, but we cannot edit that file.
  *
  *  @return A statically initialized mutex.
  **/
