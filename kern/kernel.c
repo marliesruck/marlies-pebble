@@ -18,10 +18,12 @@
 #include <common_kern.h>
 
 /* libc includes. */
-#include <stdio.h>
+#include <assert.h>
+#include <malloc.h>
 #include <simics.h>                 /* lprintf() */
 #include <simics/simics.h>
-#include <assert.h>
+#include <stdio.h>
+#include <string.h>
 
 /* multiboot header file */
 #include <multiboot.h>              /* boot_info */
@@ -30,28 +32,19 @@
 #include <x86/asm.h>                /* enable_interrupts() */
 #include <x86/cr.h>
 
-/* IDT specific includes */
-#include <syscall_int.h>
-#include <idt.h>
-#include "entry/drivers/timer.h"
-#include "entry/syscall/syscall_wrappers.h"
-
 /* Pebbles includes */
-#include <vm.h>
-#include <pg_table.h>
-#include <frame_alloc.h>
-#include <process.h>
-#include <thread.h>
-#include <sched.h>
 #include <console.h>
-
-/* Usr stack init includes */
+#include <frame_alloc.h>
+#include <idt.h>
 #include <loader.h>
+#include <pg_table.h>
+#include <process.h>
+#include <sched.h>
+#include <thread.h>
 #include <usr_stack.h>
+#include <vm.h>
 
 /* ZFOD includes */
-#include <malloc.h>
-#include <string.h>
 
 /*************************************************************************
  *  Random paging stuff that should really be elsewhere
@@ -124,7 +117,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   memset(zfod,0,PAGE_SIZE);
 
   /* Load the first executable */
-  thread_t *thread = load_task(pd, "coolness");
+  thread_t *thread = load_task(pd, "annoying");
 
   /* Init curr and enable interrupts */
   curr = thread;

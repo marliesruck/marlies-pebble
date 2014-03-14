@@ -9,7 +9,7 @@
  */
 
 /* Timer includes */
-#include "timer.h"
+#include <timer.h>
 
 /* Pebble includes */
 #include <interrupt_defines.h>
@@ -65,7 +65,7 @@ void tmr_init(unsigned short rate)
  *
  *  @return The number of ticks since boot.
  **/
-unsigned long tm_get_ticks()
+unsigned int tmr_get_ticks()
 {
   unsigned int t;
   disable_interrupts();
