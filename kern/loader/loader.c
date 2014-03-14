@@ -186,6 +186,10 @@ void *load_file(vm_info_s *vmi, const char* filename)
 
   /* For simplicity, we assume text < rodata and data < bss */
   assert(se.e_txtstart < se.e_rodatstart);
+
+  assert(se.e_datlen);
+  assert(se.e_bsslen);
+
   assert(se.e_datstart < se.e_bssstart);
 
   /* Allocate read/execute memory */

@@ -3,15 +3,36 @@
  */
 #include <syscall.h>
 #include <simics.h>
+#include <stdlib.h>
 
 int main(){
+  char buf[16];
+  char * prog = "merchant";
+  char * args[5] = { "merchant", "13", "foo bar", NULL, NULL };
+
+  args[3] = buf;
+
   int tid = fork();
-  if(tid){
-    lprintf("Parent about to vanish");
-    vanish();
+  /* Child execs merchant */
+  if(tid == 0){
+    exec(prog,args);
   }
-  else{
+
+  /* Fork again */
+  tid = fork();
+  if(tid){
+    int status;
+    lprintf("parent waiting for child");
+    wait(&status);
+    lprintf("status = %d", status);
     while(1)
-      lprintf("In child!");
+      lprintf("in parent");
+  }
+
+  else{
+      lprintf("in child setting status");
+      set_status(23);
+      lprintf("In child vanishing");
+      vanish();
   }
 }

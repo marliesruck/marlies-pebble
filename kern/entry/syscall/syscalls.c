@@ -210,6 +210,7 @@ int sys_exec(char *execname, char *argvec[])
 
 void sys_set_status(int status)
 {
+  curr->task_info->status = status;
   return;
 }
 
@@ -290,7 +291,33 @@ void sys_vanish(void)
 
 int sys_wait(int *status_ptr)
 {
-  return -1;
+  task_t *task = curr->task_info;
+  /* Atomically check for dead children */
+  mutex_lock(&task->lock);
+
+  while(queue_empty(&task->dead_children)){
+    if(task->live_children == 0){
+        /* Avoid unbounded blocking */
+        mutex_unlock(&task->lock);
+        return -1;
+      }
+    else{
+      cvar_wait(&task->cv, &task->lock);
+    }
+  }
+ queue_node_s *q = queue_dequeue(&task->dead_children);
+ mutex_unlock(&task->lock);
+
+ thread_t *child_thread = queue_entry(thread_t *, q);
+
+ task_t *child_task = child_thread->task_info;
+ int tid = child_task->orig_tid;
+ if(status_ptr)
+   *status_ptr = child_task->status;
+
+
+
+  return tid;
 }
 
 void sys_task_vanish(int status)
