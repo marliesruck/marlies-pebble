@@ -97,6 +97,7 @@ void *init_child_tcb(void *child_cr3, pte_s *pd, pt_t *pt)
   task->cr3 = (uint32_t)(child_cr3);
   task->vmi.pg_info.pg_tbls = pt;
   task->vmi.pg_info.pg_dir = pd;
+  //(task_t *)(task->parent) = (task_t *)(curr->task_info);
 
   return thread;
 }
@@ -141,6 +142,9 @@ int sys_fork(unsigned int esp)
   child_task->vmi.pg_info.pg_tbls = PG_TBL_ADDR;
   child_thread->sp = &child_thread->kstack[offset];
   child_thread->pc = finish_fork;
+
+  /* Increment the number of children forked */
+  curr->task_info->live_children++;
 
   /* Enqueue new tcb */
   assert( thrlist_add(child_thread) == 0 );
@@ -209,8 +213,70 @@ void sys_set_status(int status)
   return;
 }
 
+#include <process.h>
+#include <thread.h>
+#include <sched.h>
+#include <mutex.h>
+#include <cvar.h>
+
+#include <asm.h>
+
+/* Free a thread's resources
+ *
+ * There are 2 cases:
+ *
+ * 1) There are remaining threads in the task.  Only free the calling thread's
+ *    kernel stack and thread_t struct. This will be implemented in several
+ *    iterations:
+ *
+ *    Iteration 1:
+ *    -Enqueue in dead_peers so we can still use the kstack
+ *    -call half ctx switch(not that our kstack is still valid because another
+ *    process has not taken it)
+ *
+ *    Iteration 2:
+ *    -interject scheduler logic here and acquire scheduler lock
+ *    -call free_tcb(void *thread_t, void *next_task sp, void next_task *pc,
+ *                  void *listp)
+ *      -this will be an asm function  
+ *        -*listp = thread_t
+ *        -jmp asm_half_ctx_switch
+ *       
+ * 2) The calling thread is the last thread.  
+ *    -Add any unreaped children to init's list of unreaped children
+ *    -cond signal the parent, if this returns -1 then the parent already
+ *    exited. Add your pcb to init's dead children linked list
+ *
+ *    Assumes: Parent is responsible for freeing the child's page directory and
+ *    tables as well as the linked list of tcbs and the pcb.
+ *
+ */
 void sys_vanish(void)
 {
+  /* Function is not ctx switch safe beyond this point */
+  //mutex_lock(&sched_lock);
+  disable_interrupts();
+
+  /* Remove yourself from the runnable queue */
+  remove_from_runnable(curr);
+
+  /* There should still be someone to switch to */
+  assert( !queue_empty(&runnable) );
+
+  /* A little bit of scheduler logic so we can switch to the next thread */
+  queue_node_s *q = queue_dequeue(&runnable);
+  thread_t *next = queue_entry(thread_t *, q);
+
+  /* Move the thread to the back of the queue */
+  assert(next->state == THR_RUNNING);
+  queue_enqueue(&runnable, q);
+
+  curr = next; 
+
+  half_ctx_switch(next->sp, next->pc, next->task_info->cr3,
+                  &next->kstack[KSTACK_SIZE]);
+
+  assert(0); /* Should never reach here */
   return;
 }
 

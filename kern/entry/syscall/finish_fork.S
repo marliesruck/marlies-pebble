@@ -1,3 +1,6 @@
+.extern mutex_unlock
+.extern sim_breakpoint
+
 .global finish_fork
 
 finish_fork:
@@ -12,6 +15,10 @@ finish_fork:
   pop %ebx
   pop %edi
   pop %esi
+
+
+  # Release the sched lock
+  call enable_interrupts
 
   # Return 0
   xor %eax,%eax

@@ -9,17 +9,17 @@
 #include <x86/page.h>
 #include <stdint.h>
 #include <cllist.h>
-
-/* Did enrique already do this?
- *
- */
+#include <mutex.h>
+#include  <cvar.h>
 
 typedef struct task{
   struct task_t *parent;  /* Enqueue the last thread_t to exit in my parent's
                              list of dead children...that makes the parent
                              responsible for reaping that thread_t */
-  cll_list dead_children; /* List of threads for MY dead children to enqueue 
+  queue_s dead_children; /* List of threads for MY dead children to enqueue 
                              themselves in.  This is the list I wait() on */
+  cvar_s  cv;             /* For the parent to sleep on while it's waiting to
+                             reap its children */
   cll_list peer_threads;  /* As the task spawns thread, add them here. When the
                              last thread vanishes, we traverse this list and
                              free all threads but ourselves */
@@ -30,6 +30,9 @@ typedef struct task{
   int orig_tid;           /* Wait() returns the TID of the origin thread of the 
                              exiting tasks, not the tid of the last thread 
                              to vanish */
+  int live_children;      /* This and dead_children determine whether or not
+                             wait should block */
+  mutex_s lock;           /* Hold this lock when modifying the task struct */
   int exited;
   int status;
 }task_t;

@@ -5,6 +5,9 @@
  *  TODO: We might consider declaring a wrapper around ctx_switch that
  *  pulls the requisite fields from the thread struct...
  *
+ *  Also if we are switching between threads within the same task, we should not
+ *  reload cr3 to avoid flushing the TLB
+ *
  *  Note: I did the comments in the .h file since this API contains asm
  *  functions
  *
@@ -30,17 +33,35 @@
  * rest of the CPU state is on its kernel stack and it restores upon
  * returning from store_and_switch().
  *
- *  @param prev_sp      Address for storing previous thread's ESP.  @param
- *  prev_pc      Address for storing previous thread's EIP.  @param next_sp
- *  Next thread's ESP.  @param next_pc      Next thread's EIP.  @param
- *  next_cr3     Next thread's cr3.  @param kstack_high  Value for next
- *  thread's esp0.
+ *  @param prev_sp      Address for storing previous thread's ESP.  
+ *  @param prev_pc      Address for storing previous thread's EIP.  
+ *  @param next_sp      Next thread's ESP. 
+ *  @param next_pc      Next thread's EIP.  
+ *  @param cr3          Next thread's cr3.  
+ *  @param kstack_high  Value for next thread's esp0.
  *
  *  @return Void.
  */
 void ctx_switch(void *prev_sp, void *prev_pc, void *next_sp, void *next_pc,
                 unsigned int next_cr3, void *kstack_high);
 
+
+/* @brief Context swithch without storing the current thread's context.
+ *
+ * Since we are simply restoring context, there is no need to go through the
+ * complicated routine of storing out current context.
+ *
+ * Ultimately, this should take no arguments as we will jump to it without a
+ * stack.
+ *
+ *  @param next_sp      Next thread's ESP. 
+ *  @param next_pc      Next thread's EIP.  
+ *  @param cr3          Next thread's cr3.  
+ *  @param esp0         Value for next thread's esp0.
+ *
+ * @return Void.
+ */
+void half_ctx_switch(void *next_sp, void *next_pc, uint32_t next_cr3, void *esp0);
 
 #endif /* __CTX_SWITCH_H__ */
 

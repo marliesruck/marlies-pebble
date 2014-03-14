@@ -110,9 +110,9 @@ void mutex_unlock(mutex_s *mp)
   /* Wait your turn to access the waiting list */
   spin_lock(&mp->lock);
 
-  /* You can only unlock locked mutexes that you locked */
-  assert(mp->state == MUTEX_LOCKED);
-  assert(mp->owner == curr->tid);
+  /* You can only unlock locked mutexes that you locked...or can you? */
+  //assert(mp->state == MUTEX_LOCKED);
+  //assert(mp->owner == curr->tid);
 
   /* There's someone waiting on you */
   if (!cll_empty(&mp->queue))

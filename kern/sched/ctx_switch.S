@@ -62,3 +62,30 @@ store_and_switch:
   mov     %edi, %cr3           # Load correct PTBR
   jmp     *%esi                # Jump to new thread's EIP
 
+.global half_ctx_switch
+half_ctx_switch:
+
+  # Prologue
+  push    %ebp
+  mov     %esp, %ebp
+
+  # Extract Arguments
+  mov     8(%ebp), %esi         # next_sp
+  mov     0xc(%ebp), %edi       # next_pc
+  mov     0x10(%ebp),%ebx       # next_cr3
+  mov     0x14(%ebp),%eax       # esp0
+
+  # Set esp0.  This will have to be done before hand once we eliminate the
+  # kernel stack
+  push    %eax
+  call    set_esp0
+  add     $4, %esp
+
+  # Load the next thread's context
+  mov     %esi, %esp
+  mov     %ebx, %cr3
+  jmp     *%edi
+  
+
+
+

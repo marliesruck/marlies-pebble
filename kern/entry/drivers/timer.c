@@ -38,6 +38,10 @@ void tmr_int_handler(void)
   outb(INT_CTL_PORT, INT_ACK_CURRENT);
   ticks += 1;
 
+  /* Don't ctx switch if the schedule lock is held */
+  if(sched_lock.state == MUTEX_LOCKED)
+    return;
+
   schedule();
   return;
 }

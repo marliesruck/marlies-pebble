@@ -47,11 +47,21 @@ thread_t *task_init(void)
   /* Keep track of the number of threads in a task */
   task->num_threads = 1;
 
+  /* Keep track of children alive and dead */
+  task->live_children = 0;
+  queue_init(&task->dead_children);
+  cvar_init((&task->cv));
+
   task->exited = 0;
 
   /* Initialize root thread with new task */
   thread_t *thread = thread_init(task);
   task->orig_tid = thread->tid;
+
+  /* Initialize the task struct lock */
+  mutex_init(&task->lock);
+
+
 
   return thread;
 }

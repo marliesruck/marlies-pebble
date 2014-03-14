@@ -15,6 +15,10 @@
 #include <spin.h>
 #include <thread.h>
 
+/* Scheduler lock */
+extern mutex_s sched_lock;
+
+extern queue_s runnable;
 
 /* The currently running thread */
 thread_t *curr;
@@ -24,6 +28,7 @@ int sched_block(thread_t *thr);
 int sched_mutex_unlock_and_block(thread_t *thr, mutex_s *lock);
 int sched_spin_unlock_and_block(thread_t *thr, spin_s *lock);
 int sched_unblock(thread_t *thr, int atomic);
+int remove_from_runnable(thread_t *thr);
 void schedule(void);
 
 

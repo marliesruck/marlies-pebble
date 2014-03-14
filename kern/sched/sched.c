@@ -21,6 +21,8 @@
  **/
 queue_s runnable = QUEUE_INITIALIZER(runnable);
 
+mutex_s sched_lock = MUTEX_INITIALIZER(sched_lock);
+
 /** @brief Make a thread ineligible for CPU time.
  *
  *  In this function we use the linked list functions instead of the queue
@@ -144,7 +146,34 @@ int sched_unblock(thread_t *thr, int atomic)
   if (atomic) enable_interrupts();
   return 0;
 }
+/* @brief Remove yourself from runnable queue.
+ * 
+ * Assumes scheduler is locked.
+ *
+ * @param thr Thread to remove.
+ * @return -1 on error, 0 otherwise.
+ */
+int remove_from_runnable(thread_t *thr)
+{
+  cll_node *n;
 
+  /* Ensure thread is runnable */
+  cll_foreach(&runnable, n) {
+    if (thr == queue_entry(thread_t *, n)) break;
+  }
+  if (thr != queue_entry(thread_t *, n)) return -1;
+
+  /* Remove the thread node from the runnable queue */
+  assert(cll_extract(&runnable, n) == n);
+  free(n);
+
+  return 0;
+
+}
+thread_t *remove_runnable_head(void)
+{
+  return NULL;
+}
 /** @brief Maybe run someone new for a while.
  *
  *  This is our main scheduling function.  It selects a thread from the
@@ -177,6 +206,10 @@ void schedule(void)
     ctx_switch(&prev->sp, &prev->pc, next->sp, next->pc,
                next->task_info->cr3, &next->kstack[KSTACK_SIZE]);
   }
+
+  /* Release the schedule lock */
+//  mutex_unlock(&sched_lock);
+  enable_interrupts();
 
   return;
 }
