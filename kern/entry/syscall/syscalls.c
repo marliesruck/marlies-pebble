@@ -257,12 +257,12 @@ void sys_vanish(void)
 {
   /* Lock your tcb so no one can yield to you etc... */
   mutex_lock(&curr->lock);
-  curr->state = THR_EXITED;
+  curr->state = THR_EXITING;
   mutex_unlock(&curr->lock);
 
   /* Decrement the number of living threads */
   mutex_lock(&curr->task_info->lock);
-  int live_threads = (curr->task_info->num_threads--);
+  int live_threads = (--curr->task_info->num_threads);
   mutex_unlock(&curr->task_info->lock);
 
   /* You are the last thread. Tell your parent to reap you */
@@ -283,6 +283,7 @@ void sys_vanish(void)
 
   /* Context switch to someone else and free your kernel thread
    * resources */
+  lprintf("half_ctx_switching");
   half_ctx_switch_wrapper();
 
   assert(0); /* Should never reach here */

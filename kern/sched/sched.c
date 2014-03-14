@@ -139,11 +139,14 @@ int sched_unblock(thread_t *thr, int atomic)
   if (!n) return -1;
   queue_init_node(n, thr);
 
+
   /* Lock, enqueue, unlock */
   if (atomic) disable_interrupts();
   queue_enqueue(&runnable, n);
   thr->state = THR_RUNNING;
   if (atomic) enable_interrupts();
+  lprintf("adding to runnable queue parent thr: %p in sched_unblock", thr);
+
   return 0;
 }
 /* @brief Remove yourself from runnable queue.
@@ -192,7 +195,7 @@ void schedule(void)
   /* Move the lucky thread to the back of the queue */
   q = queue_dequeue(&runnable);
   next = queue_entry(thread_t *, q);
-  assert(next->state == THR_RUNNING);
+  assert((next->state == THR_RUNNING) || (next->state == THR_EXITING));
   queue_enqueue(&runnable, q);
 
   /* Only switch if the next thread is different */

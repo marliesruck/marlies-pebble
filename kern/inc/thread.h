@@ -27,7 +27,8 @@ enum thread_state {
   THR_NASCENT,    /**< The thread is still being initialized **/
   THR_RUNNING,    /**< The thread is currently runnable **/
   THR_BLOCKED,    /**< The thread is currently not runnable **/
-  THR_EXITED,     /**< The thread has exited **/
+  THR_EXITING,    /**< The thread is exiting so any calls to yield,
+                        make_runnable, gettid, are invalid **/
 };
 typedef enum thread_state thr_state_e;
 
