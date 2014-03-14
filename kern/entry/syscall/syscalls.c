@@ -274,9 +274,10 @@ int sys_make_runnable(int tid)
   return ret;
 }
 
+#include <timer.h>
 unsigned int sys_get_ticks(void)
 {
-  return 0;
+  return tmr_get_ticks();
 }
 
 int sys_sleep(int ticks)

@@ -6,16 +6,14 @@
  *  @author Marlies Ruck (mruck)
  **/
 
+/* Keyboard includes */
+#include "keyboard_internal.h"
+
+/* Pebble includes */
 #include <interrupt_defines.h>
 #include <x86/asm.h>
 #include <keyhelp.h>
 
-#include "keyboard_internal.h"
-#include "driver_wrappers.h"
-
-#include <ctx_switch.h>
-
-#include <simics.h>
 
 /*************************************************************************/
 /* External Interface                                                    */
@@ -78,7 +76,7 @@ void kbd_putchar(char scancode)
  *
  *  @return Void.
  **/
-void int_keyboard(void)
+void kbd_int_handler(void)
 {
   char scancode;
 

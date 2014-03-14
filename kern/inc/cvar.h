@@ -1,4 +1,4 @@
-/** @file cond_type.h
+/** @file cvar.h
  *
  *  @brief This file defines the type for condition variables.
  *
@@ -14,17 +14,29 @@
 #include <queue.h>
 #include <spin.h>
 
+/** @struct cvar
+ *  @brief A condition variable.
+ **/
 struct cvar {
-	spin_s lock;
-	queue_s queue;
+	spin_s lock;    /**< Protects the cvar struct fields **/
+	queue_s queue;  /**< Queue of waiting threads **/
 };
 typedef struct cvar cvar_s;
 
-/* condition variable functions */
-int cond_init( cvar_s *cv );
-void cond_final( cvar_s *cv );
-void cond_wait( cvar_s *cv, mutex_s *mp );
-void cond_signal( cvar_s *cv );
-void cond_broadcast( cvar_s *cv );
+/** @brief Statically initialize a condition variable.
+ *
+ *  @return A statically initialized cvar.
+ **/
+#define CVAR_INITIALIZER(name) {          \
+  .lock = SPIN_INITIALIZER(),             \
+  .queue = QUEUE_INITIALIZER(name.queue)  \
+}
+
+/* Condition variable operations */
+int cvar_init( cvar_s *cv );
+void cvar_final( cvar_s *cv );
+void cvar_wait( cvar_s *cv, mutex_s *mp );
+void cvar_signal( cvar_s *cv );
+void cvar_broadcast( cvar_s *cv );
 
 #endif /* __COND_H__ */
