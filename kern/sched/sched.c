@@ -170,31 +170,6 @@ int remove_from_runnable(thread_t *thr)
   return 0;
 
 }
-void half_ctx_switch_wrapper(void)
-{
-  /* Function is not ctx switch safe beyond this point */
-  disable_interrupts();
-
-  /* Remove yourself from the runnable queue */
-  remove_from_runnable(curr);
-
-  /* There should still be someone to switch to */
-  assert( !queue_empty(&runnable) );
-
-  /* Dequeue the thread we are switching to */
-  queue_node_s *q = queue_dequeue(&runnable);
-  thread_t *next = queue_entry(thread_t *, q);
-
-  /* Move the thread to the back of the queue */
-  assert(next->state == THR_RUNNING);
-  queue_enqueue(&runnable, q);
-
-  curr = next; 
-
-  half_ctx_switch(next->sp, next->pc, next->task_info->cr3,
-                  &next->kstack[KSTACK_SIZE]);
-
-}
 /** @brief Maybe run someone new for a while.
  *
  *  This is our main scheduling function.  It selects a thread from the
@@ -229,7 +204,6 @@ void schedule(void)
   }
 
   /* Release the schedule lock */
-//  mutex_unlock(&sched_lock);
   enable_interrupts();
 
   return;

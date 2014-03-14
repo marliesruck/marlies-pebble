@@ -42,6 +42,9 @@ struct thread {
 };
 typedef struct thread thread_t;
 
+/* When you want atomic access */
+extern mutex_s thrlist_lock;
+
 /* Initialization routines */
 thread_t *task_init(void);
 thread_t *thread_init(task_t *task);

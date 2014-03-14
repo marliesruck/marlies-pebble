@@ -1,6 +1,9 @@
 #include <ctx_switch.h>
 #include <sched.h>
 
+#include <asm.h>
+#include <assert.h>
+
 void half_ctx_switch_wrapper(void)
 {
   /* Function is not ctx switch safe beyond this point */

@@ -216,6 +216,7 @@ void sys_set_status(int status)
 #include <process.h>
 #include <thread.h>
 #include <sched.h>
+#include <ctx_switch.h>
 #include <mutex.h>
 #include <cvar.h>
 
@@ -253,6 +254,34 @@ void sys_set_status(int status)
  */
 void sys_vanish(void)
 {
+  /* Lock your tcb so no one can yield to you etc... */
+  mutex_lock(&curr->lock);
+  curr->state = THR_EXITED;
+  mutex_unlock(&curr->lock);
+
+  /* Decrement the number of living threads */
+  mutex_lock(&curr->task_info->lock);
+  int live_threads = (curr->task_info->num_threads--);
+  mutex_unlock(&curr->task_info->lock);
+
+  /* You are the last thread. Tell your parent to reap you */
+  if(live_threads == 0){
+    /* Need mechanism to make sure parent hasn't exited */
+    task_t *parent = curr->task_info->parent;
+
+    /* Enqueue yourself as a dead child */
+    mutex_lock(&parent->lock);
+    queue_node_s *q = malloc(sizeof(cll_node));
+    queue_init_node(q, curr);
+    queue_enqueue(&parent->dead_children, q);
+    cvar_signal(&parent->cv);
+    /* The parent can NOT run now that we've marked ourselves as dead */
+    disable_interrupts();
+    mutex_unlock(&parent->lock);
+  }
+
+  /* Context switch to someone else and free your kernel thread
+   * resources */
   half_ctx_switch_wrapper();
 
   assert(0); /* Should never reach here */

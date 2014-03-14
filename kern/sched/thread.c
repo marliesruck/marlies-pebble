@@ -20,6 +20,7 @@
 #include <process.h>
 #include <queue.h>
 
+#include <mutex.h>
 #include <spin.h>
 
 #include <vm.h>
@@ -27,6 +28,8 @@
 
 #include <stdlib.h>
 #include <malloc.h>
+
+mutex_s thrlist_lock = MUTEX_INITIALIZER(thrlist_lock);
 
 /* Atomically acquire a tid */
 static int tid = 0;

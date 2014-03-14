@@ -13,7 +13,7 @@
 #include  <cvar.h>
 
 typedef struct task{
-  struct task_t *parent;  /* Enqueue the last thread_t to exit in my parent's
+  struct task *parent;  /* Enqueue the last thread_t to exit in my parent's
                              list of dead children...that makes the parent
                              responsible for reaping that thread_t */
   queue_s dead_children; /* List of threads for MY dead children to enqueue 
