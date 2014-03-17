@@ -33,7 +33,6 @@ typedef struct task{
   int live_children;      /* This and dead_children determine whether or not
                              wait should block */
   mutex_s lock;           /* Hold this lock when modifying the task struct */
-  int exited;
   int status;
 }task_t;
 

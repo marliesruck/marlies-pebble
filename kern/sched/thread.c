@@ -61,8 +61,6 @@ thread_t *task_init(void)
    * lineage/reaping problems */
   task->parent = curr->task_info;
 
-  task->exited = 0;
-
   /* Initialize root thread with new task */
   thread_t *thread = thread_init(task);
   task->orig_tid = thread->tid;
@@ -98,7 +96,7 @@ thread_t *thread_init(task_t *task)
   thread->sp = NULL;
   thread->pc = NULL;
     
-    return thread;
+  return thread;
 }
 
 

@@ -270,17 +270,12 @@ void sys_vanish(void)
     /* Need mechanism to make sure parent hasn't exited, otherwise the parent is
      * init */
     task_t *parent = curr->task_info->parent;
-    lprintf("parent from child perspective?");
-    MAGIC_BREAK;
 
     /* Enqueue yourself as a dead child */
     mutex_lock(&parent->lock);
     queue_node_s *q = malloc(sizeof(cll_node));
-    queue_init_node(q, curr);
+    queue_init_node(q, curr->task_info);
 
-    lprintf("in child enqueue in parent's dead_children: %p",
-       &parent->dead_children);
-    MAGIC_BREAK;
     queue_enqueue(&parent->dead_children, q);
     cvar_signal(&parent->cv);
     /* The parent can NOT run now that we've marked ourselves as dead but have
@@ -291,7 +286,6 @@ void sys_vanish(void)
 
   /* Context switch to someone else and free your kernel thread
    * resources */
-  lprintf("half_ctx_switching");
   half_ctx_switch_wrapper();
 
   assert(0); /* Should never reach here */
@@ -301,13 +295,8 @@ void sys_vanish(void)
 int sys_wait(int *status_ptr)
 {
   task_t *task = curr->task_info;
-  lprintf("parent from parent perspective?");
-  MAGIC_BREAK;
   /* Atomically check for dead children */
   mutex_lock(&task->lock);
-
-    lprintf("in parent checking dead_children: %p",
-       &task->dead_children);
 
   while(queue_empty(&task->dead_children)){
     if(task->live_children == 0){
@@ -319,17 +308,24 @@ int sys_wait(int *status_ptr)
       cvar_wait(&task->cv, &task->lock);
     }
   }
+ /* Dequeue dead child */
  queue_node_s *q = queue_dequeue(&task->dead_children);
+
+ /* Relinquish lock */
  mutex_unlock(&task->lock);
 
- thread_t *child_thread = queue_entry(thread_t *, q);
-
- task_t *child_task = child_thread->task_info;
+ /* Store out root task tid to return */
+ task_t *child_task = queue_entry(task_t*, q);
  int tid = child_task->orig_tid;
+
  /* Free child's virtual memory */
- /* Free child's task struct */
+
+ /* Scribble to status */
  if(status_ptr)
    *status_ptr = child_task->status;
+
+ /* Free child's task struct */
+ free(child_task);
 
   return tid;
 }

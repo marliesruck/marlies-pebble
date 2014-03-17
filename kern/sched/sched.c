@@ -145,7 +145,6 @@ int sched_unblock(thread_t *thr, int atomic)
   queue_enqueue(&runnable, n);
   thr->state = THR_RUNNING;
   if (atomic) enable_interrupts();
-  lprintf("adding to runnable queue parent thr: %p in sched_unblock", thr);
 
   return 0;
 }

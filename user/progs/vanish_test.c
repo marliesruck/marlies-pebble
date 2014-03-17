@@ -27,8 +27,7 @@ int main(){
     lprintf("parent waiting for child");
     wait(&status);
     lprintf("status = %d", status);
-    while(1)
-      lprintf("in parent");
+    while(1);
   }
 
   else{
