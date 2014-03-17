@@ -233,15 +233,15 @@ void sys_set_status(int status)
  *
  *    Iteration 1:
  *    -Enqueue in dead_peers so we can still use the kstack
- *    -call half ctx switch(not that our kstack is still valid because another
+ *    -scheduler logic to identify next task
+ *    -call half ctx switch(note that our kstack is still valid because another
  *    process has not taken it)
  *
  *    Iteration 2:
- *    -interject scheduler logic here and acquire scheduler lock
  *    -call free_tcb(void *thread_t, void *next_task sp, void next_task *pc,
  *                  void *listp)
  *      -this will be an asm function  
- *        -*listp = thread_t
+ *        -*listp = thread_t //store out stack since we don't need it anymore
  *        -jmp asm_half_ctx_switch
  *       
  * 2) The calling thread is the last thread.  
@@ -267,16 +267,24 @@ void sys_vanish(void)
 
   /* You are the last thread. Tell your parent to reap you */
   if(live_threads == 0){
-    /* Need mechanism to make sure parent hasn't exited */
+    /* Need mechanism to make sure parent hasn't exited, otherwise the parent is
+     * init */
     task_t *parent = curr->task_info->parent;
+    lprintf("parent from child perspective?");
+    MAGIC_BREAK;
 
     /* Enqueue yourself as a dead child */
     mutex_lock(&parent->lock);
     queue_node_s *q = malloc(sizeof(cll_node));
     queue_init_node(q, curr);
+
+    lprintf("in child enqueue in parent's dead_children: %p",
+       &parent->dead_children);
+    MAGIC_BREAK;
     queue_enqueue(&parent->dead_children, q);
     cvar_signal(&parent->cv);
-    /* The parent can NOT run now that we've marked ourselves as dead */
+    /* The parent can NOT run now that we've marked ourselves as dead but have
+     * not technically finished executing this code */
     disable_interrupts();
     mutex_unlock(&parent->lock);
   }
@@ -293,8 +301,13 @@ void sys_vanish(void)
 int sys_wait(int *status_ptr)
 {
   task_t *task = curr->task_info;
+  lprintf("parent from parent perspective?");
+  MAGIC_BREAK;
   /* Atomically check for dead children */
   mutex_lock(&task->lock);
+
+    lprintf("in parent checking dead_children: %p",
+       &task->dead_children);
 
   while(queue_empty(&task->dead_children)){
     if(task->live_children == 0){
@@ -313,10 +326,10 @@ int sys_wait(int *status_ptr)
 
  task_t *child_task = child_thread->task_info;
  int tid = child_task->orig_tid;
+ /* Free child's virtual memory */
+ /* Free child's task struct */
  if(status_ptr)
    *status_ptr = child_task->status;
-
-
 
   return tid;
 }

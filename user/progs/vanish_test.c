@@ -13,7 +13,9 @@ int main(){
   args[3] = buf;
 
   int tid = fork();
-  /* Child execs merchant */
+
+  /* Child execs merchant which acts as idle...
+   * We can't launch idle because our loader in broken :( */
   if(tid == 0){
     exec(prog,args);
   }

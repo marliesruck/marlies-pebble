@@ -88,7 +88,9 @@ void cvar_wait(cvar_s *cv, mutex_s *mp)
   lprintf("in cvar_wait with parent thread = %p and releasing mutex: %p", curr, mp);
   sched_spin_unlock_and_block(curr, &cv->lock);
 
+  lprintf("parent blocked and calling schedule");
   schedule();
+  lprintf("parent running again");
 
   /* Lock world mutex and make progress */
   mutex_lock(mp);
@@ -101,6 +103,7 @@ void cvar_wait(cvar_s *cv, mutex_s *mp)
  */
 void cvar_signal(cvar_s *cv) 
 {
+  lprintf("child in cvar_signal");
   queue_node_s *n;
   thread_t *thr;
 

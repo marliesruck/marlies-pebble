@@ -19,6 +19,7 @@
 #include <thread.h>
 #include <process.h>
 #include <queue.h>
+#include <sched.h>
 
 #include <mutex.h>
 #include <spin.h>
@@ -55,6 +56,11 @@ thread_t *task_init(void)
   queue_init(&task->dead_children);
   cvar_init((&task->cv));
 
+  /* Initialize parent. The very first task we handload shoud be init, that way
+   * all processes will be descendants of init and we won't have bizarre
+   * lineage/reaping problems */
+  task->parent = curr->task_info;
+
   task->exited = 0;
 
   /* Initialize root thread with new task */
@@ -63,8 +69,6 @@ thread_t *task_init(void)
 
   /* Initialize the task struct lock */
   mutex_init(&task->lock);
-
-
 
   return thread;
 }
