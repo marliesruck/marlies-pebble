@@ -117,7 +117,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   memset(zfod,0,PAGE_SIZE);
 
   /* Load the first executable */
-  thread_t *thread = load_task(pd, "cooperative");
+  thread_t *thread = load_task(pd, "coolness");
 
   /* Init curr and enable interrupts */
   curr = thread;

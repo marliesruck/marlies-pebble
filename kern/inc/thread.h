@@ -27,8 +27,7 @@ enum thread_state {
   THR_NASCENT,    /**< The thread is still being initialized **/
   THR_RUNNING,    /**< The thread is currently runnable **/
   THR_BLOCKED,    /**< The thread is currently not runnable **/
-  THR_EXITING,    /**< The thread is exiting so any calls to yield,
-                        make_runnable, gettid, are invalid **/
+  THR_EXITING,    /**< The thread is exiting **/
 };
 typedef enum thread_state thr_state_e;
 
@@ -43,8 +42,8 @@ struct thread {
 };
 typedef struct thread thread_t;
 
-/* When you want atomic access */
-extern mutex_s thrlist_lock;
+/* If a parent is reaped before a child, this is the child's new parent */
+thread_t *init;
 
 /* Initialization routines */
 thread_t *task_init(void);
@@ -54,15 +53,11 @@ thread_t *thread_init(task_t *task);
 void thrlist_enqueue(thread_t *thread, queue_s *q);
 thread_t *thrlist_dequeue(queue_s *q);
 
-int thrlist_empty(queue_s *q);
-
 /* Thread list manipulation */
 int thrlist_add(thread_t *t);
 int thrlist_del(thread_t *t);
 thread_t *thrlist_find(int tid);
 
-/* If a parent is reaped before a child, this is the child's new parent */
-thread_t *init;
 
-#endif /* _THREAD_H */
+#endif /* __THREAD_H__ */
 
