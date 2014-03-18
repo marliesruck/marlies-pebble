@@ -201,8 +201,8 @@ void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
   mem_region_s *mreg;
 
   /* Allocate a region */
-  if(!(mreg = vm_region(vmi, va_start,len,attrs)))
-    return NULL;
+  mreg = vm_region(vmi, va_start, len, attrs);
+  if(!mreg) return NULL;
 
   /* Allocate frames for the requested memory */
   for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE) {
@@ -266,11 +266,8 @@ int vm_copy(vm_info_s *dst, const vm_info_s *src)
     sreg = cll_entry(mem_region_s *, n);
 
     /* Allocate a dst region struct */
-    dreg = malloc(sizeof(mem_region_s));
-    if (!dreg) {
-      vm_final(dst);
-      return -1;
-    }
+    dreg = vm_region(dst, sreg->start, sreg->limit-sreg->start, sreg->attrs);
+    if (!dreg) return -1;
 
     /* Allocate pages for the region */
     for (addr = sreg->start; addr < sreg->limit; addr += PAGE_SIZE) {
@@ -284,14 +281,6 @@ int vm_copy(vm_info_s *dst, const vm_info_s *src)
       }
       else
         assert( !copy_page(&dst->pg_info, &src->pg_info, addr, sreg->attrs) );
-    }
-
-    /* Insert the new region into the dest */
-    mreg_init(dreg, sreg->start, sreg->limit, sreg->attrs);
-    if (mreg_insert(&dst->mmap, dreg)) {
-      vm_final(dst);
-      free(dreg);
-      return -1;
     }
   }
 
@@ -347,18 +336,15 @@ void vm_zfod(mem_region_s *mreg, pg_info_s *pg_info)
   pte.present = 1;
   pte.user = 1;
   pte.zfod = 1;
-  pte.writable = 0;
   pte.addr = SHIFT_ADDR(zfod);  
 
   for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE){
-  //  lprintf("addr before: %p",addr);
-   // MAGIC_BREAK;
     if(set_pte(pg_info->pg_dir,pg_info->pg_tbls, addr,&pte) < 0){
       /* If the PDE isn't valid, make it so */
       frame = alloc_frame();
       init_pte(&pde, frame);
       pde.present = 1;
-//      pde.writable = 1;
+      pde.writable = 1;
       pde.user = 1;
       set_pde(pg_info->pg_dir, addr, &pde);
       /* Now that the PDE is initialized, try again */
