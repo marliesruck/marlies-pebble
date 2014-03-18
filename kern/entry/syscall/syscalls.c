@@ -319,6 +319,7 @@ int sys_wait(int *status_ptr)
  int tid = child_task->orig_tid;
 
  /* Free child's virtual memory */
+ vm_final(&child_task->vmi);
 
  /* Scribble to status */
  if(status_ptr)
