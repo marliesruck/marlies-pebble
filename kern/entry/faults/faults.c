@@ -205,6 +205,8 @@ void int_gen_prot(void)
 #include <thread.h>
 #include <vm.h>
 #include <sched.h>
+#include <tlb.h>
+#include <frame_alloc.h>
 #include <util.h>
 /* x86 specific includes */
 #include <x86/cr.h>
@@ -212,27 +214,33 @@ void int_gen_prot(void)
 #include <string.h>
 void int_page_fault(void *error_code)
 {
-  /* Retrieve current process's vm */
-  pg_info_s *pg_info = &curr->task_info->vmi.pg_info;
-  pt_t *pg_tbles = pg_info->pg_tbls;
-
-  /* Retrieve address that caused fault */
-  void *addr = (void *)get_cr2();
+  pte_s pte;
 
   /* Retrieve PTE for faulting address */
-  pte_s *pte = &pg_tbles[PG_DIR_INDEX(addr)][PG_TBL_INDEX(addr)];
-  /* oooops...ZFOD */
-  if(pte->zfod){
-    lprintf("handling zfod!");
-    pte->zfod = 0;
-    alloc_page(pg_info, addr, VM_ATTR_USER | VM_ATTR_RDWR);
-    memset((void *)(FLOOR(addr, PAGE_SIZE)), 0, PAGE_SIZE);
-    MAGIC_BREAK;
-  }
-  else{
-    lprintf("Error: Page fault!");
+  pg_info_s *pgi = &curr->task_info->vmi.pg_info;
+  void *addr = (void *)get_cr2();
+  if (get_pte(pgi->pg_dir, pgi->pg_tbls, addr, &pte)) {
+    lprintf("Error: Page fault on table-less address %p!", addr);
     panic("Error: Page fault!");
   }
+  lprintf("faulted on %p { addr=0x%08x, zfod=%d, write=%d, pres=%d }",
+          addr, pte.addr, pte.zfod, pte.writable, pte.present);
+
+  /* oooops...ZFOD */
+  if(pte.zfod){
+    lprintf("handling zfod!");
+
+    void *frame = alloc_frame();
+    if (!frame) return;
+    pte.addr = ((unsigned int) frame) << PG_TBL_SHIFT;
+    pte.writable = 1;
+    assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, addr, &pte) );
+    tlb_inval_page(addr);
+
+    memset((void *)(FLOOR(addr, PAGE_SIZE)), 0, PAGE_SIZE);
+    return;
+  }
+
   return;
 }
 

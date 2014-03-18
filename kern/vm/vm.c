@@ -256,7 +256,6 @@ int vm_copy(vm_info_s *dst, const vm_info_s *src)
   const mem_region_s *sreg;
   cll_node *n;
   void *addr;
-  pte_s pte;
 
   /* Don't copy unless the dest is empty */
   if (!cll_empty(&dst->mmap)) return -1;
@@ -270,18 +269,8 @@ int vm_copy(vm_info_s *dst, const vm_info_s *src)
     if (!dreg) return -1;
 
     /* Allocate pages for the region */
-    for (addr = sreg->start; addr < sreg->limit; addr += PAGE_SIZE) {
-      /* Check if page is ZFOD */
-      if (get_pte(src->pg_info.pg_dir, src->pg_info.pg_tbls, addr, &pte))
-        return -1;
-      /* If so map dummy frame in */
-      if(pte.zfod){
-        if(set_pte(dst->pg_info.pg_dir, dst->pg_info.pg_tbls,addr,&pte)< 0)
-          return -1;
-      }
-      else
-        assert( !copy_page(&dst->pg_info, &src->pg_info, addr, sreg->attrs) );
-    }
+    for (addr = sreg->start; addr < sreg->limit; addr += PAGE_SIZE)
+      assert( !copy_page(&dst->pg_info, &src->pg_info, addr, sreg->attrs) );
   }
 
   return 0;
@@ -315,40 +304,3 @@ void vm_final(vm_info_s *vmi)
   return;
 }
 
-/* @brief Makes PTEs in region ZFOD.
- *
- * @param mreg Region to set PTEs to ZFOD.
- * @param pg_info Information necessary for manipulating the process's page
- * directory and tables.
- *
- * @return Void.
- */
-void vm_zfod(mem_region_s *mreg, pg_info_s *pg_info)
-{
-  void *addr;
-
-  /* In case PDE is invalid */
-  pte_s pde;
-  void *frame; 
-
-  /* Craft a ZFOD PTE */
-  pte_s pte;
-  pte.present = 1;
-  pte.user = 1;
-  pte.zfod = 1;
-  pte.addr = SHIFT_ADDR(zfod);  
-
-  for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE){
-    if(set_pte(pg_info->pg_dir,pg_info->pg_tbls, addr,&pte) < 0){
-      /* If the PDE isn't valid, make it so */
-      frame = alloc_frame();
-      init_pte(&pde, frame);
-      pde.present = 1;
-      pde.writable = 1;
-      pde.user = 1;
-      set_pde(pg_info->pg_dir, addr, &pde);
-      /* Now that the PDE is initialized, try again */
-      set_pte(pg_info->pg_dir,pg_info->pg_tbls, addr,&pte);
-    }
-  }
-}

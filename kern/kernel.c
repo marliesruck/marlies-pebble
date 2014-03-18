@@ -51,15 +51,25 @@
  *************************************************************************/
 
 #include <x86/cr.h>
-#define CR0_PAGE 0x80000000
 
+
+void enable_write_protect(void)
+{
+  uint32_t cr0;
+  
+  cr0 = get_cr0();
+  cr0 |= CR0_WP;
+  set_cr0(cr0);
+
+  return;
+}
 
 void enable_paging(void)
 {
   uint32_t cr0;
   
   cr0 = get_cr0();
-  cr0 |= CR0_PAGE;
+  cr0 |= CR0_PG;
   set_cr0(cr0);
 
   return;
@@ -70,7 +80,7 @@ void disable_paging(void)
   uint32_t cr0;
   
   cr0 = get_cr0();
-  cr0 &= ~CR0_PAGE;
+  cr0 &= ~CR0_PG;
   set_cr0(cr0);
 
   return;
@@ -110,14 +120,17 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   init_pd(pd, pd);
 
   set_cr3((uint32_t) pd);
+  enable_write_protect();
   enable_paging();
 
   /* Allocate dummy frame for admiring zeroes */
   zfod = smemalign(PAGE_SIZE, PAGE_SIZE);
   memset(zfod,0,PAGE_SIZE);
+  lprintf("kmain: zfod = %p", zfod);
 
   /* Load the first executable */
-  thread_t *thread = load_task(pd, "cooperative");
+  thread_t *thread = load_task(pd, "coolness");
+  lprintf("loaded task");
 
   /* Init curr and enable interrupts */
   curr = thread;
@@ -127,6 +140,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   set_esp0((uint32_t)(&thread->kstack[KSTACK_SIZE]));
 
   /* Head to user-space */
+  lprintf("mode_switch(pc=%p, sp=%p)", thread->pc, thread->sp);
   mode_switch(thread->pc, thread->sp);
 
   /* We should never reach here! */
