@@ -129,8 +129,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   lprintf("kmain: zfod = %p", zfod);
 
   /* Load the first executable */
-  thread_t *thread = load_task(pd, "coolness");
-  lprintf("loaded task");
+  thread_t *thread = load_task(pd, "cooperative");
 
   /* Init curr and enable interrupts */
   curr = thread;
@@ -140,7 +139,6 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   set_esp0((uint32_t)(&thread->kstack[KSTACK_SIZE]));
 
   /* Head to user-space */
-  lprintf("mode_switch(pc=%p, sp=%p)", thread->pc, thread->sp);
   mode_switch(thread->pc, thread->sp);
 
   /* We should never reach here! */

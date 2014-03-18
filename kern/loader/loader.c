@@ -117,9 +117,6 @@ void *load_file(vm_info_s *vmi, const char* filename)
   if(validate_file(&se,filename) < 0)
     return NULL;
 
-  lprintf("text: start=0x%08x, len=0x%08x",
-          (unsigned int) se.e_txtstart, (unsigned int) se.e_txtlen);
-
   /* For simplicity, we assume text < rodata and data < bss */
   assert(se.e_txtstart < se.e_rodatstart);
   assert(se.e_datstart < se.e_bssstart);
@@ -127,7 +124,7 @@ void *load_file(vm_info_s *vmi, const char* filename)
   /* Allocate read/execute memory */
   ret = vm_alloc(vmi, (void *)se.e_txtstart,
                  (se.e_rodatstart - se.e_txtstart) + se.e_rodatlen,
-                 VM_ATTR_USER);
+                 VM_ATTR_RDWR);
   assert(ret != NULL);
 
   /* Load read/execute sections (text and rodata) */
@@ -135,6 +132,9 @@ void *load_file(vm_info_s *vmi, const char* filename)
   memset((void *)(se.e_txtstart + se.e_txtlen), 0,
          se.e_rodatstart - (se.e_txtstart + se.e_txtlen));
   getbytes(filename, se.e_rodatoff, se.e_rodatlen, (void *)se.e_rodatstart);
+
+  /* TODO: Check this return!! */
+  assert( !vm_set_attrs(vmi, (void *)se.e_txtstart, VM_ATTR_USER) );
 
   /* Allocate read/write memory */
   ret = vm_alloc(vmi, (void *)se.e_datstart,

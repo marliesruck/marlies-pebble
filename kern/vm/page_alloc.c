@@ -98,6 +98,29 @@ void free_page(pg_info_s *pgi, void *vaddr)
   return;
 }
 
+/** @brief Sets a page's attributes.
+ *
+ *  @param pgi Page table information.
+ *  @param vaddr A virtual address on the page.
+ *  @param attrs The attributes for the page.
+ *
+ *  @return 0 on success; a negative integer error code on failure.
+ **/
+int page_set_attrs(pg_info_s *pgi, void *vaddr, unsigned int attrs)
+{
+  pte_s pte;
+
+  /* Find the page's PTE */
+  if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte))
+    return -1;
+
+  /* Write the new attributes */
+  translate_attrs(&pte, attrs);
+  set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte);
+
+  return 0;
+}
+
 /** @brief Copies an address page.
  *
  *  @param dst The destination page info struct.
@@ -134,6 +157,7 @@ int copy_page(pg_info_s *dst, const pg_info_s *src, void *vaddr, unsigned int at
   /* Map in the dest page for copying */
   init_pte(&pde, frame);
   pde.present = 1;
+  pde.writable = 1;
   assert( !set_pte(src->pg_dir, src->pg_tbls, BUF, &pde) );
 
   /* Copy data */

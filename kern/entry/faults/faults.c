@@ -223,8 +223,8 @@ void int_page_fault(void *error_code)
     lprintf("Error: Page fault on table-less address %p!", addr);
     panic("Error: Page fault!");
   }
-  lprintf("faulted on %p { addr=0x%08x, zfod=%d, write=%d, pres=%d }",
-          addr, pte.addr, pte.zfod, pte.writable, pte.present);
+  lprintf("faulted on %p { addr=0x%08x, zfod=%d, write=%d, pres=%d, user=%d }",
+          addr, pte.addr, pte.zfod, pte.writable, pte.present, pte.user);
 
   /* oooops...ZFOD */
   if(pte.zfod){

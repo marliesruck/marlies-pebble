@@ -217,6 +217,34 @@ void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
   return mreg->start;
 }
 
+/** @brief Sets the attributes for a region.
+ *
+ *  @param vmi The vm_info struct for this allocation.
+ *  @param va_start The starting address for the allocation.
+ *  @param attrs The new attributes.
+ *
+ *  @return 0 on success; a negative integer error code on failure.
+ **/
+int vm_set_attrs(vm_info_s *vmi, void *va_start, unsigned int attrs)
+{
+  mem_region_s temp, *mreg;
+  void *addr;
+
+  /* Find the allocated region */
+  mreg_init(&temp, va_start, va_start, 0); 
+  mreg = mreg_lookup(&vmi->mmap, &temp);
+  if (!mreg) return -1;
+
+  /* Free pages in that region */
+  for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE) {
+    if (page_set_attrs(&vmi->pg_info, addr, attrs))
+      return -1;
+  }
+
+  mreg->attrs = attrs;
+  return 0;
+}
+
 /** @brief Frees a region previously allocated by vm_alloc(...).
  *
  *  @param vmi The vm_info struct for this allocation.
