@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 int main(){
+  /*
   char buf[16];
   char * prog = "merchant";
   char * args[5] = { "merchant", "13", "foo bar", NULL, NULL };
@@ -14,14 +15,13 @@ int main(){
 
   int tid = fork();
 
-  /* Child execs merchant which acts as idle...
-   * We can't launch idle because our loader in broken :( */
   if(tid == 0){
     exec(prog,args);
   }
 
+  */
   /* Fork again */
-  tid = fork();
+  int tid = fork();
   if(tid){
     int status;
     lprintf("parent waiting for child");
