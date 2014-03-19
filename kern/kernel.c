@@ -102,6 +102,9 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   install_sys_handlers(); 
   clear_console();
 
+  /* Initalize frame allocator data structure */
+  init_frame_allocator();
+
   /* Initialized kernel page tables */
   init_kern_pt();
 

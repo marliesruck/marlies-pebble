@@ -9,7 +9,9 @@
 #define __PAGE_ALLOC_H__
 
 #include <pg_table.h>
+#include <mutex.h>
 
+extern mutex_s frame_allocator_lock;
 
 /** @struct page_info
  *  @brief Information used by the page allocator.
@@ -26,6 +28,8 @@ void *zfod;
 void *alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs);
 void free_page(pg_info_s *pgi, void *vaddr);
 int copy_page(pg_info_s *dst, const pg_info_s *src, void *vaddr, unsigned int attrs);
+void *alloc_frame2(void);
+void free_frame2(void *frame, void *vaddr);
 
 
 #endif /* __PAGE_ALLOC_H__ */

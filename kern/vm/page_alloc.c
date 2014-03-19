@@ -17,6 +17,11 @@
 #include <assert.h>
 #include <stddef.h>
 #include <string.h>
+#include <stdint.h>
+
+
+/* Serialize access to the frame allocator */
+mutex_s frame_allocator_lock = MUTEX_INITIALIZER(frame_allocator_lock);
 
 /*************************************************************************
  *  Helper functions
@@ -147,4 +152,51 @@ int copy_page(pg_info_s *dst, const pg_info_s *src, void *vaddr, unsigned int at
 
   return 0;
 }
+/** @brief Acquire a frame.
+ *
+ * Retrieves a frame from the free list, maps it into virtual memory, and
+ * updates the free list to point to the new head.
+ *
+ * @return NULL on error, else address of frame.
+ **/
+void *alloc_frame2(void)
+{
+  /* Serialize access to the free list */
+  mutex_lock(&frame_allocator_lock);
 
+  /* Grab the head of free list */
+  void *frame = retrieve_head();
+
+  /* Map the frame into virtual memory so we can read the address of the next
+   * free frame */
+
+
+
+
+  /* Relinquish the lock */
+  mutex_unlock(&frame_allocator_lock);
+  return frame;
+}
+/** @brief Free a frame.
+ *
+ *  Adds a frame to the free list.
+ *
+ *  @param frame Address of frame to free.
+ *  @return Void.
+ **/
+void free_frame2(void *frame, void *vaddr)
+{
+  /* Serialize access to the free list */
+  mutex_lock(&frame_allocator_lock);
+
+  /* Retrieve and store out old head while frame is mapped in */
+  void *old_head = retrieve_head();
+  *(uint32_t *)(vaddr) = (uint32_t)(old_head);
+
+  /* Add frame to free list */
+  update_head(frame);
+
+  /* Relinquish the lock */
+  mutex_unlock(&frame_allocator_lock);
+  return;
+}
