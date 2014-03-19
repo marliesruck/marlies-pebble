@@ -126,14 +126,16 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   /* Allocate dummy frame for admiring zeroes */
   zfod = smemalign(PAGE_SIZE, PAGE_SIZE);
   memset(zfod,0,PAGE_SIZE);
-  lprintf("kmain: zfod = %p", zfod);
 
   /* Load the first executable */
-  thread_t *thread = load_task(pd, "cooperative");
+  thread_t *thread = load_task(pd, "vanish_test");
 
   /* Init curr and enable interrupts */
   curr = thread;
   enable_interrupts();
+
+  /* Keep track of init's task */
+  init = curr->task_info;
 
   /* Give up the kernel stack that was given to us by the bootloader */
   set_esp0((uint32_t)(&thread->kstack[KSTACK_SIZE]));
@@ -160,8 +162,6 @@ thread_t *load_task(void *pd, const char *fname)
   thread->pc = load_file(&task->vmi, fname);
   thread->sp = usr_stack_init(&task->vmi, NULL);
 
-  /* Insert the thread into the thread list */
-  assert( thrlist_add(thread) == 0 );
   assert( sched_unblock(thread, 0) == 0 );
 
   sim_reg_process(pd, fname);

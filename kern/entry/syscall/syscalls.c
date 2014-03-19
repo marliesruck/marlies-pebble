@@ -27,6 +27,7 @@
 #include <loader.h>
 
 #include <string.h>
+#include <malloc.h>
 
 /** @brief Installs our system calls.
  *
@@ -97,7 +98,7 @@ void *init_child_tcb(void *child_cr3, pte_s *pd, pt_t *pt)
   task->cr3 = (uint32_t)(child_cr3);
   task->vmi.pg_info.pg_tbls = pt;
   task->vmi.pg_info.pg_dir = pd;
-  //(task_t *)(task->parent) = (task_t *)(curr->task_info);
+  task->parent = curr->task_info;
 
   return thread;
 }
@@ -143,8 +144,11 @@ int sys_fork(unsigned int esp)
   child_thread->sp = &child_thread->kstack[offset];
   child_thread->pc = finish_fork;
 
-  /* Increment the number of children forked */
-  curr->task_info->live_children++;
+  /* Keep track of live children forked */
+  cll_node *n = malloc(sizeof(cll_node));
+  if(!n) return -1;
+  cll_init_node(n, child_task);
+  cll_insert(&curr->task_info->live_children, n);
 
   /* Enqueue new tcb */
   assert( thrlist_add(child_thread) == 0 );
@@ -156,7 +160,6 @@ int sys_fork(unsigned int esp)
 #include <loader.h>
 #include <usr_stack.h>
 #include <vm.h>
-#include <malloc.h>
 void mode_switch(void *entry_point, void *sp);
 int sys_exec(char *execname, char *argvec[])
 {
@@ -255,37 +258,69 @@ void sys_set_status(int status)
  */
 void sys_vanish(void)
 {
-  /* Lock your tcb so no one can yield to you etc... */
-  mutex_lock(&curr->lock);
-  curr->state = THR_EXITING;
-  mutex_unlock(&curr->lock);
+  queue_node_s *q;
+  task_t *child;
+
+  /* Lock thread list and remove ourselves */
+  thrlist_del(curr);
+
+  task_t *task = curr->task_info;
+
+  /* Sock lock? */
 
   /* Decrement the number of living threads */
-  mutex_lock(&curr->task_info->lock);
-  int live_threads = (--curr->task_info->num_threads);
-  mutex_unlock(&curr->task_info->lock);
+  mutex_lock(&task->lock);
+  int live_threads = (--task->num_threads);
+  mutex_unlock(&task->lock);
 
   /* You are the last thread. Tell your parent to reap you */
   if(live_threads == 0){
-    /* Need mechanism to make sure parent hasn't exited, otherwise the parent is
-     * init */
-    task_t *parent = curr->task_info->parent;
 
-    /* Enqueue yourself as a dead child */
+    /* Lock our live children and change their parent to init */
+    mutex_lock(&task->lock);
+
+    while(!cll_empty(&task->live_children)){
+      q = queue_dequeue(&task->live_children);
+      child = queue_entry(task_t *, q);
+      mutex_lock(&child->lock);
+      child->parent = init;
+      mutex_unlock(&child->lock);
+      free(q);
+    }
+    /* Release the lock and let any live children acquire it and enqueue
+     * themselves as dead children. */
+    mutex_unlock(&task->lock);
+
+    /* Reacquire the lock.  From here on out any live children should be waited
+     * on by init */
+    mutex_lock(&task->lock);
+
+    /* Enqueue our dead children as children of init */
+    while(!cll_empty(&task->dead_children)){
+      q = queue_dequeue(&task->dead_children);
+      mutex_lock(&init->lock);
+      queue_enqueue(&init->dead_children, q);
+      mutex_unlock(&init->lock);
+    }
+    mutex_unlock(&task->lock);
+
+    /* Atomically identify your parent */
+    mutex_lock(&task->lock);
+    task_t *parent = task->parent;
+
+    /* Dequeue yourself as a live child and enqueue yourself as a dead child */
     mutex_lock(&parent->lock);
-    queue_node_s *q = malloc(sizeof(cll_node));
-    queue_init_node(q, curr->task_info);
-
+    q = queue_dequeue(&parent->live_children);
     queue_enqueue(&parent->dead_children, q);
     cvar_signal(&parent->cv);
-    /* The parent can NOT run now that we've marked ourselves as dead but have
-     * not technically finished executing this code */
-    disable_interrupts();
-    mutex_unlock(&parent->lock);
+
+    mutex_unlock(&task->lock);
+
+    sched_mutex_unlock_and_block(curr, &parent->lock);
+    schedule();
   }
 
-  /* Context switch to someone else and free your kernel thread
-   * resources */
+  /* @bug Handle multi-thread program case */
   half_ctx_switch_wrapper();
 
   assert(0); /* Should never reach here */
@@ -299,7 +334,7 @@ int sys_wait(int *status_ptr)
   mutex_lock(&task->lock);
 
   while(queue_empty(&task->dead_children)){
-    if(task->live_children == 0){
+    if(cll_empty(&task->live_children)){
         /* Avoid unbounded blocking */
         mutex_unlock(&task->lock);
         return -1;
@@ -319,7 +354,7 @@ int sys_wait(int *status_ptr)
  int tid = child_task->orig_tid;
 
  /* Free child's virtual memory */
- vm_final(&child_task->vmi);
+ //vm_final(&child_task->vmi);
 
  /* Scribble to status */
  if(status_ptr)

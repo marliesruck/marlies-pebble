@@ -48,13 +48,10 @@ thread_t *task_init(void)
   task->num_threads = 1;
 
   /* Keep track of children alive and dead */
-  task->live_children = 0;
+  cll_init_list(&task->live_children);
   queue_init(&task->dead_children);
   cvar_init((&task->cv));
 
-  /* Initialize parent. The very first task we handload shoud be init, that way
-   * all processes will be descendants of init and we won't have bizarre
-   * lineage/reaping problems */
   task->parent = curr->task_info;
 
   /* Initialize root thread with new task */
@@ -88,6 +85,9 @@ thread_t *thread_init(task_t *task)
   spin_lock(&tid_lock);
   thread->tid = ++tid;
   spin_unlock(&tid_lock);
+
+  /* Add to thread list */
+  thrlist_add(thread);
 
   thread->sp = NULL;
   thread->pc = NULL;
