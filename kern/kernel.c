@@ -128,10 +128,9 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   memset(zfod,0,PAGE_SIZE);
 
   /* Load the first executable */
-  thread_t *thread = load_task(pd, "vanish_test");
+  thread_t *thread = load_task(pd, "cooperative");
 
   /* Init curr and enable interrupts */
-  curr = thread;
   enable_interrupts();
 
   /* Keep track of init's task */
@@ -151,6 +150,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 thread_t *load_task(void *pd, const char *fname)
 {
   thread_t *thread = task_init();
+  curr = thread;
 
   task_t *task = thread->task_info;
 

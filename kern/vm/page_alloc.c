@@ -63,6 +63,32 @@ void *alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs)
   }
 
   /* Back the requested vaddr with a page */
+  init_pte(&pde, zfod);
+  pde.present = 1;
+  pde.zfod = 1;
+  pde.user = (attrs & VM_ATTR_USER) ? 1 : 0;
+  assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pde) );
+
+  return zfod;
+}
+
+void *alloc_page_really(pg_info_s *pgi, void *vaddr, unsigned int attrs)
+{
+  void * frame;
+  pte_s pde;
+
+  /* If the PDE isn't valid, make it so */
+  if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, NULL)) {
+    frame = alloc_frame();
+    if (!frame) return NULL;
+    init_pte(&pde, frame);
+    pde.present = 1;
+    pde.writable = 1;
+    pde.user = 1;
+    set_pde(pgi->pg_dir, vaddr, &pde);
+  }
+
+  /* Back the requested vaddr with a page */
   frame = alloc_frame();
   if (!frame) return NULL;
   init_pte(&pde, frame);
@@ -117,6 +143,7 @@ int page_set_attrs(pg_info_s *pgi, void *vaddr, unsigned int attrs)
   /* Write the new attributes */
   translate_attrs(&pte, attrs);
   set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte);
+  /* Do we need an tlb_inval_page() here? */
 
   return 0;
 }
@@ -147,27 +174,50 @@ int copy_page(pg_info_s *dst, const pg_info_s *src, void *vaddr, unsigned int at
     set_pde(src->pg_dir, BUF, &pde);
   }
 
-  /* Allocate the dest page */
-  if (get_pte(src->pg_dir, src->pg_tbls, vaddr, NULL))
+  /* The page better exist in the parent */
+  if (get_pte(src->pg_dir, src->pg_tbls, vaddr, &pde))
     return -1;
 
-  frame = alloc_page(dst, vaddr, attrs);
-  if (!frame) return -1;
+  /* Only copy writable pages */
+  if (pde.writable)
+  {
+    /* Allocate the dest page */
+    frame = alloc_page_really(dst, vaddr, attrs);
+    if (!frame) return -1;
 
-  /* Map in the dest page for copying */
-  init_pte(&pde, frame);
-  pde.present = 1;
-  pde.writable = 1;
-  assert( !set_pte(src->pg_dir, src->pg_tbls, BUF, &pde) );
+    /* Map in the dest page for copying */
+    init_pte(&pde, frame);
+    pde.present = 1;
+    pde.writable = 1;
+    assert( !set_pte(src->pg_dir, src->pg_tbls, BUF, &pde) );
 
-  /* Copy data */
-  memcpy(BUF, vaddr, PAGE_SIZE);
+    /* Copy data */
+    memcpy(BUF, vaddr, PAGE_SIZE);
 
-  /* Unmap the dest page */
-  init_pte(&pde, NULL);
-  pde.present = 0;
-  assert( !set_pte(src->pg_dir, src->pg_tbls, BUF, &pde) );
-  tlb_inval_page(BUF);
+    /* Unmap the dest page */
+    init_pte(&pde, NULL);
+    pde.present = 0;
+    assert( !set_pte(src->pg_dir, src->pg_tbls, BUF, &pde) );
+    tlb_inval_page(BUF);
+  }
+
+  /* Don't copy read-only pages */
+  else
+  {
+    /* If the PDE isn't valid, make it so */
+    if (get_pte(dst->pg_dir, dst->pg_tbls, vaddr, NULL)) {
+      frame = alloc_frame();
+      if (!frame) return -1;
+      init_pte(&pde, frame);
+      pde.present = 1;
+      pde.writable = 1;
+      pde.user = 1;
+      set_pde(dst->pg_dir, vaddr, &pde);
+    }
+    /* Allocate the dest page */
+    assert( !get_pte(src->pg_dir, src->pg_tbls, vaddr, &pde) );
+    assert( !set_pte(dst->pg_dir, dst->pg_tbls, vaddr, &pde) );
+  }
 
   return 0;
 }

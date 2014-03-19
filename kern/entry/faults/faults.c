@@ -217,22 +217,18 @@ void int_page_fault(void *error_code)
   pte_s pte;
 
   /* Retrieve PTE for faulting address */
-  pg_info_s *pgi = &curr->task_info->vmi.pg_info;
   void *addr = (void *)get_cr2();
+  pg_info_s *pgi = &curr->task_info->vmi.pg_info;
   if (get_pte(pgi->pg_dir, pgi->pg_tbls, addr, &pte)) {
-    lprintf("Error: Page fault on table-less address %p!", addr);
+    lprintf("Error: Page fault on table-less address!");
     panic("Error: Page fault!");
   }
-  lprintf("faulted on %p { addr=0x%08x, zfod=%d, write=%d, pres=%d, user=%d }",
-          addr, pte.addr, pte.zfod, pte.writable, pte.present, pte.user);
 
   /* oooops...ZFOD */
   if(pte.zfod){
-    lprintf("handling zfod!");
-
     void *frame = alloc_frame();
     if (!frame) return;
-    pte.addr = ((unsigned int) frame) << PG_TBL_SHIFT;
+    pte.addr = ((unsigned int) frame) >> PG_TBL_SHIFT;
     pte.writable = 1;
     assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, addr, &pte) );
     tlb_inval_page(addr);
