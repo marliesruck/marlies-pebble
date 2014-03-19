@@ -61,8 +61,5 @@ int thrlist_add(thread_t *t);
 int thrlist_del(thread_t *t);
 thread_t *thrlist_find(int tid);
 
-/* If a parent is reaped before a child, this is the child's new parent */
-thread_t *init;
-
 #endif /* _THREAD_H */
 

@@ -37,4 +37,7 @@ typedef struct task{
   int status;
 }task_t;
 
+/* This does not belong here */
+task_t *init;
+
 #endif /* _PROCESS_H */

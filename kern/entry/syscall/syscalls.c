@@ -258,28 +258,63 @@ void sys_set_status(int status)
  */
 void sys_vanish(void)
 {
-  /* Lock your tcb so no one can yield to you etc... */
-  mutex_lock(&curr->lock);
-  curr->state = THR_EXITING;
-  mutex_unlock(&curr->lock);
+  queue_node_s *q;
+  task_t *child;
+
+  /* Lock thread list and remove ourselves */
+  thrlist_del(curr);
+
+  task_t *task = curr->task_info;
+
+  /* Sock lock? */
 
   /* Decrement the number of living threads */
-  mutex_lock(&curr->task_info->lock);
-  int live_threads = (--curr->task_info->num_threads);
-  mutex_unlock(&curr->task_info->lock);
+  mutex_lock(&task->lock);
+  int live_threads = (--task->num_threads);
+  mutex_unlock(&task->lock);
 
   /* You are the last thread. Tell your parent to reap you */
   if(live_threads == 0){
 
-    /* Need mechanism to make sure parent hasn't exited, otherwise the parent is
-     * init */
-    task_t *parent = curr->task_info->parent;
+    /* Lock our live children and change their parent to init */
+    mutex_lock(&task->lock);
+
+    while(!cll_empty(&task->live_children)){
+      q = queue_dequeue(&task->live_children);
+      child = queue_entry(task_t *, q);
+      mutex_lock(&child->lock);
+      child->parent = init;
+      mutex_unlock(&child->lock);
+      free(q);
+    }
+    /* Release the lock and let any live children acquire it and enqueue
+     * themselves as dead children. */
+    mutex_unlock(&task->lock);
+
+    /* Reacquire the lock.  From here on out any live children should be waited
+     * on by init */
+    mutex_lock(&task->lock);
+
+    /* Enqueue our dead children as children of init */
+    while(!cll_empty(&task->dead_children)){
+      q = queue_dequeue(&task->dead_children);
+      mutex_lock(&init->lock);
+      queue_enqueue(&init->dead_children, q);
+      mutex_unlock(&init->lock);
+    }
+    mutex_unlock(&task->lock);
+
+    /* Atomically identify your parent */
+    mutex_lock(&task->lock);
+    task_t *parent = task->parent;
 
     /* Dequeue yourself as a live child and enqueue yourself as a dead child */
     mutex_lock(&parent->lock);
-    queue_node_s *q = queue_dequeue(&parent->live_children);
+    q = queue_dequeue(&parent->live_children);
     queue_enqueue(&parent->dead_children, q);
     cvar_signal(&parent->cv);
+
+    mutex_unlock(&task->lock);
 
     sched_mutex_unlock_and_block(curr, &parent->lock);
     schedule();
