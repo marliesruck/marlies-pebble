@@ -35,15 +35,64 @@ void translate_attrs(pte_s *pte, unsigned int attrs)
   return;
 }
 
+void *alloc_page_table(pg_info_s *pgi, void *vaddr)
+{
+  void *frame;
+  pte_s pde;
+
+  frame = alloc_frame();
+  if (!frame) return NULL;
+  init_pte(&pde, frame);
+  pde.present = 1;
+  pde.writable = 1;
+  pde.user = 1;
+  set_pde(pgi->pg_dir, vaddr, &pde);
+
+  return frame;
+}
+
+/** @brief Allocate a page of virtual memory.
+ *
+ *  This function backs all allocations with a new frame instead of using
+ *  the ZFOD dummy frame.
+ *
+ *  @param pgi Page table information.
+ *  @param vaddr The virtual address to allocate.
+ *  @param attrs The attributes for the allocation.
+ *
+ *  @return Void.
+ **/
+void *alloc_page_really(pg_info_s *pgi, void *vaddr, unsigned int attrs)
+{
+  void * frame;
+  pte_s pde;
+
+  /* If the PDE isn't valid, make it so */
+  if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, NULL)) {
+    alloc_page_table(pgi, vaddr);
+  }
+
+  /* Get a new frame */
+  frame = alloc_frame();
+  if (!frame) return NULL;
+
+  /* Back vaddr with the new frame */
+  init_pte(&pde, frame);
+  pde.present = 1;
+  translate_attrs(&pde, attrs);
+  assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pde) );
+
+  return frame;
+}
+
 
 /*************************************************************************
  *  Exported API
  *************************************************************************/
 
-/** @brief Allocate a page of virtual memory.
+/** @brief "Allocate" a page of virtual memory.
  *
- *  @bug This will overwrite an existing pte for the specified virtual
- *  address.  Not sure if that's alright or not...
+ *  This function backs all allocations with the ZFOD dummy frame.
  *
  *  @param pgi Page table information.
  *  @param vaddr The virtual address to allocate.
@@ -53,29 +102,21 @@ void translate_attrs(pte_s *pte, unsigned int attrs)
  **/
 void *alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs)
 {
-  void * frame;
   pte_s pde;
 
   /* If the PDE isn't valid, make it so */
   if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, NULL)) {
-    frame = alloc_frame();
-    if (!frame) return NULL;
-    init_pte(&pde, frame);
-    pde.present = 1;
-    pde.writable = 1;
-    pde.user = 1;
-    set_pde(pgi->pg_dir, vaddr, &pde);
+    alloc_page_table(pgi, vaddr);
   }
 
-  /* Back the requested vaddr with a page */
-  frame = alloc_frame();
-  if (!frame) return NULL;
-  init_pte(&pde, frame);
+  /* Back vaddr with the ZFOD frame */
+  init_pte(&pde, zfod);
   pde.present = 1;
-  translate_attrs(&pde, attrs);
+  pde.zfod = 1;
+  pde.user = (attrs & VM_ATTR_USER) ? 1 : 0;
   assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pde) );
 
-  return frame;
+  return zfod;
 }
 
 /** @brief Free a page.
@@ -103,6 +144,30 @@ void free_page(pg_info_s *pgi, void *vaddr)
   return;
 }
 
+/** @brief Sets a page's attributes.
+ *
+ *  @param pgi Page table information.
+ *  @param vaddr A virtual address on the page.
+ *  @param attrs The attributes for the page.
+ *
+ *  @return 0 on success; a negative integer error code on failure.
+ **/
+int page_set_attrs(pg_info_s *pgi, void *vaddr, unsigned int attrs)
+{
+  pte_s pte;
+
+  /* Find the page's PTE */
+  if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte))
+    return -1;
+
+  /* Write the new attributes */
+  translate_attrs(&pte, attrs);
+  set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte);
+  /* Do we need an tlb_inval_page() here? */
+
+  return 0;
+}
+
 /** @brief Copies an address page.
  *
  *  @param dst The destination page info struct.
@@ -119,36 +184,51 @@ int copy_page(pg_info_s *dst, const pg_info_s *src, void *vaddr, unsigned int at
   void *frame;
   pte_s pde;
 
-  /* Allocate a buffer page to map in the dest page */
+  /* Allocate a buffer page to map in the dest page
+   * FIXME: explicitly discarding 'const' isn't really ok...
+   */
   if (get_pte(src->pg_dir, src->pg_tbls, BUF, NULL)) {
-    frame = alloc_frame();
+    alloc_page_table((pg_info_s *)src, BUF);
+  }
+
+  /* The page better exist in the parent */
+  if (get_pte(src->pg_dir, src->pg_tbls, vaddr, &pde))
+    return -1;
+
+  /* Only copy writable pages */
+  if (pde.writable)
+  {
+    /* Allocate the dest page */
+    frame = alloc_page_really(dst, vaddr, attrs);
     if (!frame) return -1;
+
+    /* Map in the dest page for copying */
     init_pte(&pde, frame);
     pde.present = 1;
     pde.writable = 1;
-    set_pde(src->pg_dir, BUF, &pde);
+    assert( !set_pte(src->pg_dir, src->pg_tbls, BUF, &pde) );
+
+    /* Copy data */
+    memcpy(BUF, vaddr, PAGE_SIZE);
+
+    /* Unmap the dest page */
+    init_pte(&pde, NULL);
+    pde.present = 0;
+    assert( !set_pte(src->pg_dir, src->pg_tbls, BUF, &pde) );
+    tlb_inval_page(BUF);
   }
 
-  /* Allocate the dest page */
-  if (get_pte(src->pg_dir, src->pg_tbls, vaddr, NULL))
-    return -1;
+  /* Don't copy read-only pages */
+  else
+  {
+    /* If the PDE isn't valid, make it so */
+    if (get_pte(dst->pg_dir, dst->pg_tbls, vaddr, NULL)) {
+      alloc_page_table(dst, vaddr);
+    }
 
-  frame = alloc_page(dst, vaddr, attrs);
-  if (!frame) return -1;
-
-  /* Map in the dest page for copying */
-  init_pte(&pde, frame);
-  pde.present = 1;
-  assert( !set_pte(src->pg_dir, src->pg_tbls, BUF, &pde) );
-
-  /* Copy data */
-  memcpy(BUF, vaddr, PAGE_SIZE);
-
-  /* Unmap the dest page */
-  init_pte(&pde, NULL);
-  pde.present = 0;
-  assert( !set_pte(src->pg_dir, src->pg_tbls, BUF, &pde) );
-  tlb_inval_page(BUF);
+    /* Allocate the dest page */
+    assert( !set_pte(dst->pg_dir, dst->pg_tbls, vaddr, &pde) );
+  }
 
   return 0;
 }

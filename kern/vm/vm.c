@@ -201,8 +201,8 @@ void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
   mem_region_s *mreg;
 
   /* Allocate a region */
-  if(!(mreg = vm_region(vmi, va_start,len,attrs)))
-    return NULL;
+  mreg = vm_region(vmi, va_start, len, attrs);
+  if(!mreg) return NULL;
 
   /* Allocate frames for the requested memory */
   for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE) {
@@ -215,6 +215,34 @@ void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
 
   /* Return the ACTUAL start of the allocation */
   return mreg->start;
+}
+
+/** @brief Sets the attributes for a region.
+ *
+ *  @param vmi The vm_info struct for this allocation.
+ *  @param va_start The starting address for the allocation.
+ *  @param attrs The new attributes.
+ *
+ *  @return 0 on success; a negative integer error code on failure.
+ **/
+int vm_set_attrs(vm_info_s *vmi, void *va_start, unsigned int attrs)
+{
+  mem_region_s temp, *mreg;
+  void *addr;
+
+  /* Find the allocated region */
+  mreg_init(&temp, va_start, va_start, 0); 
+  mreg = mreg_lookup(&vmi->mmap, &temp);
+  if (!mreg) return -1;
+
+  /* Free pages in that region */
+  for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE) {
+    if (page_set_attrs(&vmi->pg_info, addr, attrs))
+      return -1;
+  }
+
+  mreg->attrs = attrs;
+  return 0;
 }
 
 /** @brief Frees a region previously allocated by vm_alloc(...).
@@ -256,7 +284,6 @@ int vm_copy(vm_info_s *dst, const vm_info_s *src)
   const mem_region_s *sreg;
   cll_node *n;
   void *addr;
-  pte_s pte;
 
   /* Don't copy unless the dest is empty */
   if (!cll_empty(&dst->mmap)) return -1;
@@ -266,33 +293,12 @@ int vm_copy(vm_info_s *dst, const vm_info_s *src)
     sreg = cll_entry(mem_region_s *, n);
 
     /* Allocate a dst region struct */
-    dreg = malloc(sizeof(mem_region_s));
-    if (!dreg) {
-      vm_final(dst);
-      return -1;
-    }
+    dreg = vm_region(dst, sreg->start, sreg->limit-sreg->start, sreg->attrs);
+    if (!dreg) return -1;
 
     /* Allocate pages for the region */
-    for (addr = sreg->start; addr < sreg->limit; addr += PAGE_SIZE) {
-      /* Check if page is ZFOD */
-      if (get_pte(src->pg_info.pg_dir, src->pg_info.pg_tbls, addr, &pte))
-        return -1;
-      /* If so map dummy frame in */
-      if(pte.zfod){
-        if(set_pte(dst->pg_info.pg_dir, dst->pg_info.pg_tbls,addr,&pte)< 0)
-          return -1;
-      }
-      else
-        assert( !copy_page(&dst->pg_info, &src->pg_info, addr, sreg->attrs) );
-    }
-
-    /* Insert the new region into the dest */
-    mreg_init(dreg, sreg->start, sreg->limit, sreg->attrs);
-    if (mreg_insert(&dst->mmap, dreg)) {
-      vm_final(dst);
-      free(dreg);
-      return -1;
-    }
+    for (addr = sreg->start; addr < sreg->limit; addr += PAGE_SIZE)
+      assert( !copy_page(&dst->pg_info, &src->pg_info, addr, sreg->attrs) );
   }
 
   return 0;
@@ -326,43 +332,3 @@ void vm_final(vm_info_s *vmi)
   return;
 }
 
-/* @brief Makes PTEs in region ZFOD.
- *
- * @param mreg Region to set PTEs to ZFOD.
- * @param pg_info Information necessary for manipulating the process's page
- * directory and tables.
- *
- * @return Void.
- */
-void vm_zfod(mem_region_s *mreg, pg_info_s *pg_info)
-{
-  void *addr;
-
-  /* In case PDE is invalid */
-  pte_s pde;
-  void *frame; 
-
-  /* Craft a ZFOD PTE */
-  pte_s pte;
-  pte.present = 1;
-  pte.user = 1;
-  pte.zfod = 1;
-  pte.writable = 0;
-  pte.addr = SHIFT_ADDR(zfod);  
-
-  for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE){
-  //  lprintf("addr before: %p",addr);
-   // MAGIC_BREAK;
-    if(set_pte(pg_info->pg_dir,pg_info->pg_tbls, addr,&pte) < 0){
-      /* If the PDE isn't valid, make it so */
-      frame = alloc_frame();
-      init_pte(&pde, frame);
-      pde.present = 1;
-//      pde.writable = 1;
-      pde.user = 1;
-      set_pde(pg_info->pg_dir, addr, &pde);
-      /* Now that the PDE is initialized, try again */
-      set_pte(pg_info->pg_dir,pg_info->pg_tbls, addr,&pte);
-    }
-  }
-}

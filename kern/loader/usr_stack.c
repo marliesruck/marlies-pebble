@@ -19,7 +19,7 @@ void *usr_stack_init(vm_info_s *vmi, char **arg_vec)
 
   /* Allocate user's stack */
   base = USR_SP_HI - USR_STACK_SIZE;
-  vm_alloc(vmi, base, USR_STACK_SIZE, VM_ATTR_RDWR|VM_ATTR_USER);
+  vm_alloc(vmi, base, USR_STACK_SIZE, VM_ATTR_RDWR);
   sp = USR_SP_HI;
 
   /* Copy the argument vector onto the stack */
@@ -55,6 +55,7 @@ void *usr_stack_init(vm_info_s *vmi, char **arg_vec)
   PUSH(sp,argc);            /* argc */
   PUSH(sp,0);               /* "return address" */
 
+  vm_set_attrs(vmi, base, VM_ATTR_RDWR|VM_ATTR_USER);
   return sp;
 }
 

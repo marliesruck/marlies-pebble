@@ -51,15 +51,25 @@
  *************************************************************************/
 
 #include <x86/cr.h>
-#define CR0_PAGE 0x80000000
 
+
+void enable_write_protect(void)
+{
+  uint32_t cr0;
+  
+  cr0 = get_cr0();
+  cr0 |= CR0_WP;
+  set_cr0(cr0);
+
+  return;
+}
 
 void enable_paging(void)
 {
   uint32_t cr0;
   
   cr0 = get_cr0();
-  cr0 |= CR0_PAGE;
+  cr0 |= CR0_PG;
   set_cr0(cr0);
 
   return;
@@ -70,7 +80,7 @@ void disable_paging(void)
   uint32_t cr0;
   
   cr0 = get_cr0();
-  cr0 &= ~CR0_PAGE;
+  cr0 &= ~CR0_PG;
   set_cr0(cr0);
 
   return;
@@ -113,6 +123,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   init_pd(pd, pd);
 
   set_cr3((uint32_t) pd);
+  enable_write_protect();
   enable_paging();
 
   /* Allocate dummy frame for admiring zeroes */
@@ -123,7 +134,6 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   thread_t *thread = load_task(pd, "init");
 
   /* Init curr and enable interrupts */
-  curr = thread;
   enable_interrupts();
 
   /* Keep track of init's task */
@@ -143,6 +153,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 thread_t *load_task(void *pd, const char *fname)
 {
   thread_t *thread = task_init();
+  curr = thread;
 
   task_t *task = thread->task_info;
 
