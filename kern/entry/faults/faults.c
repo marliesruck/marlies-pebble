@@ -237,6 +237,10 @@ void int_page_fault(void *error_code)
     return;
   }
 
+  /* It's a real fault */
+  lprintf("Error: Page fault on table-less address!");
+  panic("Error: Page fault!");
+
   return;
 }
 

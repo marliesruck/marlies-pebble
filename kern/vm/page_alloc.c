@@ -30,15 +30,64 @@ void translate_attrs(pte_s *pte, unsigned int attrs)
   return;
 }
 
+void *alloc_page_table(pg_info_s *pgi, void *vaddr)
+{
+  void *frame;
+  pte_s pde;
+
+  frame = alloc_frame();
+  if (!frame) return NULL;
+  init_pte(&pde, frame);
+  pde.present = 1;
+  pde.writable = 1;
+  pde.user = 1;
+  set_pde(pgi->pg_dir, vaddr, &pde);
+
+  return frame;
+}
+
+/** @brief Allocate a page of virtual memory.
+ *
+ *  This function backs all allocations with a new frame instead of using
+ *  the ZFOD dummy frame.
+ *
+ *  @param pgi Page table information.
+ *  @param vaddr The virtual address to allocate.
+ *  @param attrs The attributes for the allocation.
+ *
+ *  @return Void.
+ **/
+void *alloc_page_really(pg_info_s *pgi, void *vaddr, unsigned int attrs)
+{
+  void * frame;
+  pte_s pde;
+
+  /* If the PDE isn't valid, make it so */
+  if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, NULL)) {
+    alloc_page_table(pgi, vaddr);
+  }
+
+  /* Get a new frame */
+  frame = alloc_frame();
+  if (!frame) return NULL;
+
+  /* Back vaddr with the new frame */
+  init_pte(&pde, frame);
+  pde.present = 1;
+  translate_attrs(&pde, attrs);
+  assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pde) );
+
+  return frame;
+}
+
 
 /*************************************************************************
  *  Exported API
  *************************************************************************/
 
-/** @brief Allocate a page of virtual memory.
+/** @brief "Allocate" a page of virtual memory.
  *
- *  @bug This will overwrite an existing pte for the specified virtual
- *  address.  Not sure if that's alright or not...
+ *  This function backs all allocations with the ZFOD dummy frame.
  *
  *  @param pgi Page table information.
  *  @param vaddr The virtual address to allocate.
@@ -48,21 +97,14 @@ void translate_attrs(pte_s *pte, unsigned int attrs)
  **/
 void *alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs)
 {
-  void * frame;
   pte_s pde;
 
   /* If the PDE isn't valid, make it so */
   if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, NULL)) {
-    frame = alloc_frame();
-    if (!frame) return NULL;
-    init_pte(&pde, frame);
-    pde.present = 1;
-    pde.writable = 1;
-    pde.user = 1;
-    set_pde(pgi->pg_dir, vaddr, &pde);
+    alloc_page_table(pgi, vaddr);
   }
 
-  /* Back the requested vaddr with a page */
+  /* Back vaddr with the ZFOD frame */
   init_pte(&pde, zfod);
   pde.present = 1;
   pde.zfod = 1;
@@ -70,33 +112,6 @@ void *alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs)
   assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pde) );
 
   return zfod;
-}
-
-void *alloc_page_really(pg_info_s *pgi, void *vaddr, unsigned int attrs)
-{
-  void * frame;
-  pte_s pde;
-
-  /* If the PDE isn't valid, make it so */
-  if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, NULL)) {
-    frame = alloc_frame();
-    if (!frame) return NULL;
-    init_pte(&pde, frame);
-    pde.present = 1;
-    pde.writable = 1;
-    pde.user = 1;
-    set_pde(pgi->pg_dir, vaddr, &pde);
-  }
-
-  /* Back the requested vaddr with a page */
-  frame = alloc_frame();
-  if (!frame) return NULL;
-  init_pte(&pde, frame);
-  pde.present = 1;
-  translate_attrs(&pde, attrs);
-  assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pde) );
-
-  return frame;
 }
 
 /** @brief Free a page.
@@ -164,14 +179,11 @@ int copy_page(pg_info_s *dst, const pg_info_s *src, void *vaddr, unsigned int at
   void *frame;
   pte_s pde;
 
-  /* Allocate a buffer page to map in the dest page */
+  /* Allocate a buffer page to map in the dest page
+   * FIXME: explicitly discarding 'const' isn't really ok...
+   */
   if (get_pte(src->pg_dir, src->pg_tbls, BUF, NULL)) {
-    frame = alloc_frame();
-    if (!frame) return -1;
-    init_pte(&pde, frame);
-    pde.present = 1;
-    pde.writable = 1;
-    set_pde(src->pg_dir, BUF, &pde);
+    alloc_page_table((pg_info_s *)src, BUF);
   }
 
   /* The page better exist in the parent */
@@ -206,16 +218,10 @@ int copy_page(pg_info_s *dst, const pg_info_s *src, void *vaddr, unsigned int at
   {
     /* If the PDE isn't valid, make it so */
     if (get_pte(dst->pg_dir, dst->pg_tbls, vaddr, NULL)) {
-      frame = alloc_frame();
-      if (!frame) return -1;
-      init_pte(&pde, frame);
-      pde.present = 1;
-      pde.writable = 1;
-      pde.user = 1;
-      set_pde(dst->pg_dir, vaddr, &pde);
+      alloc_page_table(dst, vaddr);
     }
+
     /* Allocate the dest page */
-    assert( !get_pte(src->pg_dir, src->pg_tbls, vaddr, &pde) );
     assert( !set_pte(dst->pg_dir, dst->pg_tbls, vaddr, &pde) );
   }
 
