@@ -117,6 +117,7 @@ asm_\scname:
   movl  %esp, %ebp                # Set up new EBP
 
   push  %edi                      # Save EDI
+  push  %ebx                      # Save EBX
 
   push  %ds                       # Store DS data segment
   push  %es                       # Store ES data segment
@@ -124,13 +125,14 @@ asm_\scname:
   push  %gs                       # Store GS data segment
 
   movl \argc, %ecx                # ECX = argument count (for rep)
-  sub  $8,   %esp                 # Make space on the stack for the args
+  leal (,%ecx, 4), %ebx          # Compute space on stack for args
+  sub  %ebx, %esp                 # Make space on the stack for the args
   movl %esp, %edi                 # EDI = kernel stack
   rep movsl                       # Copy args onto kernel stack
 
   # Invoke system call handler
   call \scname                    # Call the system call handler
-  add   $8, %esp                  # Clean up ESP from args pushed on by rep
+  add   %ebx, %esp                # Clean up ESP from args pushed on by rep
 
   # Epilogue
   pop   %gs                       # Restore GS data segment
@@ -138,6 +140,7 @@ asm_\scname:
   pop   %es                       # Restore ES data segment
   pop   %ds                       # Restore DS data segment
 
+  pop   %ebx                      # Restore EBX
   pop   %edi                      # Restore EDI
 
   pop   %ebp                      # Restore USER EBP
