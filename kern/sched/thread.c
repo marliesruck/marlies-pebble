@@ -6,38 +6,34 @@
  * @author Marlies Ruck (mruck)
  *
  * @bug List locking mechanisms? 
- *      queue vs list?
  *      Should vm initialization be here?
  *      should thread init be responsible for acquiring the tid lock?
  *      extern thrlist and initialize here
  *
  */
 
-#include <assert.h>
-
 #include <cllist.h>
-#include <thread.h>
 #include <process.h>
-#include <queue.h>
-#include <sched.h>
-
-#include <mutex.h>
-#include <spin.h>
-
-#include <vm.h>
 #include <pg_table.h>
+#include <sched.h>
+#include <spin.h>
+#include <thread.h>
+#include <vm.h>
 
+#include <assert.h>
 #include <stdlib.h>
 #include <malloc.h>
 
-mutex_s thrlist_lock = MUTEX_INITIALIZER(thrlist_lock);
 
 /* Atomically acquire a tid */
 static int tid = 0;
 static spin_s tid_lock = SPIN_INITIALIZER();
-static cll_list thread_list = CLL_LIST_INITIALIZER(thread_list);
 
-/* @brief Initializae a task and its root thread.
+/* Thread list */
+static cll_list thread_list = CLL_LIST_INITIALIZER(thread_list);
+static mutex_s thrlist_lock = MUTEX_INITIALIZER(thrlist_lock);
+
+/* @brief Initialize a task and its root thread.
  *
  * @return Address of the initializaed root thread.
  */
@@ -104,7 +100,7 @@ thread_t *thread_init(task_t *task)
  *  Thread List Functions
  *************************************************************************/
 
-/** @brief Add a thread to the thread lust.
+/** @brief Add a thread to the thread list.
  *
  *  @param t The thread to add.
  *
@@ -119,7 +115,10 @@ int thrlist_add(thread_t *t)
   if (!n) return -1;
   cll_init_node(n, t);
 
+  /* Lock, insert, unlock */
+  mutex_lock(&thrlist_lock);
   cll_insert(thread_list.next, n);
+  mutex_unlock(&thrlist_lock);
 
   return 0;
 }
@@ -134,6 +133,9 @@ int thrlist_del(thread_t *t)
 {
   cll_node *n;
 
+  /* Lock the thread list */
+  mutex_lock(&thrlist_lock);
+
   /* Find our thread in the thread list */
   cll_foreach(&thread_list, n)
     if (cll_entry(thread_t *,n) == t) break;
@@ -142,8 +144,10 @@ int thrlist_del(thread_t *t)
 
   /* Extract and free it */
   assert(cll_extract(&thread_list, n));
-  free(n);
 
+  /* Unlock, free and return */
+  mutex_unlock(&thrlist_lock);
+  free(n);
   return 0;
 }
 
@@ -158,14 +162,19 @@ thread_t *thrlist_find(int tid)
   cll_node *n;
   thread_t *t;
 
+  t = NULL;
+
   /* Iteratively search the thread list */
+  mutex_lock(&thrlist_lock);
   cll_foreach(&thread_list, n) {
     t = cll_entry(thread_t *,n);
-    if (t->tid == tid) {
-      return t;
-    }
+    if (t->tid == tid) break;
   }
+  mutex_unlock(&thrlist_lock);
 
-  return NULL;
+  /* We didn't find it */
+  if (n == &thread_list) return NULL;
+
+  return t;
 }
 
