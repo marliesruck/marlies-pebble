@@ -34,7 +34,7 @@ UPDATE_METHOD = web
 # A list of the test programs you want compiled in from the 410user/progs
 # directory.
 #
-410TESTS = ck1 merchant peon knife fork_test1 exec_basic_helper exec_basic exec_nonexist coolness new_pages mem_permissions print_basic readline_basic deschedule_hang loader_test1 loader_test2
+410TESTS = ck1 merchant peon knife fork_test1 exec_basic_helper exec_basic exec_nonexist coolness new_pages mem_permissions print_basic readline_basic deschedule_hang loader_test1 loader_test2 fork_wait getpid_test1 wait_getpid stack_test1
 
 ###########################################################################
 # Test programs you have written which you wish to run
@@ -63,7 +63,7 @@ STUDENTFILES =
 ###########################################################################
 # Object files for your thread library
 ###########################################################################
-THREAD_OBJS = malloc.o panic.o atomic.o spin.o
+THREAD_OBJS = malloc.o panic.o asm_thr.o thread.o tcb.o stack_alloc.o synch/atomic.o synch/cvar.o synch/mutex.o synch/sem.o synch/spin.o util/cllist.o synch/rwlock.o 
 
 # Thread Group Library Support.
 #
@@ -71,7 +71,7 @@ THREAD_OBJS = malloc.o panic.o atomic.o spin.o
 # P3" we give you can't build libthrgrp.a.  Once you install your thread
 # library and fix THREAD_OBJS above, uncomment this line to enable building
 # libthrgrp.a:
-#410USER_LIBS_EARLY += libthrgrp.a
+410USER_LIBS_EARLY += libthrgrp.a
 
 ###########################################################################
 # Object files for your syscall wrappers

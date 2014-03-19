@@ -72,7 +72,7 @@ remove_and_vanish:
 
   # Load args
   movl  0x8(%ebp), %esi           # Move stack base into ESI
-  movl  0xC(%ebp), %edx           # Move list ptr into EBX
+  movl  0xC(%ebp), %ebx           # Move list ptr into EBX
 
   # Recycle the stack
   int   $REMOVE_PAGES_INT         # Remove memory page(s)

@@ -19,30 +19,37 @@
  * improvements that they make and grant CSL redistribution rights.
  */
 
-#include <stdio.h>
-#include <stdarg.h>
-#include <stdlib.h>
 #include <simics.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <syscall.h>
 
-/*
- * This function is called by the assert() macro defined in assert.h;
- * it's also a nice simple general-purpose panic function.
+
+#define MAX_MSG_LEN 80
+
+/* @brief If a thread crashes dump the registers and vanish
  */
 void panic(const char *fmt, ...)
 {
-	va_list vl;
+  va_list vl;
+  char msg[MAX_MSG_LEN];
 
-	va_start(vl, fmt);
-	vprintf(fmt, vl);
-	va_end(vl);
+  if (fmt) {
+    /* Write error message to string */
+    va_start(vl, fmt);
+    vsnprintf(msg, MAX_MSG_LEN, fmt, vl);
+    va_end(vl);
 
-	printf("\n");
+    /* Print to simics terminal */
+    lprintf("Encountered fatal error:");
+    lprintf("%s",msg);
+  }
+  lprintf("Aborting...");
 
-	volatile static int side_effect = 0;
-	while (1) {
-		// exact authorship uncertain, popularized by Heinlein
-		printf("When in danger or in doubt, run in circles, scream and shout.\n");
-		lprintf("When in danger or in doubt, run in circles, scream and shout.");
-		++side_effect;
-	}
+  /* End it all, take your children with you */
+  task_vanish(-1);
+
+  return;
 }
+
