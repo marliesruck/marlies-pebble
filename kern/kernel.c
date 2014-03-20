@@ -127,23 +127,16 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   set_cr3((uint32_t) pd);
   enable_write_protect();
   enable_paging();
-  lprintf("1");
 
   /* Allocate dummy frame for admiring zeroes */
   zfod = smemalign(PAGE_SIZE, PAGE_SIZE);
   memset(zfod,0,PAGE_SIZE);
 
-  lprintf("2");
-
   /* Load the first executable */
-  thread_t *thread = load_task(pd, "init");
-
-  lprintf("3");
+  thread_t *thread = load_task(pd, "exec_basic");
 
   /* Init curr and enable interrupts */
   enable_interrupts();
-
-  lprintf("4");
 
   /* Keep track of init's task */
   init = curr->task_info;
