@@ -26,11 +26,10 @@ typedef struct page_info pg_info_s;
 void *zfod;
 
 void *alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs);
+void *alloc_page_table(pg_info_s *pgi, void *vaddr);
 void free_page(pg_info_s *pgi, void *vaddr);
 int page_set_attrs(pg_info_s *pgi, void *vaddr, unsigned int attrs);
 int copy_page(pg_info_s *dst, const pg_info_s *src, void *vaddr, unsigned int attrs);
-void *alloc_frame2(void);
-void free_frame2(void *frame, void *vaddr);
 
 
 #endif /* __PAGE_ALLOC_H__ */

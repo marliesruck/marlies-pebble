@@ -6,6 +6,8 @@
  *  @author Marlies Ruck (mruck)
  **/
 
+#include <simics.h>
+
 /* Page table includes */
 #include <pg_table.h>
 
@@ -15,6 +17,7 @@
 /* Libc includes */
 #include <stddef.h>
 #include <string.h>
+#include <stdint.h>
 
 
 page_t *pages = (page_t *)NULL;
@@ -37,7 +40,9 @@ void init_kern_pt(void)
 
   /* Direct map kernel memory */
   for (i = 0; i < KERN_PD_ENTRIES; i++) {
-    kern_pt[i] = alloc_frame();
+    kern_pt[i] = retrieve_head();
+    update_head_wrapper(kern_pt[i]);
+
     for (j = 0; j < PG_TBL_ENTRIES; j++) {
       init_pte(&kern_pt[i][j],
                (void *)(i * PAGE_SIZE * 1024 + j * PAGE_SIZE));

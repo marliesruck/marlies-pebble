@@ -144,6 +144,7 @@ int sched_unblock(thread_t *thr, int atomic)
   if (atomic) disable_interrupts();
   queue_enqueue(&runnable, n);
   thr->state = THR_RUNNING;
+
   if (atomic) enable_interrupts();
 
   return 0;

@@ -7,6 +7,7 @@
  *
  *  @bug No known bugs
  */
+#include <simics.h>
 
 #include <mutex.h>
 

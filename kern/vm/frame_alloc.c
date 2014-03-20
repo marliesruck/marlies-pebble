@@ -12,6 +12,7 @@
 /* Pebbles includes */
 #include <common_kern.h>
 #include <x86/page.h>
+#include <util.h>
 
 /* Libc includes */
 #include <stddef.h>
@@ -25,20 +26,6 @@ int frame_index = USER_MEM_START/sizeof(frame_t);
 
 /* Pointer to the head of the free list */
 static void *freelist_p;
-
-void *alloc_frame(void)
-{
-  void *base;
-
-  /* Make sure we have frames */
-  if (frame_index > machine_phys_frames())
-    return NULL;
-
-  base = (void *)&frames[frame_index];
-  ++frame_index;
-
-  return base;
-}
 
 void free_frame(void *frame)
 {
@@ -102,5 +89,21 @@ void update_head(void *frame)
   freelist_p = frame;
 
   return;
+}
+/* @brief Updates head.
+ *
+ * Takes a virtual address, computes the floor (the location of the implicit
+ * pointer to the next free frame), and updates the head accordingly.
+ *
+ * @param addr.
+ * @return Void.
+ */
+void update_head_wrapper(void *addr)
+{
+  /* The pointer to the next free frame is stored in the lowest 
+   * addressable word */
+  uint32_t *floor = (uint32_t *)(FLOOR(addr, PAGE_SIZE));
+
+  freelist_p = (void *)(*floor);
 }
 

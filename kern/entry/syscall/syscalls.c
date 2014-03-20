@@ -110,14 +110,8 @@ int sys_fork(unsigned int esp)
   pte_s *child_pd = child_pg_tables[PG_SELFREF_INDEX];
 
   /* Map the child's PD into the parent's address space */
-  void *child_cr3 = alloc_frame();
-  init_pte(&pde, child_cr3);
-  pde.present = 1;
-  pde.writable = 1;
   task_t *curr_task = curr->task_info;
-  set_pde(curr_task->vmi.pg_info.pg_dir, child_pd, &pde);
-  set_pte(curr_task->vmi.pg_info.pg_dir, curr_task->vmi.pg_info.pg_tbls,
-          child_pd, &pde);
+  void *child_cr3 = alloc_page_table(&curr_task->vmi.pg_info, child_pd);
 
   /* Initialize child stuffs */
   init_pd(child_pd, child_cr3);

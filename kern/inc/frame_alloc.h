@@ -8,7 +8,6 @@
 #ifndef __FRAME_ALLOC_H__
 #define __FRAME_ALLOC_H__
 
-void *alloc_frame(void);
 void free_frame(void *frame);
 int frame_remaining(void);
 
@@ -18,6 +17,7 @@ void init_frame_allocator(void);
 /* Frame allocator manipulation routines */
 void *retrieve_head(void);
 void update_head(void *frame);
+void update_head_wrapper(void *vaddr);
 
 
 #endif /* __FRAME_ALLOC_H__ */

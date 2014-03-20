@@ -52,6 +52,8 @@ void stackgrowth_handler(void *stack_low, ureg_t *ureg)
 
 void install_autostack(void *stack_high, void *stack_low)
 {
+  return;
+
   /* Save the high/low stack addresses */
 	sp_high = stack_high;
 	sp_low = stack_low;

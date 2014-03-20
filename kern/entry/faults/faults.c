@@ -225,15 +225,36 @@ void int_page_fault(void *error_code)
   }
 
   /* oooops...ZFOD */
+
+  /* TO DO: get rid of this extra bit */
   if(pte.zfod){
-    void *frame = alloc_frame();
-    if (!frame) return;
+
+    /* Serialize access to the free list */
+    mutex_lock(&frame_allocator_lock);
+
+    /* Grab the head of free list */
+    void *frame = retrieve_head();
+    //lprintf("frame: %p", frame);
+    if (!frame){
+      lprintf("Error: No frames left to back zfod page"); 
+      panic("Error: Page fault!");
+    }
+
     pte.addr = ((unsigned int) frame) >> PG_TBL_SHIFT;
     pte.writable = 1;
+    pte.user = 1;
+    pte.present = 1;
     assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, addr, &pte) );
+
     tlb_inval_page(addr);
 
+    update_head_wrapper(addr);
+
+    /* Relinquish the lock */
+    mutex_unlock(&frame_allocator_lock);
+
     memset((void *)(FLOOR(addr, PAGE_SIZE)), 0, PAGE_SIZE);
+
     return;
   }
 

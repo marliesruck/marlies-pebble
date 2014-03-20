@@ -119,22 +119,31 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   init_kern_pt();
 
   /* First executable page directory */
-  pte_s *pd = alloc_frame();
+  pte_s *pd = retrieve_head();
+  update_head_wrapper(pd);
+
   init_pd(pd, pd);
 
   set_cr3((uint32_t) pd);
   enable_write_protect();
   enable_paging();
+  lprintf("1");
 
   /* Allocate dummy frame for admiring zeroes */
   zfod = smemalign(PAGE_SIZE, PAGE_SIZE);
   memset(zfod,0,PAGE_SIZE);
 
+  lprintf("2");
+
   /* Load the first executable */
   thread_t *thread = load_task(pd, "init");
 
+  lprintf("3");
+
   /* Init curr and enable interrupts */
   enable_interrupts();
+
+  lprintf("4");
 
   /* Keep track of init's task */
   init = curr->task_info;
@@ -165,6 +174,7 @@ thread_t *load_task(void *pd, const char *fname)
   thread->pc = load_file(&task->vmi, fname);
   thread->sp = usr_stack_init(&task->vmi, NULL);
 
+  /* This enables interrupts */
   assert( sched_unblock(thread, 0) == 0 );
 
   sim_reg_process(pd, fname);

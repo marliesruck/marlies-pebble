@@ -12,6 +12,7 @@
 #include <frame_alloc.h>
 #include <tlb.h>
 #include <vm.h>
+#include <util.h>
 
 /* Libc includes */
 #include <assert.h>
@@ -37,16 +38,30 @@ void translate_attrs(pte_s *pte, unsigned int attrs)
 
 void *alloc_page_table(pg_info_s *pgi, void *vaddr)
 {
-  void *frame;
   pte_s pde;
 
-  frame = alloc_frame();
+  /* Serialize access to the free list */
+  mutex_lock(&frame_allocator_lock);
+
+  /* Grab the head of free list */
+  void *frame = retrieve_head();
   if (!frame) return NULL;
+
+  /* Map the frame into virtual memory so we can read the address of the next
+   * free frame */
   init_pte(&pde, frame);
   pde.present = 1;
   pde.writable = 1;
   pde.user = 1;
   set_pde(pgi->pg_dir, vaddr, &pde);
+
+  /* Update the head of the free list */
+  void *new_head = (void *)(pgi->pg_tbls[PG_DIR_INDEX(vaddr)][0].addr 
+                    << PG_TBL_SHIFT);
+  update_head(new_head);
+
+  /* Relinquish the lock */
+  mutex_unlock(&frame_allocator_lock);
 
   return frame;
 }
@@ -54,7 +69,8 @@ void *alloc_page_table(pg_info_s *pgi, void *vaddr)
 /** @brief Allocate a page of virtual memory.
  *
  *  This function backs all allocations with a new frame instead of using
- *  the ZFOD dummy frame.
+ *  the ZFOD dummy frame.  It retrieves a frame from the free list, maps it into
+ *  virtual memory, and updates the free list to point to the new head.
  *
  *  @param pgi Page table information.
  *  @param vaddr The virtual address to allocate.
@@ -64,7 +80,6 @@ void *alloc_page_table(pg_info_s *pgi, void *vaddr)
  **/
 void *alloc_page_really(pg_info_s *pgi, void *vaddr, unsigned int attrs)
 {
-  void * frame;
   pte_s pde;
 
   /* If the PDE isn't valid, make it so */
@@ -72,8 +87,11 @@ void *alloc_page_really(pg_info_s *pgi, void *vaddr, unsigned int attrs)
     alloc_page_table(pgi, vaddr);
   }
 
-  /* Get a new frame */
-  frame = alloc_frame();
+  /* Serialize access to the free list */
+  mutex_lock(&frame_allocator_lock);
+
+  /* Grab the head of free list */
+  void *frame = retrieve_head();
   if (!frame) return NULL;
 
   /* Back vaddr with the new frame */
@@ -81,6 +99,12 @@ void *alloc_page_really(pg_info_s *pgi, void *vaddr, unsigned int attrs)
   pde.present = 1;
   translate_attrs(&pde, attrs);
   assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pde) );
+
+  /* Update the head of the free list */
+  update_head_wrapper(vaddr);
+
+  /* Relinquish the lock */
+  mutex_unlock(&frame_allocator_lock);
 
   return frame;
 }
@@ -232,31 +256,6 @@ int copy_page(pg_info_s *dst, const pg_info_s *src, void *vaddr, unsigned int at
 
   return 0;
 }
-/** @brief Acquire a frame.
- *
- * Retrieves a frame from the free list, maps it into virtual memory, and
- * updates the free list to point to the new head.
- *
- * @return NULL on error, else address of frame.
- **/
-void *alloc_frame2(void)
-{
-  /* Serialize access to the free list */
-  mutex_lock(&frame_allocator_lock);
-
-  /* Grab the head of free list */
-  void *frame = retrieve_head();
-
-  /* Map the frame into virtual memory so we can read the address of the next
-   * free frame */
-
-
-
-
-  /* Relinquish the lock */
-  mutex_unlock(&frame_allocator_lock);
-  return frame;
-}
 /** @brief Free a frame.
  *
  *  Adds a frame to the free list.
@@ -266,12 +265,14 @@ void *alloc_frame2(void)
  **/
 void free_frame2(void *frame, void *vaddr)
 {
+  uint32_t *floor = (uint32_t *)(FLOOR(vaddr, PAGE_SIZE));
+
   /* Serialize access to the free list */
   mutex_lock(&frame_allocator_lock);
 
   /* Retrieve and store out old head while frame is mapped in */
   void *old_head = retrieve_head();
-  *(uint32_t *)(vaddr) = (uint32_t)(old_head);
+  *floor = (uint32_t)(old_head);
 
   /* Add frame to free list */
   update_head(frame);
