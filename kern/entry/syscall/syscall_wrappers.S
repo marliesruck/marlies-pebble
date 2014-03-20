@@ -8,7 +8,7 @@
  *  @author Marlies Ruck (esn)
  **/
 
-#include "sc_utils.h"
+#include <sc_utils.h>
 
 /* Special */
 .extern sys_fork

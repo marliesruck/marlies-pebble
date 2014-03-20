@@ -40,6 +40,7 @@
 #include <pg_table.h>
 #include <process.h>
 #include <sched.h>
+#include <sc_utils.h>
 #include <thread.h>
 #include <usr_stack.h>
 #include <vm.h>
