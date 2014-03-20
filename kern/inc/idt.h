@@ -11,14 +11,15 @@
 #define __IDT_H__
 
 
-/* DPL Flags */
-#define IDT_USER_DPL    (0x3)  /* This handler is user callable */
-#define IDT_KERN_DPL    (0x0)  /* This handler must be called by
-                                     the kernel */
+/* IDT DPL flags */
+#define IDT_USER_DPL (0x00006000) /* This handler is user callable */
+#define IDT_KERN_DPL (0x00000000) /* This handler is kernel callable */
 
+/* Setting IDT entries */
 void install_trap_gate(int index, void *handler, unsigned int dpl);
 void install_interrupt_gate(int index, void *handler, unsigned int dpl);
 
+/* Installing interrupt handlers */
 void install_device_handlers(void);
 void install_fault_handlers(void);
 
