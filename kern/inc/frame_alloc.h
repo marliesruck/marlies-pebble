@@ -8,7 +8,6 @@
 #ifndef __FRAME_ALLOC_H__
 #define __FRAME_ALLOC_H__
 
-void free_frame(void *frame);
 int frame_remaining(void);
 
 /* Frame allocator initalization routine */

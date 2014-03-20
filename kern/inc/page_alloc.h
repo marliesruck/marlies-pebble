@@ -1,4 +1,4 @@
-/** @file frame_alloc.h
+/** @file page_alloc.h
  *
  *  @brief Delcares the page allocator API.
  *

@@ -189,8 +189,8 @@ int sys_exec(char *execname, char *argvec[])
 
   /* Destroy the old address space; setup the new */
   vm_final(&curr->task_info->vmi);
-  void *entry_point = load_file(&curr->task_info->vmi, execname_k);
 
+  void *entry_point = load_file(&curr->task_info->vmi, execname_k);
 
   void *usr_sp = usr_stack_init(&curr->task_info->vmi, argvec_k);
 

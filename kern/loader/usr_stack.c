@@ -1,5 +1,7 @@
 /** @file usr_stack
  **/
+#include <simics.h>
+
 #include <usr_stack.h>
 
 #include <vm.h>
@@ -19,7 +21,7 @@ void *usr_stack_init(vm_info_s *vmi, char **arg_vec)
 
   /* Allocate user's stack */
   base = USR_SP_HI - USR_STACK_SIZE;
-  vm_alloc(vmi, base, USR_STACK_SIZE, VM_ATTR_RDWR);
+  vm_alloc(vmi, base, USR_STACK_SIZE, VM_ATTR_USER | VM_ATTR_RDWR);
   sp = USR_SP_HI;
 
   /* Copy the argument vector onto the stack */

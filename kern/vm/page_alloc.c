@@ -5,6 +5,7 @@
  *  @author Enrique Naudon (esn)
  *  @author Marlies Ruck (mruck)
  **/
+#include <simics.h>
 
 #include <page_alloc.h>
 
@@ -143,31 +144,6 @@ void *alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs)
   return zfod;
 }
 
-/** @brief Free a page.
- *
- *  @param pgi Page table information.
- *  @param vaddr The virtual address to free.
- *
- *  @return Void.
- **/
-void free_page(pg_info_s *pgi, void *vaddr)
-{
-  pte_s pte;
-
-  /* If the PDE isn't valid, there's nothing to free */
-  if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte)) return;
-
-  /* Free the frame */
-  free_frame((void *)(pte.addr << 12));
-
-  /* Free the page; invalidate the tlb entry */
-  init_pte(&pte, NULL);
-  set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte);
-  tlb_inval_page(vaddr);
-
-  return;
-}
-
 /** @brief Sets a page's attributes.
  *
  *  @param pgi Page table information.
@@ -260,24 +236,50 @@ int copy_page(pg_info_s *dst, const pg_info_s *src, void *vaddr, unsigned int at
  *
  *  Adds a frame to the free list.
  *
- *  @param frame Address of frame to free.
+ *  @param pgi   Page table information.
+ *  @param vaddr Logical address of frame.
  *  @return Void.
  **/
-void free_frame2(void *frame, void *vaddr)
+void free_page(pg_info_s *pgi, void *vaddr)
 {
+  pte_s pte;
+
+  /* If the PDE isn't valid, there's nothing to free */
+  if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte)) return;
+
+  /* Make the page writable so we can store an implicit pointer to 
+   * the old head */
+  if(!pte.writable){
+    tlb_inval_page(vaddr);
+    pte.writable = 1;
+    set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte);
+  }
+  
+  /* The implicit pointer should be stored in the lowest addressable word */
   uint32_t *floor = (uint32_t *)(FLOOR(vaddr, PAGE_SIZE));
+  void *frame = (void *)(pte.addr << PG_TBL_SHIFT);
 
-  /* Serialize access to the free list */
-  mutex_lock(&frame_allocator_lock);
+  /* Don't add the zfod frame to the free list */
+  if(frame != zfod){
 
-  /* Retrieve and store out old head while frame is mapped in */
-  void *old_head = retrieve_head();
-  *floor = (uint32_t)(old_head);
+    /* Serialize access to the free list */
+    mutex_lock(&frame_allocator_lock);
 
-  /* Add frame to free list */
-  update_head(frame);
+    /* Retrieve and store out the old head while frame is mapped in */
+    void *old_head = retrieve_head();
+    *floor = (uint32_t)(old_head);
 
-  /* Relinquish the lock */
-  mutex_unlock(&frame_allocator_lock);
+    /* Add frame to free list */
+    update_head(frame);
+
+    /* Relinquish the lock */
+    mutex_unlock(&frame_allocator_lock);
+  }
+
+  /* Free the page; invalidate the tlb entry */
+  init_pte(&pte, NULL);
+  set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte);
+  tlb_inval_page(vaddr);
+
   return;
 }

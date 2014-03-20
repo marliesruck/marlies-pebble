@@ -27,11 +27,6 @@ int frame_index = USER_MEM_START/sizeof(frame_t);
 /* Pointer to the head of the free list */
 static void *freelist_p;
 
-void free_frame(void *frame)
-{
-  return;
-}
-
 int frame_remaining(void)
 {
   return machine_phys_frames() - frame_index;
