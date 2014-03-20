@@ -108,14 +108,22 @@ int sys_fork(unsigned int esp)
   pte_s pde;
   pt_t *child_pg_tables = (pt_t *)(CHILD_PDE);
   pte_s *child_pd = child_pg_tables[PG_SELFREF_INDEX];
+  task_t *curr_task = curr->task_info;
 
   /* Map the child's PD into the parent's address space */
-  task_t *curr_task = curr->task_info;
-  void *child_cr3 = alloc_page_table(&curr_task->vmi.pg_info, child_pd);
+  void *child_cr3 = alloc_page_table(&curr_task->vmi.pg_info, CHILD_PDE);
+  init_pte(&pde, child_cr3);
+  pde.present = 1;
+  pde.writable = 1;
+  /* Make the child's page directory self referential */
+  set_pte(curr_task->vmi.pg_info.pg_dir, curr_task->vmi.pg_info.pg_tbls,
+          child_pd, &pde);
 
   /* Initialize child stuffs */
   init_pd(child_pd, child_cr3);
+
   thread_t *child_thread = init_child_tcb(child_cr3, child_pd, child_pg_tables);
+
   task_t *child_task = child_thread->task_info;
   vm_copy(&child_task->vmi, &curr_task->vmi);
 

@@ -278,7 +278,7 @@ void vm_free(vm_info_s *vmi, void *va_start)
  *
  *  @return 0 on success; a negative integer error code on failure.
  **/
-int vm_copy(vm_info_s *dst, const vm_info_s *src)
+int vm_copy(vm_info_s *dst, vm_info_s *src)
 {
   mem_region_s *dreg;
   const mem_region_s *sreg;

@@ -168,6 +168,27 @@ int page_set_attrs(pg_info_s *pgi, void *vaddr, unsigned int attrs)
   return 0;
 }
 
+#define BUF ( (void *)&tomes[PG_TBL_ENTRIES - 4][PG_TBL_ENTRIES - 1])
+void *buffered_copy(pg_info_s *src, void *vaddr)
+{
+    pte_s pte;
+
+    /* Allocate the dest page and map it into the current address 
+     * space for copying */
+    void *frame = alloc_page_really(src, BUF, VM_ATTR_RDWR);
+    if (!frame) return NULL;
+
+    /* Copy data */
+    memcpy(BUF, vaddr, PAGE_SIZE);
+
+    /* Unmap the dest page */
+    init_pte(&pte, NULL);
+    assert( !set_pte(src->pg_dir, src->pg_tbls, BUF, &pte) );
+    tlb_inval_page(BUF);
+
+    return frame;
+}
+
 /** @brief Copies an address page.
  *
  *  @param dst The destination page info struct.
@@ -178,56 +199,48 @@ int page_set_attrs(pg_info_s *pgi, void *vaddr, unsigned int attrs)
  *  @return 0 on success; a negative integer error code on failure.
  **/
 /* TODO: make this dynamic */
-#define BUF ( (void *)&tomes[PG_TBL_ENTRIES - 4][PG_TBL_ENTRIES - 1])
-int copy_page(pg_info_s *dst, const pg_info_s *src, void *vaddr, unsigned int attrs)
-{
-  void *frame;
-  pte_s pde;
 
-  /* Allocate a buffer page to map in the dest page
-   * FIXME: explicitly discarding 'const' isn't really ok...
-   */
-  if (get_pte(src->pg_dir, src->pg_tbls, BUF, NULL)) {
-    alloc_page_table((pg_info_s *)src, BUF);
-  }
+#define CHILD_PDE ( (void *)tomes[PG_TBL_ENTRIES - 2] )
+int copy_page(pg_info_s *dst, pg_info_s *src, void *vaddr, unsigned int attrs)
+{
+  pte_s pte;
 
   /* The page better exist in the parent */
-  if (get_pte(src->pg_dir, src->pg_tbls, vaddr, &pde))
+  if (get_pte(src->pg_dir, src->pg_tbls, vaddr, &pte))
     return -1;
 
-  /* Only copy writable pages */
-  if (pde.writable)
+  void *frame = (void *)(pte.addr << PG_TBL_SHIFT);
+
+
+  /* Only copy non zfod pages*/
+  if (frame != zfod)
   {
-    /* Allocate the dest page */
-    frame = alloc_page_really(dst, vaddr, attrs);
-    if (!frame) return -1;
+    /* Copy to a buffer first */
+    void *frame = buffered_copy(src, vaddr);
 
-    /* Map in the dest page for copying */
-    init_pte(&pde, frame);
-    pde.present = 1;
-    pde.writable = 1;
-    assert( !set_pte(src->pg_dir, src->pg_tbls, BUF, &pde) );
+    /* Preserve the attributes of the source PTE and change the frame */
+    pte.addr = ((uint32_t)(frame)) >> PG_TBL_SHIFT;
 
-    /* Copy data */
-    memcpy(BUF, vaddr, PAGE_SIZE);
+    if(set_pte(dst->pg_dir, dst->pg_tbls, vaddr, &pte)){
+      /* Add a PDE */
+      alloc_page_table(dst, vaddr);
+      /* Try again */
+      assert(!set_pte(dst->pg_dir, dst->pg_tbls, vaddr, &pte));
+    }
+   // lprintf("%p",
+    //    *(void **)&src->pg_tbls[PG_DIR_INDEX(CHILD_PDE)][PG_TBL_INDEX(vaddr)]);
+    //MAGIC_BREAK;
 
-    /* Unmap the dest page */
-    init_pte(&pde, NULL);
-    pde.present = 0;
-    assert( !set_pte(src->pg_dir, src->pg_tbls, BUF, &pde) );
-    tlb_inval_page(BUF);
   }
-
-  /* Don't copy read-only pages */
+  /* Simply copy the source PTE into the dest */
   else
   {
-    /* If the PDE isn't valid, make it so */
-    if (get_pte(dst->pg_dir, dst->pg_tbls, vaddr, NULL)) {
+    if(set_pte(dst->pg_dir, dst->pg_tbls, vaddr, &pte)){
+      /* Add a PDE */
       alloc_page_table(dst, vaddr);
+      /* Try again */
+      assert(!set_pte(dst->pg_dir, dst->pg_tbls, vaddr, &pte));
     }
-
-    /* Allocate the dest page */
-    assert( !set_pte(dst->pg_dir, dst->pg_tbls, vaddr, &pde) );
   }
 
   return 0;
