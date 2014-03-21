@@ -30,9 +30,8 @@ typedef struct task{
   int orig_tid;           /* Wait() returns the TID of the origin thread of the 
                              exiting tasks, not the tid of the last thread 
                              to vanish */
-  cll_list live_children; /* This and dead_children determine whether or not
-                             wait should block.  When you die, update your
-                             children's parent to be init */
+  int live_children;      /* This and dead_children determine whether or not
+                             wait should block */
   mutex_s  lock;           /* Hold this lock when modifying the task struct */
   int status;
 }task_t;

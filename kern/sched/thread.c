@@ -48,7 +48,7 @@ thread_t *task_init(void)
   task->num_threads = 1;
 
   /* Keep track of children alive and dead */
-  cll_init_list(&task->live_children);
+  task->live_children = 0;
   queue_init(&task->dead_children);
   cvar_init((&task->cv));
 
