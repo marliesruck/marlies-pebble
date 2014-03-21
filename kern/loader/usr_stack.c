@@ -57,7 +57,6 @@ void *usr_stack_init(vm_info_s *vmi, char **arg_vec)
   PUSH(sp,argc);            /* argc */
   PUSH(sp,0);               /* "return address" */
 
-  vm_set_attrs(vmi, base, VM_ATTR_RDWR|VM_ATTR_USER);
   return sp;
 }
 

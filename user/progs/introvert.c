@@ -13,10 +13,12 @@ int main()
     lprintf("parent");
   else
     lprintf("child");
-  lprintf("&test[4095]:%p test[4095]: %d",&test[4095], test[4095]);
-  test[4095] = 123;
-  lprintf("test[4095] = %d",test[4095]);
-  //MAGIC_BREAK;
+
+  if((tid = fork()) == 0)
+    lprintf("parent");
+  else
+    lprintf("child");
+
   while(1);
   /*
   lprintf("forking...");

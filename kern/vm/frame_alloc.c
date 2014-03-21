@@ -13,10 +13,12 @@
 #include <common_kern.h>
 #include <x86/page.h>
 #include <util.h>
+#include <page_alloc.h>
 
 /* Libc includes */
 #include <stddef.h>
 #include <stdint.h>
+#include <assert.h>
 
 #include <simics.h>
 
@@ -68,6 +70,7 @@ void init_frame_allocator(void)
  */
 void *retrieve_head(void)
 {
+  assert(freelist_p != zfod);
   return freelist_p;
 }
 
@@ -81,6 +84,7 @@ void *retrieve_head(void)
 void update_head(void *frame)
 {
   /* Update head */
+  assert(frame != zfod);
   freelist_p = frame;
 
   return;
@@ -99,6 +103,7 @@ void update_head_wrapper(void *addr)
    * addressable word */
   uint32_t *floor = (uint32_t *)(FLOOR(addr, PAGE_SIZE));
 
+  assert(((void *)(*floor)) != zfod);
   freelist_p = (void *)(*floor);
 }
 

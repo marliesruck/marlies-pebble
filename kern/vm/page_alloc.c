@@ -226,10 +226,8 @@ int copy_page(pg_info_s *dst, pg_info_s *src, void *vaddr, unsigned int attrs)
       alloc_page_table(dst, vaddr);
       /* Try again */
       assert(!set_pte(dst->pg_dir, dst->pg_tbls, vaddr, &pte));
+
     }
-   // lprintf("%p",
-    //    *(void **)&src->pg_tbls[PG_DIR_INDEX(CHILD_PDE)][PG_TBL_INDEX(vaddr)]);
-    //MAGIC_BREAK;
 
   }
   /* Simply copy the source PTE into the dest */

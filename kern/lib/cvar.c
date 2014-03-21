@@ -89,6 +89,7 @@ void cvar_wait(cvar_s *cv, mutex_s *mp)
 
   schedule();
 
+
   /* Lock world mutex and make progress */
   mutex_lock(mp);
   return;

@@ -444,6 +444,7 @@ int sys_sleep(int ticks)
 
 int sys_new_pages(void *addr, int len)
 {
+  lprintf("in new pages");
   if (!vm_alloc(&curr->task_info->vmi, addr, len,
                 VM_ATTR_RDWR|VM_ATTR_USER|VM_ATTR_NEWPG))
   {
