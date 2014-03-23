@@ -42,7 +42,7 @@ task_t *init;
 /* Task list manipulation routines */
 int tasklist_add(task_t *t);
 int tasklist_del(task_t *t);
-task_t *tasklist_find(task_t *task);
+task_t *tasklist_find(task_t *t);
 
 
 #endif /* _PROCESS_H */

@@ -28,6 +28,8 @@ static mutex_s task_list_lock = MUTEX_INITIALIZER(task_list_lock);
  **/
 int tasklist_add(task_t *t)
 {
+  assert(t);
+
   cll_node *n;
 
   /* Allocate a node for the new task */
@@ -51,6 +53,8 @@ int tasklist_add(task_t *t)
  **/
 int tasklist_del(task_t *t)
 {
+  assert(t);
+
   cll_node *n;
   task_t *task;
 
@@ -83,17 +87,17 @@ int tasklist_del(task_t *t)
  *
  *  @return A pointer to the task, or NULL if not found.
  **/
-task_t *tasklist_find(task_t *task)
+task_t *tasklist_find(task_t *t)
 {
-  cll_node *n;
-  task_t *t;
+  assert(t);
 
-  t = NULL;
+  cll_node *n;
+  task_t *task;
 
   /* Iteratively search the task list */
   mutex_lock(&task_list_lock);
   cll_foreach(&task_list, n) {
-    t = cll_entry(task_t *,n);
+    task = cll_entry(task_t *,n);
     if (t == task) break;
   }
 
@@ -102,6 +106,6 @@ task_t *tasklist_find(task_t *task)
 
   /* Does not release task list lock! */
 
-  return t;
+  return task;
 }
 

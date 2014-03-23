@@ -85,6 +85,8 @@ int sched_spin_unlock_and_block(thread_t *thr, spin_s *lock)
 {
   int ret;
 
+  assert(thr);
+
   /* Lock the run queue, unlock the world lock */
   disable_interrupts();
   if (lock) spin_unlock(lock);

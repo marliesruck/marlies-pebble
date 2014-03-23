@@ -222,7 +222,7 @@ void sys_vanish(void)
     mutex_unlock(&task->lock);
 
     /* Free your virtual memory */
-    vm_final(&task->vmi);
+    //vm_final(&task->vmi);
 
     /* Enqueue your dead children as children of init */
     while(!cll_empty(&task->dead_children)){
