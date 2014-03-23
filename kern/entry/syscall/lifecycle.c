@@ -31,7 +31,7 @@
 
 #define CHILD_PDE ( (void *)tomes[PG_TBL_ENTRIES - 2] )
 
-/* Keep track of number of tasks */
+/* Keep track of tasks */
 static cll_list task_list = CLL_LIST_INITIALIZER(task_list);
 /* And make all accesses atomic */
 static mutex_s task_list_lock = MUTEX_INITIALIZER(task_list_lock);
@@ -124,12 +124,8 @@ int sys_fork(unsigned int esp)
   child_thread->pc = finish_fork;
 
   /* Add the new task to the task list */
-  cll_node *n = malloc(sizeof(cll_node));
-  if(!n) return -1;
-  cll_init_node(n, child_task);
-  mutex_lock(&task_list_lock);
-  cll_insert(&task_list, n);
-  mutex_unlock(&task_list_lock);
+  if(tasklist_add(child_task) < 0)
+    return -1;  /* Out of memory! */
 
   /* Keep track of live children */
   curr_task->live_children++;
@@ -197,16 +193,11 @@ void sys_set_status(int status)
   return;
 }
 
-/* Free a thread's resources
- *
- */
 void sys_vanish(void)
 {
   cll_node *n;
-  task_t *elem;
 
-  /* Lock thread list and remove ourselves...In order for someone to wait on
-   * the lock in our tcb they need to find us in the thread list first */
+  /* @bug Eliminate this? */
   thrlist_del(curr);
 
   task_t *task = curr->task_info;
@@ -223,14 +214,12 @@ void sys_vanish(void)
 
     /* Remove yourself from the task list so that your children cannot add
      * themselves to your dead children list */
-    mutex_lock(&task_list_lock);
-    cll_foreach(&task_list, n){
-      elem = cll_entry(task_t *, n);
-      if(elem == task){
-        cll_extract(&task_list, n);
-      }
-    }
-    mutex_unlock(&task_list_lock);
+    tasklist_del(task);
+
+    /* Acquire and release your lock in case your child grabbed your task lock
+     * before you removed yourself from the task list */
+    mutex_lock(&task->lock);
+    mutex_unlock(&task->lock);
 
     /* Free your virtual memory */
     vm_final(&task->vmi);
@@ -243,30 +232,24 @@ void sys_vanish(void)
       mutex_unlock(&init->lock);
     }
 
-    /* Check if your parent is still alive */
+    /* Check if your parent is still alive...
+     * This function does NOT release the list lock so that you can enqueue
+     * yourself as dead child before the parent exits (since you must
+     * lock the task list to exit) */
     task_t *parent = task->parent;
-    int found = 0;
+    if(!tasklist_find(parent)) 
+      parent = init; /* Your parent is dead. Tell init instead */
+    else
+    /* Live children count is for direct descendents only.  Don't do this if
+     * your parent is init */
+      parent->live_children--;
 
-    mutex_lock(&task_list_lock);
-    while(!found){
-      cll_foreach(&task_list, n){
-        elem = cll_entry(task_t *, n);
-        if(elem == parent){
-          found = 1;
-        }
-      }
-    }
-    /* Your parent is dead. Tell init instead */
-    if(!found)
-      parent = init;
-    /* Lock your parent's task_t struct in case you are competing with someone
-     * else to be added as a dead child */
+    /* Grab your parent's lock to prevent them from exiting while you are trying
+     * to enqueue yourself as a dead child */
     mutex_lock(&parent->lock);
+
     /* Release the list lock */
     mutex_unlock(&task_list_lock);
-
-    /* Decrement the number of live children */
-    parent->live_children--;
 
     /* Add yourself as a dead child */
     n = malloc(sizeof(cll_node));
@@ -319,7 +302,6 @@ int sys_wait(int *status_ptr)
  int tid = child_task->orig_tid;
 
  /* Free child's page directory */
- //vm_final(&child_task->vmi);
 
  /* Scribble to status */
  if(status_ptr)
