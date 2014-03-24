@@ -193,8 +193,6 @@ void sys_vanish(void)
 {
   cll_node *n;
 
-  /* @bug Eliminate this? */
-  /* This frees the thread! */
   thrlist_del(curr);
 
   task_t *task = curr->task_info;
@@ -287,33 +285,24 @@ int sys_wait(int *status_ptr)
   }
  /* Dequeue dead child */
  queue_node_s *q = queue_dequeue(&task->dead_children);
+ task_t *child_task = cll_entry(task_t*, q);
+ free(q);
 
  /* Relinquish lock */
  mutex_unlock(&task->lock);
 
  /* Store out root task tid to return */
- task_t *child_task = cll_entry(task_t*, q);
- free(q);
  int tid = child_task->orig_tid;
-
- /* --- Free child's page directory --- */
- free_unmapped_frame((void *)(child_task->cr3), &task->vmi.pg_info);
 
  /* Scribble to status */
  if(status_ptr)
    *status_ptr = child_task->status;
 
- /* Free child's thread resources...
-  cll_node *n;
-  thread_t *thr;
-  cll_foreach(&child_task->peer_threads, n){
-    MAGIC_BREAK;
-    cll_extract(&child_task->peer_threads, n);
-    thr = cll_entry(thread_t *, n);
-    free(thr);
-    free(n);
-  }
-  */
+ /* Free child's page directory */
+ free_unmapped_frame((void *)(child_task->cr3), &task->vmi.pg_info);
+
+ /* Free child's thread resources... */
+ cll_free(&child_task->peer_threads);
 
  /* Free child's task struct */
  free(child_task);

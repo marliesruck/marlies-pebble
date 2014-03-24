@@ -66,8 +66,11 @@ int tasklist_del(task_t *t)
   /* Find our task in the task list */
   cll_foreach(&task_list, n)
     if (cll_entry(task_t *,n) == t) break;
-  if (cll_entry(task_t *,n) != t)
+
+  if (cll_entry(task_t *,n) != t){
+    mutex_unlock(&task_list_lock);
     return -1;
+  }
 
   /* Extract the task */
   assert(cll_extract(&task_list, n));
@@ -78,8 +81,6 @@ int tasklist_del(task_t *t)
 
   /* Free the node but NOT the task */
   free(n);
-
-
 
   return 0;
 }

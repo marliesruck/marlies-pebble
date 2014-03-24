@@ -85,7 +85,7 @@ void cll_init_node(cll_node *n, void *data);
 void cll_final_node(cll_node *n);
 void cll_insert(cll_node *before, cll_node *at);
 cll_node *cll_extract(cll_list *l, cll_node *victim);
-
+void cll_free(cll_list *l);
 
 /* Debugging */
 int cll_check(cll_list *l);
