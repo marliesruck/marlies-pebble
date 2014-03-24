@@ -144,22 +144,23 @@ void *alloc_page_really(pg_info_s *pgi, void *vaddr, unsigned int attrs)
 
 void *buffered_copy(pg_info_s *src, void *vaddr)
 {
-    pte_s pte;
+  pte_s pte;
 
-    /* Allocate the dest page and map it into the current address 
-     * space for copying */
-    void *frame = alloc_page_really(src, BUF, VM_ATTR_RDWR);
-    if (!frame) return NULL;
+  /* Allocate the dest page and map it into the current address 
+   * space for copying
+   */
+  void *frame = alloc_page_really(src, BUF, VM_ATTR_RDWR);
+  if (!frame) return NULL;
 
-    /* Copy data */
-    memcpy(BUF, vaddr, PAGE_SIZE);
+  /* Copy data */
+  memcpy(BUF, vaddr, PAGE_SIZE);
 
-    /* Unmap the dest page */
-    init_pte(&pte, NULL);
-    assert( !set_pte(src->pg_dir, src->pg_tbls, BUF, &pte) );
-    tlb_inval_page(BUF);
+  /* Unmap the dest page */
+  init_pte(&pte, NULL);
+  assert( !set_pte(src->pg_dir, src->pg_tbls, BUF, &pte) );
+  tlb_inval_page(BUF);
 
-    return frame;
+  return frame;
 }
 
 
@@ -210,6 +211,37 @@ void *alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs)
   assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pde) );
 
   return zfod;
+}
+
+/** 
+ **/
+void *pg_alloc_phys(pg_info_s *pgi, void *vaddr)
+{
+  void *frame, *new_head;
+  pte_s pte;
+
+  /* If there's no PDE, we can't back the address */
+  if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte))
+    return NULL;
+
+  /* Serialize access to the free list */
+  mutex_lock(&frame_allocator_lock);
+
+  /* Grab the head of free list */
+  frame = retrieve_head();
+  if (!frame) return NULL;
+
+  /* Back vaddr with frame */
+  pte.addr = ((unsigned int) frame) >> PG_TBL_SHIFT;
+  assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte) );
+  tlb_inval_page(vaddr);
+
+  /* Save the new head */
+  new_head = *(void **)(FLOOR(vaddr, PAGE_SIZE));
+  update_head(new_head);
+
+  mutex_unlock(&frame_allocator_lock);
+  return frame;
 }
 
 /** @brief Sets a page's attributes.

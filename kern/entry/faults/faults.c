@@ -222,49 +222,23 @@ void int_page_fault(void *pc, void *error_code)
   if (get_pte(pgi->pg_dir, pgi->pg_tbls, addr, &pte)) {
     lprintf("Error: Page fault on table-less address %p by instruction %p", 
             addr, pc);
-    MAGIC_BREAK;
     panic("Error: Page fault!");
   }
 
-  /* oooops...ZFOD */
-
-  /* TO DO: get rid of this extra bit */
-  if(pte.zfod){
-
-    /* Serialize access to the free list */
-    mutex_lock(&frame_allocator_lock);
-
-    /* Grab the head of free list */
-    void *frame = retrieve_head();
-    //lprintf("frame: %p", frame);
-    if (!frame){
-      lprintf("Error: No frames left to back zfod page"); 
-      panic("Error: Page fault!");
-    }
-
+  /* TODO: get rid of this extra bit */
+  if(pte.zfod) {
+    void *frame = pg_alloc_phys(pgi, addr);
+    assert(frame);
     pte.addr = ((unsigned int) frame) >> PG_TBL_SHIFT;
     pte.writable = 1;
-    pte.user = 1;
-    pte.present = 1;
     assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, addr, &pte) );
-
-    tlb_inval_page(addr);
-
-    void *new_head = *(void **)(FLOOR(addr, PAGE_SIZE));
-    update_head(new_head);
-
-    /* Relinquish the lock */
-    mutex_unlock(&frame_allocator_lock);
-
     memset((void *)(FLOOR(addr, PAGE_SIZE)), 0, PAGE_SIZE);
-
     return;
   }
 
   /* It's a real fault */
   lprintf("Error: Page fault on table-less address %p by instruction %p", 
           addr, pc);
-  MAGIC_BREAK;
   panic("Error: Page fault!");
 
   return;
