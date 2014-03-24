@@ -1,6 +1,9 @@
 #include <stddef.h>
 #include <malloc.h>
 #include <malloc/malloc_internal.h>
+#include <mutex.h>
+
+static mutex_s allocator_lock = MUTEX_INITIALIZER(allocator_lock);
 
 /* safe versions of malloc functions */
 void *malloc(size_t size)

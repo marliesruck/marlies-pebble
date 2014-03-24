@@ -8,6 +8,7 @@
 
 #include <sched.h>
 #include <vm.h>
+#include <mutex.h>
 
 
 /*************************************************************************
@@ -16,12 +17,14 @@
 
 int sys_new_pages(void *addr, int len)
 {
+  mutex_lock(&curr->task_info->lock);
   if (!vm_alloc(&curr->task_info->vmi, addr, len,
                 VM_ATTR_RDWR|VM_ATTR_USER|VM_ATTR_NEWPG))
   {
+    mutex_unlock(&curr->task_info->lock);
     return -1;
   }
-
+  mutex_unlock(&curr->task_info->lock);
   return 0;
 }
 

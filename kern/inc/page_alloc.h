@@ -30,6 +30,7 @@ void *alloc_page_table(pg_info_s *pgi, void *vaddr);
 void free_page(pg_info_s *pgi, void *vaddr);
 int page_set_attrs(pg_info_s *pgi, void *vaddr, unsigned int attrs);
 int copy_page(pg_info_s *dst, pg_info_s *src, void *vaddr, unsigned int attrs);
+void free_unmapped_frame(void *frame, pg_info_s *pgi);
 
 
 #endif /* __PAGE_ALLOC_H__ */

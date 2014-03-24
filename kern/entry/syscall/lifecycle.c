@@ -296,15 +296,14 @@ int sys_wait(int *status_ptr)
  free(q);
  int tid = child_task->orig_tid;
 
- /* Free child's page directory */
+ /* --- Free child's page directory --- */
+ free_unmapped_frame((void *)(child_task->cr3), &task->vmi.pg_info);
 
  /* Scribble to status */
  if(status_ptr)
    *status_ptr = child_task->status;
 
  /* Free child's thread resources...
-  * I think I'm using the cll wrong */
- /*
   cll_node *n;
   thread_t *thr;
   cll_foreach(&child_task->peer_threads, n){
