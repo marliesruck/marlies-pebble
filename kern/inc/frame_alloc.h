@@ -22,7 +22,6 @@ void fr_init_allocator(void);
 /* Frame allocator manipulation routines */
 void *retrieve_head(void);
 void update_head(void *frame);
-void update_head_wrapper(void *vaddr);
 
 
 #endif /* __FRAME_ALLOC_H__ */

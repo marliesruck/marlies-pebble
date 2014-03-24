@@ -38,14 +38,15 @@ void init_kern_pt(void)
 {
   int i, j;
 
-  /* Direct map kernel memory */
-  for (i = 0; i < KERN_PD_ENTRIES; i++) {
+  for (i = 0; i < KERN_PD_ENTRIES; i++)
+  {
+    /* Allocate kernel page tables */
     kern_pt[i] = retrieve_head();
-    update_head_wrapper(kern_pt[i]);
+    update_head(*(void **)kern_pt[i]);
 
+    /* Direct map kernel memory */
     for (j = 0; j < PG_TBL_ENTRIES; j++) {
-      init_pte(&kern_pt[i][j],
-               (void *)(i * PAGE_SIZE * 1024 + j * PAGE_SIZE));
+      init_pte(&kern_pt[i][j], &tomes[i][j]);
       kern_pt[i][j].present = 1;
       kern_pt[i][j].writable = 1;
       kern_pt[i][j].global = 1;

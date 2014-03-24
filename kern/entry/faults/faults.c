@@ -250,7 +250,8 @@ void int_page_fault(void *pc, void *error_code)
 
     tlb_inval_page(addr);
 
-    update_head_wrapper(addr);
+    void *new_head = *(void **)(FLOOR(addr, PAGE_SIZE));
+    update_head(new_head);
 
     /* Relinquish the lock */
     mutex_unlock(&frame_allocator_lock);

@@ -133,7 +133,8 @@ void *alloc_page_really(pg_info_s *pgi, void *vaddr, unsigned int attrs)
   assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pde) );
 
   /* Update the head of the free list */
-  update_head_wrapper(vaddr);
+  void *new_head = *(void **)(FLOOR(vaddr, PAGE_SIZE));
+  update_head(new_head);
 
   /* Relinquish the lock */
   mutex_unlock(&frame_allocator_lock);
@@ -254,8 +255,7 @@ int copy_page(pg_info_s *dst, pg_info_s *src, void *vaddr)
   void *frame = (void *)(pte.addr << PG_TBL_SHIFT);
 
   /* Only copy non zfod pages*/
-  if (frame != zfod)
-  {
+  if (frame != zfod) {
     frame = buffered_copy(src, vaddr);
     pte.addr = ((uint32_t)(frame)) >> PG_TBL_SHIFT;
   }

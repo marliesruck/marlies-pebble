@@ -117,7 +117,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 
   /* First executable page directory */
   pte_s *pd = retrieve_head();
-  update_head_wrapper(pd);
+  update_head(*(void **)pd);
   init_pd(pd, pd);
 
   /* Enable paging */
