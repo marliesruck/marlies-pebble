@@ -85,6 +85,8 @@ int sched_spin_unlock_and_block(thread_t *thr, spin_s *lock)
 {
   int ret;
 
+  assert(thr);
+
   /* Lock the run queue, unlock the world lock */
   disable_interrupts();
   if (lock) spin_unlock(lock);
@@ -195,8 +197,11 @@ void schedule(void)
   /* Move the lucky thread to the back of the queue */
   q = queue_dequeue(&runnable);
   next = queue_entry(thread_t *, q);
-  assert((next->state == THR_RUNNING) || (next->state == THR_EXITING));
+  if ((next->state != THR_RUNNING) && (next->state == THR_EXITING)){
+    MAGIC_BREAK;
+  }
   queue_enqueue(&runnable, q);
+
 
   /* Only switch if the next thread is different */
   if (next != curr) {

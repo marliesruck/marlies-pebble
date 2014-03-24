@@ -125,8 +125,8 @@ void *load_file(vm_info_s *vmi, const char* filename)
 
   /* ELF contains only text */
   if(se.e_rodatlen == 0){
-    ret = vm_alloc(vmi, (void *)se.e_txtstart, se.e_txtlen, VM_ATTR_RDWR 
-                                                          | VM_ATTR_USER);
+    ret = vm_alloc(vmi, (void *)se.e_txtstart, se.e_txtlen, 
+                   VM_ATTR_RDWR | VM_ATTR_USER);
     assert(ret != NULL);
   }
   /* ELF contains text and rodata */

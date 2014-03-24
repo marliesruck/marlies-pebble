@@ -11,6 +11,7 @@
  *      extern thrlist and initialize here
  *
  */
+#include <simics.h>
 
 #include <cllist.h>
 #include <process.h>
@@ -44,22 +45,24 @@ thread_t *task_init(void)
   /* Initialize vm? */
   vm_init(&task->vmi, PG_TBL_ADDR[PG_SELFREF_INDEX], PG_TBL_ADDR);
 
-  /* Keep track of the number of threads in a task */
+  /* Keep track of threads in a task */
   task->num_threads = 1;
+  cll_init_list(&task->peer_threads);
 
   /* Keep track of children alive and dead */
-  cll_init_list(&task->live_children);
+  task->live_children = 0;
   queue_init(&task->dead_children);
   cvar_init((&task->cv));
 
   task->parent = curr->task_info;
 
+  /* Initialize the task struct lock */
+  mutex_init(&task->lock);
+
   /* Initialize root thread with new task */
   thread_t *thread = thread_init(task);
   task->orig_tid = thread->tid;
 
-  /* Initialize the task struct lock */
-  mutex_init(&task->lock);
 
   return thread;
 }
@@ -75,9 +78,18 @@ thread_t *thread_init(task_t *task)
 {
   assert(task);
 
+  /* Initalize thread structure */
   thread_t *thread = malloc(sizeof(thread_t));
   thread->task_info = task;
   thread->state = THR_NASCENT;
+
+  /* Keep track of peer threads */
+  cll_node *n = malloc(sizeof(cll_node));
+  cll_init_node(n, thread);
+
+  mutex_lock(&task->lock);
+  cll_insert(&task->peer_threads,n);
+  mutex_unlock(&task->lock);
 
   mutex_init(&thread->lock);
 

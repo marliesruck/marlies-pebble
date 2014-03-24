@@ -212,7 +212,7 @@ void int_gen_prot(void)
 #include <x86/cr.h>
 /* Libc includes */
 #include <string.h>
-void int_page_fault(void *error_code)
+void int_page_fault(void *pc, void *error_code)
 {
   pte_s pte;
 
@@ -220,7 +220,9 @@ void int_page_fault(void *error_code)
   void *addr = (void *)get_cr2();
   pg_info_s *pgi = &curr->task_info->vmi.pg_info;
   if (get_pte(pgi->pg_dir, pgi->pg_tbls, addr, &pte)) {
-    lprintf("Error: Page fault on table-less address!");
+    lprintf("Error: Page fault on table-less address %p by instruction %p", 
+            addr, pc);
+    MAGIC_BREAK;
     panic("Error: Page fault!");
   }
 
@@ -259,7 +261,9 @@ void int_page_fault(void *error_code)
   }
 
   /* It's a real fault */
-  lprintf("Error: Page fault on table-less address!");
+  lprintf("Error: Page fault on table-less address %p by instruction %p", 
+          addr, pc);
+  MAGIC_BREAK;
   panic("Error: Page fault!");
 
   return;

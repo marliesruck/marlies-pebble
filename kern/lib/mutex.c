@@ -112,8 +112,8 @@ void mutex_unlock(mutex_s *mp)
   spin_lock(&mp->lock);
 
   /* You can only unlock locked mutexes that you locked...or can you? */
-  //assert(mp->state == MUTEX_LOCKED);
-  //assert(mp->owner == curr->tid);
+  assert(mp->owner == curr->tid);
+  assert(mp->state == MUTEX_LOCKED);
 
   /* There's someone waiting on you */
   if (!cll_empty(&mp->queue))

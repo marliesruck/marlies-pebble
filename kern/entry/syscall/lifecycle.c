@@ -5,6 +5,7 @@
  *  @author Enrique Naudon (esn)
  *  @author Marlies Ruck (mruck)
  **/
+#include <simics.h>
 
 #include <sc_utils.h>
 
@@ -29,9 +30,7 @@
 /* x86 includes */
 #include <x86/asm.h>
 
-
 #define CHILD_PDE ( (void *)tomes[PG_TBL_ENTRIES - 2] )
-
 
 /*************************************************************************
  *  Internal helper functions
@@ -107,7 +106,6 @@ int sys_fork(unsigned int esp)
   set_pde(curr_task->vmi.pg_info.pg_dir, child_pd, &pde);
   tlb_inval_tome(child_pg_tables);
   tlb_inval_page(curr_task->vmi.pg_info.pg_tbls[PG_DIR_INDEX(child_pd)]);
-
   /* Copy the parent's kstack */
   unsigned int offset = esp - ((unsigned int) curr->kstack);
   size_t len = ((unsigned int) &curr->kstack[KSTACK_SIZE]) - esp;
@@ -120,11 +118,13 @@ int sys_fork(unsigned int esp)
   child_thread->sp = &child_thread->kstack[offset];
   child_thread->pc = finish_fork;
 
-  /* Keep track of live children forked */
-  cll_node *n = malloc(sizeof(cll_node));
-  if(!n) return -1;
-  cll_init_node(n, child_task);
-  cll_insert(&curr->task_info->live_children, n);
+  /* Add the new task to the task list...should this be done
+   * in task init? */
+  if(tasklist_add(child_task) < 0)
+    return -1;  /* Out of memory! */
+
+  /* Keep track of live children */
+  curr_task->live_children++;
 
   /* Enqueue new tcb */
   assert( thrlist_add(child_thread) == 0 );
@@ -132,7 +132,7 @@ int sys_fork(unsigned int esp)
 
   return child_thread->tid;
 }
-
+/* @bug Add a pcb final function for reinitializing pcb */
 int sys_exec(char *execname, char *argvec[])
 {
   char *execname_k, **argvec_k;
@@ -189,42 +189,12 @@ void sys_set_status(int status)
   return;
 }
 
-/* Free a thread's resources
- *
- * There are 2 cases:
- *
- * 1) There are remaining threads in the task.  Only free the calling thread's
- *    kernel stack and thread_t struct. This will be implemented in several
- *    iterations:
- *
- *    Iteration 1:
- *    -Enqueue in dead_peers so we can still use the kstack
- *    -scheduler logic to identify next task
- *    -call half ctx switch(note that our kstack is still valid because another
- *    process has not taken it)
- *
- *    Iteration 2:
- *    -call free_tcb(void *thread_t, void *next_task sp, void next_task *pc,
- *                  void *listp)
- *      -this will be an asm function  
- *        -*listp = thread_t //store out stack since we don't need it anymore
- *        -jmp asm_half_ctx_switch
- *       
- * 2) The calling thread is the last thread.  
- *    -Add any unreaped children to init's list of unreaped children
- *    -cond signal the parent, if this returns -1 then the parent already
- *    exited. Add your pcb to init's dead children linked list
- *
- *    Assumes: Parent is responsible for freeing the child's page directory and
- *    tables as well as the linked list of tcbs and the pcb.
- *
- */
 void sys_vanish(void)
 {
-  queue_node_s *q;
-  task_t *child;
+  cll_node *n;
 
-  /* Lock thread list and remove ourselves */
+  /* @bug Eliminate this? */
+  /* This frees the thread! */
   thrlist_del(curr);
 
   task_t *task = curr->task_info;
@@ -239,52 +209,60 @@ void sys_vanish(void)
   /* You are the last thread. Tell your parent to reap you */
   if(live_threads == 0){
 
-    /* Lock our live children and change their parent to init */
-    mutex_lock(&task->lock);
+    /* Remove yourself from the task list so that your children cannot add
+     * themselves to your dead children list */
+    tasklist_del(task);
 
-    while(!cll_empty(&task->live_children)){
-      q = queue_dequeue(&task->live_children);
-      child = queue_entry(task_t *, q);
-      mutex_lock(&child->lock);
-      child->parent = init;
-      mutex_unlock(&child->lock);
-      free(q);
-    }
-    /* Release the lock and let any live children acquire it and enqueue
-     * themselves as dead children. */
+    /* Acquire and release your lock in case your child grabbed your task lock
+     * before you removed yourself from the task list */
+    mutex_lock(&task->lock);
     mutex_unlock(&task->lock);
 
-    /* Reacquire the lock.  From here on out any live children should be waited
-     * on by init */
-    mutex_lock(&task->lock);
+    /* Free your virtual memory */
+    vm_final(&task->vmi);
 
-    /* Enqueue our dead children as children of init */
+    /* Enqueue your dead children as children of init */
     while(!cll_empty(&task->dead_children)){
-      q = queue_dequeue(&task->dead_children);
+      n = queue_dequeue(&task->dead_children);
       mutex_lock(&init->lock);
-      queue_enqueue(&init->dead_children, q);
+      cll_insert(&init->dead_children, n);
       mutex_unlock(&init->lock);
     }
-    mutex_unlock(&task->lock);
 
-    /* Atomically identify your parent */
-    mutex_lock(&task->lock);
+    /* Check if your parent is still alive...
+     * This function does NOT release the list lock so that you can enqueue
+     * yourself as dead child before the parent exits (since you must
+     * lock the task list to exit) */
     task_t *parent = task->parent;
+    if(!tasklist_find(parent)) 
+      parent = init; /* Your parent is dead. Tell init instead */
+    else
+    /* Live children count is for direct descendents only.  Don't do this if
+     * your parent is init */
+      parent->live_children--;
 
-    /* Dequeue yourself as a live child and enqueue yourself as a dead child */
+    /* Grab your parent's lock to prevent them from exiting while you are trying
+     * to enqueue yourself as a dead child */
     mutex_lock(&parent->lock);
-    q = queue_dequeue(&parent->live_children);
-    queue_enqueue(&parent->dead_children, q);
+
+    /* Release the list lock */
+    mutex_unlock(&task_list_lock);
+
+    /* Add yourself as a dead child */
+    n = malloc(sizeof(cll_node));
+    cll_init_node(n, task);
+    cll_insert(&parent->dead_children, n);
     cvar_signal(&parent->cv);
 
-    mutex_unlock(&task->lock);
-
+    /* Your parent should not reap you until you've descheduled yourself */
     sched_mutex_unlock_and_block(curr, &parent->lock);
     schedule();
   }
-
-  /* @bug Handle multi-thread program case */
-  half_ctx_switch_wrapper();
+  /* Remove yourself from the runnable queue */
+  else{
+    sched_block(curr);
+    schedule();
+  }
 
   assert(0); /* Should never reach here */
   return;
@@ -293,11 +271,12 @@ void sys_vanish(void)
 int sys_wait(int *status_ptr)
 {
   task_t *task = curr->task_info;
+
   /* Atomically check for dead children */
   mutex_lock(&task->lock);
 
   while(queue_empty(&task->dead_children)){
-    if(cll_empty(&task->live_children)){
+    if(task->live_children == 0){
         /* Avoid unbounded blocking */
         mutex_unlock(&task->lock);
         return -1;
@@ -313,20 +292,34 @@ int sys_wait(int *status_ptr)
  mutex_unlock(&task->lock);
 
  /* Store out root task tid to return */
- task_t *child_task = queue_entry(task_t*, q);
+ task_t *child_task = cll_entry(task_t*, q);
+ free(q);
  int tid = child_task->orig_tid;
 
- /* Free child's virtual memory */
- //vm_final(&child_task->vmi);
+ /* Free child's page directory */
 
  /* Scribble to status */
  if(status_ptr)
    *status_ptr = child_task->status;
 
+ /* Free child's thread resources...
+  * I think I'm using the cll wrong */
+ /*
+  cll_node *n;
+  thread_t *thr;
+  cll_foreach(&child_task->peer_threads, n){
+    MAGIC_BREAK;
+    cll_extract(&child_task->peer_threads, n);
+    thr = cll_entry(thread_t *, n);
+    free(thr);
+    free(n);
+  }
+  */
+
  /* Free child's task struct */
  free(child_task);
 
-  return tid;
+ return tid;
 }
 
 void sys_task_vanish(int status)

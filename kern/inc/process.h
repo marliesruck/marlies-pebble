@@ -12,6 +12,8 @@
 #include <mutex.h>
 #include  <cvar.h>
 
+extern mutex_s task_list_lock;
+
 typedef struct task{
   struct task *parent;    /* Enqueue the last thread_t to exit in my parent's
                              list of dead children...that makes the parent
@@ -30,14 +32,19 @@ typedef struct task{
   int orig_tid;           /* Wait() returns the TID of the origin thread of the 
                              exiting tasks, not the tid of the last thread 
                              to vanish */
-  cll_list live_children; /* This and dead_children determine whether or not
-                             wait should block.  When you die, update your
-                             children's parent to be init */
+  int live_children;      /* This and dead_children determine whether or not
+                             wait should block */
   mutex_s  lock;           /* Hold this lock when modifying the task struct */
   int status;
 }task_t;
 
 /* This does not belong here */
 task_t *init;
+
+/* Task list manipulation routines */
+int tasklist_add(task_t *t);
+int tasklist_del(task_t *t);
+task_t *tasklist_find(task_t *t);
+
 
 #endif /* _PROCESS_H */
