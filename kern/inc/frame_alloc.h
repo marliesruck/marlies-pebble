@@ -8,10 +8,16 @@
 #ifndef __FRAME_ALLOC_H__
 #define __FRAME_ALLOC_H__
 
+#include <mutex.h>
+
+
+/* Serialize access to the frame allocator */
+extern mutex_s frame_allocator_lock;
+
 int frame_remaining(void);
 
 /* Frame allocator initalization routine */
-void init_frame_allocator(void);
+void fr_init_allocator(void);
 
 /* Frame allocator manipulation routines */
 void *retrieve_head(void);

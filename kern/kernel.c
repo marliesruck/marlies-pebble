@@ -113,25 +113,17 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   install_sys_handlers(); 
   clear_console();
 
-  /* Initalize frame allocator data structure */
-  init_frame_allocator();
-
-  /* Initialized kernel page tables */
-  init_kern_pt();
+  vm_init_allocator();
 
   /* First executable page directory */
   pte_s *pd = retrieve_head();
   update_head_wrapper(pd);
-
   init_pd(pd, pd);
 
+  /* Enable paging */
   set_cr3((uint32_t) pd);
   enable_write_protect();
   enable_paging();
-
-  /* Allocate dummy frame for admiring zeroes */
-  zfod = smemalign(PAGE_SIZE, PAGE_SIZE);
-  memset(zfod,0,PAGE_SIZE);
 
   /* Load the first executable */
   thread_t *thread = load_task(pd, "init");

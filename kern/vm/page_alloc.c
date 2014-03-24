@@ -17,13 +17,19 @@
 
 /* Libc includes */
 #include <assert.h>
+#include <malloc.h>
 #include <stddef.h>
 #include <string.h>
 #include <stdint.h>
 
 
-/* Serialize access to the frame allocator */
-mutex_s frame_allocator_lock = MUTEX_INITIALIZER(frame_allocator_lock);
+/* ZFOD dummy frame */
+static void *zfod = NULL;
+
+/* TODO: make these dynamic */
+#define CHILD_PDE ( (void *)tomes[PG_TBL_ENTRIES - 2] )
+#define BUF ( (void *)&tomes[PG_TBL_ENTRIES - 4][PG_TBL_ENTRIES - 1])
+
 
 /*************************************************************************
  *  Helper functions
@@ -33,6 +39,31 @@ void translate_attrs(pte_s *pte, unsigned int attrs)
 {
   pte->writable = (attrs & VM_ATTR_RDWR) ? 1 : 0;
   pte->user = (attrs & VM_ATTR_USER) ? 1 : 0;
+
+  return;
+}
+
+void free_frame(void *frame, void *vaddr)
+{
+  /* The implicit pointer should be stored in the lowest addressable word */
+  uint32_t *floor = (uint32_t *)(FLOOR(vaddr, PAGE_SIZE));
+
+  /* Don't add the zfod frame to the free list */
+  if(frame != zfod){
+
+    /* Serialize access to the free list */
+    mutex_lock(&frame_allocator_lock);
+
+    /* Retrieve and store out the old head while frame is mapped in */
+    void *old_head = retrieve_head();
+    *floor = (uint32_t)(old_head);
+
+    /* Add frame to free list */
+    update_head(frame);
+
+    /* Relinquish the lock */
+    mutex_unlock(&frame_allocator_lock);
+  }
 
   return;
 }
@@ -110,10 +141,46 @@ void *alloc_page_really(pg_info_s *pgi, void *vaddr, unsigned int attrs)
   return frame;
 }
 
+void *buffered_copy(pg_info_s *src, void *vaddr)
+{
+    pte_s pte;
+
+    /* Allocate the dest page and map it into the current address 
+     * space for copying */
+    void *frame = alloc_page_really(src, BUF, VM_ATTR_RDWR);
+    if (!frame) return NULL;
+
+    /* Copy data */
+    memcpy(BUF, vaddr, PAGE_SIZE);
+
+    /* Unmap the dest page */
+    init_pte(&pte, NULL);
+    assert( !set_pte(src->pg_dir, src->pg_tbls, BUF, &pte) );
+    tlb_inval_page(BUF);
+
+    return frame;
+}
+
 
 /*************************************************************************
  *  Exported API
  *************************************************************************/
+
+/** @brief Intitialize the page allocator.
+ *
+ *  @return Void.
+ **/
+void pg_init_allocator(void)
+{
+  fr_init_allocator();
+  init_kern_pt();
+
+  /* Allocate dummy frame for admiring zeroes */
+  zfod = smemalign(PAGE_SIZE, PAGE_SIZE);
+  memset(zfod,0,PAGE_SIZE);
+
+  return;
+}
 
 /** @brief "Allocate" a page of virtual memory.
  *
@@ -168,40 +235,15 @@ int page_set_attrs(pg_info_s *pgi, void *vaddr, unsigned int attrs)
   return 0;
 }
 
-#define BUF ( (void *)&tomes[PG_TBL_ENTRIES - 4][PG_TBL_ENTRIES - 1])
-void *buffered_copy(pg_info_s *src, void *vaddr)
-{
-    pte_s pte;
-
-    /* Allocate the dest page and map it into the current address 
-     * space for copying */
-    void *frame = alloc_page_really(src, BUF, VM_ATTR_RDWR);
-    if (!frame) return NULL;
-
-    /* Copy data */
-    memcpy(BUF, vaddr, PAGE_SIZE);
-
-    /* Unmap the dest page */
-    init_pte(&pte, NULL);
-    assert( !set_pte(src->pg_dir, src->pg_tbls, BUF, &pte) );
-    tlb_inval_page(BUF);
-
-    return frame;
-}
-
 /** @brief Copies an address page.
  *
  *  @param dst The destination page info struct.
  *  @param src The source page info struct.
  *  @param addr The vitual address of the page to copy.
- *  @param attrs Attributes for the copied page.
  *
  *  @return 0 on success; a negative integer error code on failure.
  **/
-/* TODO: make this dynamic */
-
-#define CHILD_PDE ( (void *)tomes[PG_TBL_ENTRIES - 2] )
-int copy_page(pg_info_s *dst, pg_info_s *src, void *vaddr, unsigned int attrs)
+int copy_page(pg_info_s *dst, pg_info_s *src, void *vaddr)
 {
   pte_s pte;
 
@@ -211,41 +253,23 @@ int copy_page(pg_info_s *dst, pg_info_s *src, void *vaddr, unsigned int attrs)
 
   void *frame = (void *)(pte.addr << PG_TBL_SHIFT);
 
-
   /* Only copy non zfod pages*/
   if (frame != zfod)
   {
-    /* Copy to a buffer first */
-    void *frame = buffered_copy(src, vaddr);
-
-    /* Preserve the attributes of the source PTE and change the frame */
+    frame = buffered_copy(src, vaddr);
     pte.addr = ((uint32_t)(frame)) >> PG_TBL_SHIFT;
-
-    if(set_pte(dst->pg_dir, dst->pg_tbls, vaddr, &pte)){
-      /* Add a PDE */
-      alloc_page_table(dst, vaddr);
-      /* Try again */
-      assert(!set_pte(dst->pg_dir, dst->pg_tbls, vaddr, &pte));
-
-    }
-
   }
-  /* Simply copy the source PTE into the dest */
-  else
-  {
-    if(set_pte(dst->pg_dir, dst->pg_tbls, vaddr, &pte)){
-      /* Add a PDE */
-      alloc_page_table(dst, vaddr);
-      /* Try again */
-      assert(!set_pte(dst->pg_dir, dst->pg_tbls, vaddr, &pte));
-    }
+
+  /* Map the new frame into the child */
+  if(set_pte(dst->pg_dir, dst->pg_tbls, vaddr, &pte)) {
+    alloc_page_table(dst, vaddr);
+    assert(!set_pte(dst->pg_dir, dst->pg_tbls, vaddr, &pte));
   }
 
   return 0;
 }
-/** @brief Free a frame.
- *
- *  Adds a frame to the free list.
+
+/** @brief Free a page.
  *
  *  @param pgi   Page table information.
  *  @param vaddr Logical address of frame.
@@ -257,35 +281,19 @@ void free_page(pg_info_s *pgi, void *vaddr)
 
   /* If the PDE isn't valid, there's nothing to free */
   if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte)) return;
-
+  
   /* Make the page writable so we can store an implicit pointer to 
-   * the old head */
+   * the old head
+   */
   if(!pte.writable){
-    tlb_inval_page(vaddr);
     pte.writable = 1;
     set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte);
+    tlb_inval_page(vaddr);
   }
-  
-  /* The implicit pointer should be stored in the lowest addressable word */
-  uint32_t *floor = (uint32_t *)(FLOOR(vaddr, PAGE_SIZE));
+
+  /* Free the frame */
   void *frame = (void *)(pte.addr << PG_TBL_SHIFT);
-
-  /* Don't add the zfod frame to the free list */
-  if(frame != zfod){
-
-    /* Serialize access to the free list */
-    mutex_lock(&frame_allocator_lock);
-
-    /* Retrieve and store out the old head while frame is mapped in */
-    void *old_head = retrieve_head();
-    *floor = (uint32_t)(old_head);
-
-    /* Add frame to free list */
-    update_head(frame);
-
-    /* Relinquish the lock */
-    mutex_unlock(&frame_allocator_lock);
-  }
+  free_frame(frame, vaddr);
 
   /* Free the page; invalidate the tlb entry */
   init_pte(&pte, NULL);
@@ -294,3 +302,4 @@ void free_page(pg_info_s *pgi, void *vaddr)
 
   return;
 }
+
