@@ -76,8 +76,7 @@ int tasklist_del(task_t *t)
   /* Unlock  */
   mutex_unlock(&task_list_lock);
 
-  /* Free the task */
-  free(task);
+  /* Free the node but NOT the task */
   free(n);
 
 

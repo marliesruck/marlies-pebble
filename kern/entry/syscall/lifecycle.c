@@ -118,7 +118,8 @@ int sys_fork(unsigned int esp)
   child_thread->sp = &child_thread->kstack[offset];
   child_thread->pc = finish_fork;
 
-  /* Add the new task to the task list */
+  /* Add the new task to the task list...should this be done
+   * in task init? */
   if(tasklist_add(child_task) < 0)
     return -1;  /* Out of memory! */
 
@@ -131,7 +132,7 @@ int sys_fork(unsigned int esp)
 
   return child_thread->tid;
 }
-
+/* @bug Add a pcb final function for reinitializing pcb */
 int sys_exec(char *execname, char *argvec[])
 {
   char *execname_k, **argvec_k;
@@ -193,6 +194,7 @@ void sys_vanish(void)
   cll_node *n;
 
   /* @bug Eliminate this? */
+  /* This frees the thread! */
   thrlist_del(curr);
 
   task_t *task = curr->task_info;
@@ -217,7 +219,7 @@ void sys_vanish(void)
     mutex_unlock(&task->lock);
 
     /* Free your virtual memory */
-    //vm_final(&task->vmi);
+    vm_final(&task->vmi);
 
     /* Enqueue your dead children as children of init */
     while(!cll_empty(&task->dead_children)){
@@ -268,8 +270,6 @@ void sys_vanish(void)
 
 int sys_wait(int *status_ptr)
 {
-  cll_node *n;
-  thread_t *thr;
   task_t *task = curr->task_info;
 
   /* Atomically check for dead children */
@@ -302,13 +302,19 @@ int sys_wait(int *status_ptr)
  if(status_ptr)
    *status_ptr = child_task->status;
 
- /* Free child's thread resources */
-  cll_foreach(&task->peer_threads, n){
+ /* Free child's thread resources...
+  * I think I'm using the cll wrong */
+ /*
+  cll_node *n;
+  thread_t *thr;
+  cll_foreach(&child_task->peer_threads, n){
+    MAGIC_BREAK;
+    cll_extract(&child_task->peer_threads, n);
     thr = cll_entry(thread_t *, n);
-    cll_extract(&task->peer_threads, n);
     free(thr);
     free(n);
   }
+  */
 
  /* Free child's task struct */
  free(child_task);
