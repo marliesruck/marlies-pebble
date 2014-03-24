@@ -12,6 +12,8 @@
 #include <mutex.h>
 #include  <cvar.h>
 
+extern mutex_s task_list_lock;
+
 typedef struct task{
   struct task *parent;    /* Enqueue the last thread_t to exit in my parent's
                              list of dead children...that makes the parent

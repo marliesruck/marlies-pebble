@@ -37,11 +37,12 @@ void asm_int_generic(void);
  * neccessary to retrieve this argument and pass it to the C function so it can
  * be given as an argument for a user defined page fault handler.
  *
- * @param error_code Error code pushed on by the processor
+ * @param pc Address of faulting instruction
+ * @param error_code Error code pushed on stack by the processor
  *
  * @return Void.
  */
-void asm_int_page_fault(void *error_code);
+void asm_int_page_fault(void *pc, void *error_code);
 
 #endif /* __FAULT_WRAPPERS_H__ */
 

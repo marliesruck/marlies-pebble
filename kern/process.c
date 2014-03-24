@@ -6,6 +6,8 @@
  * @author Marlies Ruck (mruck)
  */
 
+#include <simics.h>
+
 /* Pebble specific includes */
 #include <cllist.h>
 #include <process.h>
@@ -18,7 +20,7 @@
 /* Keep track of tasks */
 static cll_list task_list = CLL_LIST_INITIALIZER(task_list);
 /* And make all accesses atomic */
-static mutex_s task_list_lock = MUTEX_INITIALIZER(task_list_lock);
+mutex_s task_list_lock = MUTEX_INITIALIZER(task_list_lock);
 
 /** @brief Add a task to the task list.
  *
@@ -67,14 +69,18 @@ int tasklist_del(task_t *t)
   if (cll_entry(task_t *,n) != t)
     return -1;
 
+  /* Extract the task */
+  assert(cll_extract(&task_list, n));
+  task = cll_entry(task_t *, n);
+
   /* Unlock  */
   mutex_unlock(&task_list_lock);
 
-  /* Extract and free the node and task */
-  assert(cll_extract(&task_list, n));
-  task = cll_entry(task_t *, n);
+  /* Free the task */
   free(task);
   free(n);
+
+
 
   return 0;
 }
@@ -98,14 +104,11 @@ task_t *tasklist_find(task_t *t)
   mutex_lock(&task_list_lock);
   cll_foreach(&task_list, n) {
     task = cll_entry(task_t *,n);
-    if (t == task) break;
+    if (t == task) return task;
   }
+  /* Does NOT release task lock */
 
   /* We didn't find it */
-  if (n == &task_list) return NULL;
-
-  /* Does not release task list lock! */
-
-  return task;
+  return NULL;
 }
 

@@ -197,8 +197,11 @@ void schedule(void)
   /* Move the lucky thread to the back of the queue */
   q = queue_dequeue(&runnable);
   next = queue_entry(thread_t *, q);
-  assert((next->state == THR_RUNNING) || (next->state == THR_EXITING));
+  if ((next->state != THR_RUNNING) && (next->state == THR_EXITING)){
+    MAGIC_BREAK;
+  }
   queue_enqueue(&runnable, q);
+
 
   /* Only switch if the next thread is different */
   if (next != curr) {

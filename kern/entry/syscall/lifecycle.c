@@ -5,6 +5,7 @@
  *  @author Enrique Naudon (esn)
  *  @author Marlies Ruck (mruck)
  **/
+#include <simics.h>
 
 #include <sc_utils.h>
 
@@ -30,11 +31,6 @@
 #include <x86/asm.h>
 
 #define CHILD_PDE ( (void *)tomes[PG_TBL_ENTRIES - 2] )
-
-/* Keep track of tasks */
-static cll_list task_list = CLL_LIST_INITIALIZER(task_list);
-/* And make all accesses atomic */
-static mutex_s task_list_lock = MUTEX_INITIALIZER(task_list_lock);
 
 /*************************************************************************
  *  Internal helper functions
@@ -110,7 +106,6 @@ int sys_fork(unsigned int esp)
   set_pde(curr_task->vmi.pg_info.pg_dir, child_pd, &pde);
   tlb_inval_tome(child_pg_tables);
   tlb_inval_page(curr_task->vmi.pg_info.pg_tbls[PG_DIR_INDEX(child_pd)]);
-
   /* Copy the parent's kstack */
   unsigned int offset = esp - ((unsigned int) curr->kstack);
   size_t len = ((unsigned int) &curr->kstack[KSTACK_SIZE]) - esp;
@@ -308,9 +303,9 @@ int sys_wait(int *status_ptr)
    *status_ptr = child_task->status;
 
  /* Free child's thread resources */
-  cll_foreach(&task_list, n){
+  cll_foreach(&task->peer_threads, n){
     thr = cll_entry(thread_t *, n);
-    cll_extract(&task_list, n);
+    cll_extract(&task->peer_threads, n);
     free(thr);
     free(n);
   }
