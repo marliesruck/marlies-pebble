@@ -25,6 +25,7 @@
 #define PG_TBL_DIRTY    0x040   /**< Set by HW on write **/
 #define PG_TBL_ATTR     0x080   /**< No idea; should be unset **/
 #define PG_TBL_GLOBAL   0x100   /**< Set stops TLB flush on ctx switch **/
+#define PG_TBL_ZFOD     0x200   /**< Set indicates ZFOD pages **/
 #define PG_TBL_AVAIL    0xE00   /**< Available for programmer use **/
 
 /* Page table masks */
@@ -82,46 +83,21 @@
 #define PACK_PTE(addr,attrs)  \
   ( (unsigned int)(addr) | (attrs) )
 
-/** @brief Shifts an address for storing in a page table entry
- *
- *  @param pte The address
- *
- *  @return The shifted address
- **/
-#define SHIFT_ADDR(addr)   \
-  ((unsigned int)(addr) >> (PG_TBL_SHIFT))
-
 #define KERN_PD_ENTRIES PG_DIR_INDEX(USER_MEM_START)
 
-/** @struct page_table_entry
- *  @brief An x86 page table/directory entry.
- **/
-struct page_table_entry {
-  unsigned int present  : 1;    /**< Set indicates entry is valid **/
-  unsigned int writable : 1;    /**< Set allows writing **/
-  unsigned int user     : 1;    /**< Set allows user access **/
-  unsigned int wr_thru  : 1;    /**< Set enables cache write-through **/
-  unsigned int no_cache : 1;    /**< Set disables caching **/
-  unsigned int accessed : 1;    /**< Set by HW on any access **/
-  unsigned int dirty    : 1;    /**< Set by HW on write **/
-  unsigned int attr     : 1;    /**< Should be unset **/
-  unsigned int global   : 1;    /**< Set stops TLB flush on ctx switch **/
-  unsigned int zfod     : 1;    /**< Set if page is ZFOD **/
-  unsigned int avail    : 2;    /**< Available for programmer use **/
-  unsigned int addr     : 20;   /**< The frame backing this page **/
-};
-typedef struct page_table_entry pte_s;
+typedef unsigned int pte_t;
 
-#define PG_TBL_ENTRIES PAGE_SIZE/sizeof(pte_s)
-typedef pte_s pt_t[PG_TBL_ENTRIES];
-
-extern pte_s *kern_pt[KERN_PD_ENTRIES];
+#define PG_TBL_ENTRIES PAGE_SIZE/sizeof(pte_t)
+typedef pte_t pt_t[PG_TBL_ENTRIES];
 
 typedef char page_t[PAGE_SIZE];
 extern page_t *pages;
 typedef page_t tome_t[PG_TBL_ENTRIES];
 extern tome_t *tomes;
 
+#define PG_TBL_ATTRS ( PG_TBL_PRESENT | PG_TBL_WRITABLE | PG_TBL_USER )
+
+#define PG_SELFREF_ATTRS ( PG_TBL_PRESENT | PG_TBL_WRITABLE )
 #define PG_SELFREF_INDEX (PG_TBL_ENTRIES - 1)
 #define PG_TBL_ADDR ( (pt_t *)tomes[PG_SELFREF_INDEX] )
 
@@ -129,15 +105,15 @@ extern tome_t *tomes;
 void init_kern_pt(void);
 
 /* Page directory operations */
-void init_pd(pte_s *pd, void *frame);
-pte_s get_pde(pte_s *pd, void *addr);
-void set_pde(pte_s *pd, void *addr, pte_s *pt);
+void init_pd(pte_t *pd, void *frame);
+pte_t get_pde(pte_t *pd, void *addr);
+void set_pde(pte_t *pd, void *addr, pte_t *pt);
 
 /* Page directory operations */
-void init_pte(pte_s *pte, void *frame);
-void init_pt(pte_s *pt);
-int get_pte(pte_s *pd, pt_t *pt, void *addr, pte_s *dst);
-int set_pte(pte_s *pd, pt_t *pt, void *addr, pte_s *pte);
+void init_pt(pte_t *pt);
+void init_pte(pte_t *pte, void *frame);
+int get_pte(pte_t *pd, pt_t *pt, void *addr, pte_t *dst);
+int set_pte(pte_t *pd, pt_t *pt, void *addr, pte_t *pte);
 
 
 #endif /* __PG_TABLE_H__ */

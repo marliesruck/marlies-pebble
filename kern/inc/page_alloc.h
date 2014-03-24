@@ -15,7 +15,7 @@
  *  @brief Information used by the page allocator.
  **/
 struct page_info {
-  pte_s *pg_dir;    /**< The page directory. **/
+  pte_t *pg_dir;    /**< The page directory. **/
   pt_t  *pg_tbls;   /**< The page tables. **/
 };
 typedef struct page_info pg_info_s;

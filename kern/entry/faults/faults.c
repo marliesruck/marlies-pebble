@@ -212,9 +212,10 @@ void int_gen_prot(void)
 #include <x86/cr.h>
 /* Libc includes */
 #include <string.h>
+extern void *zfod;
 void int_page_fault(void *pc, void *error_code)
 {
-  pte_s pte;
+  pte_t pte;
 
   /* Retrieve PTE for faulting address */
   void *addr = (void *)get_cr2();
@@ -226,11 +227,10 @@ void int_page_fault(void *pc, void *error_code)
   }
 
   /* TODO: get rid of this extra bit */
-  if(pte.zfod) {
+  if (GET_ADDR(pte) == zfod) {
     void *frame = pg_alloc_phys(pgi, addr);
     assert(frame);
-    pte.addr = ((unsigned int) frame) >> PG_TBL_SHIFT;
-    pte.writable = 1;
+    pte = PACK_PTE( frame, GET_ATTRS(pte) | PG_TBL_WRITABLE );
     assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, addr, &pte) );
     memset((void *)(FLOOR(addr, PAGE_SIZE)), 0, PAGE_SIZE);
     return;

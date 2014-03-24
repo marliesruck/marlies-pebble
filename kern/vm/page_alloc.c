@@ -24,7 +24,7 @@
 
 
 /* ZFOD dummy frame */
-static void *zfod = NULL;
+void *zfod = NULL;
 
 /* TODO: make these dynamic */
 #define CHILD_PDE ( (void *)tomes[PG_TBL_ENTRIES - 2] )
@@ -35,10 +35,14 @@ static void *zfod = NULL;
  *  Helper functions
  *************************************************************************/
 
-void translate_attrs(pte_s *pte, unsigned int attrs)
+void translate_attrs(pte_t *pte, unsigned int attrs)
 {
-  pte->writable = (attrs & VM_ATTR_RDWR) ? 1 : 0;
-  pte->user = (attrs & VM_ATTR_USER) ? 1 : 0;
+  *pte = (attrs & VM_ATTR_RDWR)
+         ? (*pte) | PG_TBL_WRITABLE
+         : (*pte) & ~PG_TBL_WRITABLE;
+  *pte = (attrs & VM_ATTR_USER)
+         ? (*pte) | PG_TBL_USER
+         : (*pte) & ~PG_TBL_USER;
 
   return;
 }
@@ -70,7 +74,7 @@ void free_frame(void *frame, void *vaddr)
 
 void *alloc_page_table(pg_info_s *pgi, void *vaddr)
 {
-  pte_s pde;
+  pte_t pde;
 
   /* Serialize access to the free list */
   mutex_lock(&frame_allocator_lock);
@@ -82,14 +86,11 @@ void *alloc_page_table(pg_info_s *pgi, void *vaddr)
   /* Map the frame into virtual memory so we can read the address of the next
    * free frame */
   init_pte(&pde, frame);
-  pde.present = 1;
-  pde.writable = 1;
-  pde.user = 1;
+  pde = PACK_PTE(frame, PG_TBL_ATTRS);
   set_pde(pgi->pg_dir, vaddr, &pde);
 
   /* Update the head of the free list */
-  void *new_head = (void *)(pgi->pg_tbls[PG_DIR_INDEX(vaddr)][0].addr 
-                    << PG_TBL_SHIFT);
+  void *new_head = (void *)GET_ADDR(pgi->pg_tbls[PG_DIR_INDEX(vaddr)][0]);
   update_head(new_head);
 
   /* Relinquish the lock */
@@ -112,7 +113,7 @@ void *alloc_page_table(pg_info_s *pgi, void *vaddr)
  **/
 void *alloc_page_really(pg_info_s *pgi, void *vaddr, unsigned int attrs)
 {
-  pte_s pde;
+  pte_t pde;
 
   /* If the PDE isn't valid, make it so */
   if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, NULL)) {
@@ -127,8 +128,7 @@ void *alloc_page_really(pg_info_s *pgi, void *vaddr, unsigned int attrs)
   if (!frame) return NULL;
 
   /* Back vaddr with the new frame */
-  init_pte(&pde, frame);
-  pde.present = 1;
+  pde = PACK_PTE(frame, PG_TBL_PRESENT);
   translate_attrs(&pde, attrs);
   assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pde) );
 
@@ -144,7 +144,7 @@ void *alloc_page_really(pg_info_s *pgi, void *vaddr, unsigned int attrs)
 
 void *buffered_copy(pg_info_s *src, void *vaddr)
 {
-  pte_s pte;
+  pte_t pte;
 
   /* Allocate the dest page and map it into the current address 
    * space for copying
@@ -196,7 +196,8 @@ void pg_init_allocator(void)
  **/
 void *alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs)
 {
-  pte_s pde;
+  pte_t pde;
+  unsigned int real_attrs;
 
   /* If the PDE isn't valid, make it so */
   if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, NULL)) {
@@ -204,10 +205,9 @@ void *alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs)
   }
 
   /* Back vaddr with the ZFOD frame */
-  init_pte(&pde, zfod);
-  pde.present = 1;
-  pde.zfod = 1;
-  pde.user = (attrs & VM_ATTR_USER) ? 1 : 0;
+  real_attrs = PG_TBL_PRESENT | PG_TBL_ZFOD;
+  real_attrs |= (attrs & VM_ATTR_USER) ? PG_TBL_USER : 0;
+  pde = PACK_PTE(zfod, real_attrs);
   assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pde) );
 
   return zfod;
@@ -218,7 +218,7 @@ void *alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs)
 void *pg_alloc_phys(pg_info_s *pgi, void *vaddr)
 {
   void *frame, *new_head;
-  pte_s pte;
+  pte_t pte;
 
   /* If there's no PDE, we can't back the address */
   if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte))
@@ -232,7 +232,7 @@ void *pg_alloc_phys(pg_info_s *pgi, void *vaddr)
   if (!frame) return NULL;
 
   /* Back vaddr with frame */
-  pte.addr = ((unsigned int) frame) >> PG_TBL_SHIFT;
+  pte = PACK_PTE(frame, GET_ATTRS(pte));
   assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte) );
   tlb_inval_page(vaddr);
 
@@ -254,7 +254,7 @@ void *pg_alloc_phys(pg_info_s *pgi, void *vaddr)
  **/
 int page_set_attrs(pg_info_s *pgi, void *vaddr, unsigned int attrs)
 {
-  pte_s pte;
+  pte_t pte;
 
   /* Find the page's PTE */
   if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte))
@@ -278,24 +278,23 @@ int page_set_attrs(pg_info_s *pgi, void *vaddr, unsigned int attrs)
  **/
 int copy_page(pg_info_s *dst, pg_info_s *src, void *vaddr)
 {
-  pte_s pte;
+  void *frame;
+  pte_t pte;
 
   /* The page better exist in the parent */
   if (get_pte(src->pg_dir, src->pg_tbls, vaddr, &pte))
     return -1;
 
-  void *frame = (void *)(pte.addr << PG_TBL_SHIFT);
-
   /* Only copy non zfod pages*/
-  if (frame != zfod) {
+  if (GET_ADDR(pte) != zfod) {
     frame = buffered_copy(src, vaddr);
-    pte.addr = ((uint32_t)(frame)) >> PG_TBL_SHIFT;
+    pte = PACK_PTE(frame, GET_ATTRS(pte));
   }
 
   /* Map the new frame into the child */
   if(set_pte(dst->pg_dir, dst->pg_tbls, vaddr, &pte)) {
     alloc_page_table(dst, vaddr);
-    assert(!set_pte(dst->pg_dir, dst->pg_tbls, vaddr, &pte));
+    assert( !set_pte(dst->pg_dir, dst->pg_tbls, vaddr, &pte) );
   }
 
   return 0;
@@ -309,22 +308,23 @@ int copy_page(pg_info_s *dst, pg_info_s *src, void *vaddr)
  **/
 void free_page(pg_info_s *pgi, void *vaddr)
 {
-  pte_s pte;
+  pte_t pte;
 
   /* If the PDE isn't valid, there's nothing to free */
-  if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte)) return;
+  if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte))
+    return;
   
   /* Make the page writable so we can store an implicit pointer to 
    * the old head
    */
-  if(!pte.writable){
-    pte.writable = 1;
+  if( !(pte & PG_TBL_WRITABLE) ){
+    pte |= PG_TBL_WRITABLE;
     set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte);
     tlb_inval_page(vaddr);
   }
 
   /* Free the frame */
-  void *frame = (void *)(pte.addr << PG_TBL_SHIFT);
+  void *frame = (void *)GET_ADDR(pte);
   free_frame(frame, vaddr);
 
   /* Free the page; invalidate the tlb entry */

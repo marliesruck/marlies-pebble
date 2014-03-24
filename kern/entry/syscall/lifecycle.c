@@ -40,7 +40,7 @@
 void mode_switch(void *entry_point, void *sp);
 int finish_fork(void);
 
-void *init_child_tcb(void *child_cr3, pte_s *pd, pt_t *pt)
+void *init_child_tcb(void *child_cr3, pte_t *pd, pt_t *pt)
 {
   /* Initialize vm struct */
   thread_t *thread = task_init();
@@ -78,17 +78,14 @@ void *init_child_tcb(void *child_cr3, pte_s *pd, pt_t *pt)
  */
 int sys_fork(unsigned int esp)
 {
-  pte_s pde;
-  pt_t *child_pg_tables = (pt_t *)(CHILD_PDE);
-  pte_s *child_pd = child_pg_tables[PG_SELFREF_INDEX];
+  pte_t pde;
+  pt_t *child_pg_tables = CHILD_PDE;
+  pte_t *child_pd = child_pg_tables[PG_SELFREF_INDEX];
   task_t *curr_task = curr->task_info;
 
   /* Map the child's PD into the parent's address space */
   void *child_cr3 = alloc_page_table(&curr_task->vmi.pg_info, CHILD_PDE);
-  init_pte(&pde, child_cr3);
-  pde.present = 1;
-  pde.writable = 1;
-  /* Make the child's page directory self referential */
+  pde = PACK_PTE(child_cr3, PG_SELFREF_ATTRS);
   set_pte(curr_task->vmi.pg_info.pg_dir, curr_task->vmi.pg_info.pg_tbls,
           child_pd, &pde);
 
@@ -101,11 +98,11 @@ int sys_fork(unsigned int esp)
   vm_copy(&child_task->vmi, &curr_task->vmi);
 
   /* Unmap child PD */
-  init_pte(&pde, NULL);
-  pde.present = 0;
+  pde = PACK_PTE(NULL, 0);
   set_pde(curr_task->vmi.pg_info.pg_dir, child_pd, &pde);
   tlb_inval_tome(child_pg_tables);
   tlb_inval_page(curr_task->vmi.pg_info.pg_tbls[PG_DIR_INDEX(child_pd)]);
+
   /* Copy the parent's kstack */
   unsigned int offset = esp - ((unsigned int) curr->kstack);
   size_t len = ((unsigned int) &curr->kstack[KSTACK_SIZE]) - esp;

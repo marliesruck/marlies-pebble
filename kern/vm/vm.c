@@ -109,7 +109,7 @@ mem_region_s *mreg_extract_any(cll_list *map)
  *
  *  @return Void.
  **/
-void vm_init(vm_info_s *vmi, pte_s *pd, pt_t *pt)
+void vm_init(vm_info_s *vmi, pte_t *pd, pt_t *pt)
 {
   vmi->pg_info.pg_dir = pd;
   vmi->pg_info.pg_tbls = pt;

@@ -116,7 +116,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   vm_init_allocator();
 
   /* First executable page directory */
-  pte_s *pd = retrieve_head();
+  pte_t *pd = retrieve_head();
   update_head(*(void **)pd);
   init_pd(pd, pd);
 
