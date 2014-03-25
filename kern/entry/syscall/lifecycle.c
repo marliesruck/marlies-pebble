@@ -186,11 +186,10 @@ void sys_set_status(int status)
 void sys_vanish(void)
 {
   cll_node *n;
+
   thrlist_del(curr);
 
   task_t *task = curr->task_info;
-
-  /* Sock lock? */
 
   /* Decrement the number of living threads */
   mutex_lock(&task->lock);
@@ -271,7 +270,7 @@ int sys_wait(int *status_ptr)
     if(task->live_children == 0){
         /* Avoid unbounded blocking */
         mutex_unlock(&task->lock);
-        return -1;
+        return 0;
       }
     else{
       cvar_wait(&task->cv, &task->lock);

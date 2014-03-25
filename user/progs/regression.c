@@ -17,17 +17,19 @@ int main()
     exec("cooperative_terminate", NULL);
   }
 
-  wait(NULL);
+  while(wait(NULL));
 
   if(!fork()){
     exec("coolness_terminate", NULL);
   }
-  wait(NULL);
+
+  while(wait(NULL));
 
   if(!fork()){
     exec("coy_terminate", NULL);
   }
-  wait(NULL);
+
+  while(wait(NULL));
 
   /*** --- Classic Init Routine --- ***/
 
