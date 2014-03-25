@@ -245,12 +245,10 @@ void sys_vanish(void)
 
     /* Your parent should not reap you until you've descheduled yourself */
     sched_mutex_unlock_and_block(curr, &parent->lock);
-    schedule();
   }
   /* Remove yourself from the runnable queue */
   else{
     sched_block(curr);
-    schedule();
   }
 
   assert(0); /* Should never reach here */

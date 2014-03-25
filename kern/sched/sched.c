@@ -47,6 +47,8 @@ int raw_block(thread_t *thr)
   assert(cll_extract(&runnable, n) == n);
   free(n);
   thr->state = THR_BLOCKED;
+  
+  schedule();
 
   return 0;
 }
@@ -124,11 +126,28 @@ int sched_mutex_unlock_and_block(thread_t *thr, mutex_s *lock)
   enable_interrupts();
   return ret;
 }
+/** @brief Make a thread eligible for CPU time.
+ *
+ *  This operation is not atomic.
+ *
+ *  @param n The node to add to the runnable queue.
+ *  @param thr The thread to make runnable.
+ *
+ *  @return Void. 
+ **/
+void raw_unblock(thread_t *thr, queue_node_s *n)
+{
+  queue_enqueue(&runnable, n);
+  thr->state = THR_RUNNING;
+
+  return;
+}
 
 /** @brief Make a thread eligible for CPU time.
  *
+ *  This operation is atomic.
+ *
  *  @param thr The thread to make runnable.
- *  @param atomic Flag indicating atomaticity of enqueue.
  *
  *  @return 0 on success; a negative integer error code on failure.
  **/
@@ -144,10 +163,16 @@ int sched_unblock(thread_t *thr, int atomic)
 
   /* Lock, enqueue, unlock */
   if (atomic) disable_interrupts();
+  /*
   queue_enqueue(&runnable, n);
   thr->state = THR_RUNNING;
+  */
+  raw_unblock(thr,n);
 
   if (atomic) enable_interrupts();
+
+  if(atomic)
+  schedule();
 
   return 0;
 }

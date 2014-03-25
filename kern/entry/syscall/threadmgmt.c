@@ -33,7 +33,6 @@ int sys_deschedule(int *reject)
   if (*reject) return 0;
 
   sched_mutex_unlock_and_block(curr, &curr->lock);
-  schedule();
 
   return 0;
 }

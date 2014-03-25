@@ -1,26 +1,38 @@
 /** @file dispatch.h
  *
- *  @brief Declares our ctx_switch API.
+ *  @brief Assembly and C functions for mode switches.
  *
- *  TODO: We might consider declaring a wrapper around ctx_switch that
- *  pulls the requisite fields from the thread struct...
- *
- *  Also if we are switching between threads within the same task, we should not
- *  reload cr3 to avoid flushing the TLB
- *
- *  Note: I did the comments in the .h file since this API contains asm
- *  functions
+ *  Dispatch() is an assembly function for context switching and half_dispatch()
+ *  is an assembly function specifically for transitioning from kernel to user
+ *  mode.
  *
  *  @author Marlies Ruck(mruck)
  *  @author Enrique Naudon (esn)
  *
  *  @bug No known bugs
  **/
+
 #ifndef __DISPATCH_H__
 #define __DISPATCH_H__
 
 #include <thread.h>
 
+/** @brief Mode switch from kernel to user.
+ *
+ *  @param entry_point Value EIP should be set to.
+ *  @param sp Vale ESP should be set to.
+ *
+ *  @return Void.
+ **/
+void half_dispatch(void *entry_point, void *sp);
+
+/** @brief Wrapper for dispatch
+ *
+ *  @param next Thread to dispatch.
+ *
+ *  @return Void.
+ **/
+void dispatch_wrapper(thread_t *next);
 
 /* @brief Switch between threads.
  * 
@@ -44,11 +56,6 @@
  */
 void dispatch(void *prev_sp, void *prev_pc, void *next_sp, void *next_pc,
                 unsigned int next_cr3, void *kstack_high);
-
-
-void dispatch_wrapper(thread_t *next);
-
-void half_dispatch(void *entry_point, void *sp);
 
 #endif /* __DISPATCH_H__ */
 
