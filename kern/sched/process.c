@@ -1,4 +1,4 @@
-/* @file task.c
+/* @file process.c
  * 
  * @brief Defines structures and functions for task manipulation.
  *
@@ -11,15 +11,17 @@
 /* Pebble specific includes */
 #include <cllist.h>
 #include <process.h>
-#include <thread.h>
 #include <sched.h>
+#include <thread.h>
 
 /* Libc specific includes */
 #include <assert.h>
-#include <stdlib.h>
 #include <malloc.h>
+#include <stdlib.h>
 
-/* Keep track of tasks */
+/** @var task_list 
+ *  @brief The list of tasks.
+ **/
 static cll_list task_list = CLL_LIST_INITIALIZER(task_list);
 /* And make all accesses atomic */
 mutex_s task_list_lock = MUTEX_INITIALIZER(task_list_lock);

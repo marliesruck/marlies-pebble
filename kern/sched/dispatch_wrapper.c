@@ -1,3 +1,11 @@
+/** @files dispatch_wrapper.c
+ *
+ *  @brief Defines C wrapper for the assembly routine dispatch().
+ *
+ *  @author Enrique Naudon (esn)
+ *  @author Marlies Ruck (mruck)
+ **/
+
 #include <dispatch.h>
 
 /* Pebbles specific includes */

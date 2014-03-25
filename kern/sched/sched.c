@@ -6,15 +6,18 @@
  *  @author Marlies Ruck (mruck)
  **/
 
+#include <simics.h>
 #include <sched.h>
 
+/* Pebble specific includes */
 #include <dispatch.h>
 
-#include <asm.h>
+/* Libc specific includes */
 #include <assert.h>
 #include <malloc.h>
-#include <simics.h>
 
+/* x86 includes */
+#include <asm.h>
 
 /** @var runnable
  *  @brief The queue of runnable threads.

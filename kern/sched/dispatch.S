@@ -1,12 +1,9 @@
-/** @files asm_dispatch.S
+/** @files dispatch.S
  *
  *  @brief Assembly routines for context and mode switches.
  *
  *  @author Enrique Naudon (esn)
  *  @author Marlies Ruck (mruck)
- *
- *  @bug We could pass the address of the prev and next tcb if we want to reduce
- *  the number of args we are passing to asm_dispatch
  **/
 
 #include <x86/seg.h>
@@ -50,7 +47,6 @@ dispatch:
   # Epilogue
   pop     %ebp
   ret
-
 
 store_and_switch:
   # Prologue

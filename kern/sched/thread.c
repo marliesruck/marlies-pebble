@@ -14,23 +14,24 @@
 #include <simics.h>
 
 /* Pebble specific includes */
-#include <thread.h>
 #include <cllist.h>
-#include <process.h>
 #include <pg_table.h>
+#include <process.h>
+#include <thread.h>
 #include <vm.h>
 
 /* Libc specific includes */
 #include <assert.h>
-#include <stdlib.h>
 #include <malloc.h>
-
+#include <stdlib.h>
 
 /* Atomically acquire a tid */
 static int tid = 0;
 static mutex_s tid_lock = MUTEX_INITIALIZER(tid_lock); 
 
-/* Thread list */
+/** @var thread_list 
+ *  @brief The list of threads.
+ **/
 static cll_list thread_list = CLL_LIST_INITIALIZER(thread_list);
 static mutex_s thrlist_lock = MUTEX_INITIALIZER(thrlist_lock);
 
