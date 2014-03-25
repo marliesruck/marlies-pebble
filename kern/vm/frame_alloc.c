@@ -26,6 +26,8 @@ typedef char frame_t[PAGE_SIZE];
 const frame_t *frames = (const frame_t *)NULL;
 int frame_index = USER_MEM_START/sizeof(frame_t);
 
+mutex_s frame_allocator_lock = MUTEX_INITIALIZER(frame_allocator_lock);
+
 /* Pointer to the head of the free list */
 static void *freelist_p;
 
@@ -41,7 +43,7 @@ int frame_remaining(void)
  *
  *  @return Void.
  **/
-void init_frame_allocator(void)
+void fr_init_allocator(void)
 {
   int i;
   int lim = machine_phys_frames();
@@ -70,7 +72,6 @@ void init_frame_allocator(void)
  */
 void *retrieve_head(void)
 {
-  assert(freelist_p != zfod);
   return freelist_p;
 }
 
@@ -83,12 +84,10 @@ void *retrieve_head(void)
  **/
 void update_head(void *frame)
 {
-  /* Update head */
-  assert(frame != zfod);
   freelist_p = frame;
-
   return;
 }
+
 /* @brief Updates head.
  *
  * Takes a virtual address, computes the floor (the location of the implicit
@@ -99,11 +98,9 @@ void update_head(void *frame)
  */
 void update_head_wrapper(void *addr)
 {
-  /* The pointer to the next free frame is stored in the lowest 
-   * addressable word */
   uint32_t *floor = (uint32_t *)(FLOOR(addr, PAGE_SIZE));
+  update_head((void *)*floor);
 
-  assert(((void *)(*floor)) != zfod);
-  freelist_p = (void *)(*floor);
+  return;
 }
 

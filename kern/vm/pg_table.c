@@ -23,7 +23,8 @@
 page_t *pages = (page_t *)NULL;
 tome_t *tomes = (tome_t *)NULL;
 
-pte_s *kern_pt[KERN_PD_ENTRIES];
+#define KERN_PTE_ATTRS ( PG_TBL_PRESENT | PG_TBL_WRITABLE | PG_TBL_GLOBAL )
+static pte_t *kern_pt[KERN_PD_ENTRIES];
 
 
 /** @brief Initialize kernel pages.
@@ -36,19 +37,19 @@ pte_s *kern_pt[KERN_PD_ENTRIES];
  **/
 void init_kern_pt(void)
 {
+  void *frame;
   int i, j;
 
-  /* Direct map kernel memory */
-  for (i = 0; i < KERN_PD_ENTRIES; i++) {
-    kern_pt[i] = retrieve_head();
-    update_head_wrapper(kern_pt[i]);
+  for (i = 0; i < KERN_PD_ENTRIES; i++)
+  {
+    /* Allocate kernel page table */
+    frame = retrieve_head();
+    kern_pt[i] = frame;
+    update_head(*(void **)frame);
 
+    /* Direct map kernel pages */
     for (j = 0; j < PG_TBL_ENTRIES; j++) {
-      init_pte(&kern_pt[i][j],
-               (void *)(i * PAGE_SIZE * 1024 + j * PAGE_SIZE));
-      kern_pt[i][j].present = 1;
-      kern_pt[i][j].writable = 1;
-      kern_pt[i][j].global = 1;
+      kern_pt[i][j] = PACK_PTE(&tomes[i][j], KERN_PTE_ATTRS);
     }
   }
 
@@ -66,22 +67,17 @@ void init_kern_pt(void)
  *
  *  @return Void.
  **/
-void init_pd(pte_s *pd, void *frame)
+void init_pd(pte_t *pd, void *frame)
 {
   int i;
 
+  /* The page directory is also a page table... */
+  pd[PG_SELFREF_INDEX] = PACK_PTE(frame, PG_SELFREF_ATTRS);
+
   /* Map the kernel's page table */
   for (i = 0; i < KERN_PD_ENTRIES; i++) {
-    init_pte(&pd[i], kern_pt[i]);
-    pd[i].present = 1;
-    pd[i].writable = 1;
-    pd[i].global = 1;
+    pd[i] = PACK_PTE(kern_pt[i], KERN_PTE_ATTRS);
   }
-
-  /* The page directory is also a page table... */
-  init_pte(&pd[PG_SELFREF_INDEX], frame);
-  pd[PG_SELFREF_INDEX].present = 1;
-  pd[PG_SELFREF_INDEX].writable = 1;
 
   /* Init the directory */
   for (i = KERN_PD_ENTRIES; i < PG_TBL_ENTRIES; i++) {
@@ -99,7 +95,7 @@ void init_pd(pte_s *pd, void *frame)
  *
  *  @return The page directory entry for the specified virtual address.
  **/
-pte_s get_pde(pte_s *pd, void *addr)
+pte_t get_pde(pte_t *pd, void *addr)
 {
   int pdi;
   pdi = PG_DIR_INDEX(addr);
@@ -114,7 +110,7 @@ pte_s get_pde(pte_s *pd, void *addr)
  *
  *  @return Void.
  **/
-void set_pde(pte_s *pd, void *addr, pte_s *pte)
+void set_pde(pte_t *pd, void *addr, pte_t *pte)
 {
   int pdi;
   pdi = PG_DIR_INDEX(addr); 
@@ -133,10 +129,9 @@ void set_pde(pte_s *pd, void *addr, pte_s *pte)
  *
  *  @return Void.
  **/
-void init_pte(pte_s *pte, void *frame)
+void init_pte(pte_t *pte, void *frame)
 {
-  memset(pte, 0, sizeof(pte_s));
-  pte->addr = ((unsigned int) frame) >> PG_TBL_SHIFT;
+  *pte = PACK_PTE(frame, 0);
   return;
 }
 
@@ -146,7 +141,7 @@ void init_pte(pte_s *pte, void *frame)
  *
  *  @return Void.
  **/
-void init_pt(pte_s *pt)
+void init_pt(pte_t *pt)
 {
   int i;
 
@@ -167,14 +162,14 @@ void init_pt(pte_s *pt)
  *
  *  @return 0 on success; a negative integer error code on failure.
  **/
-int get_pte(pte_s *pd, pt_t *pt, void *addr, pte_s *dst)
+int get_pte(pte_t *pd, pt_t *pt, void *addr, pte_t *dst)
 {
   int pdi, pti;
-  pte_s pde;
+  pte_t pde;
   
   /* Return an error if the PDE isn't present */
   pde = get_pde(pd, addr);
-  if (!pde.present)
+  if ( !(pde & PG_TBL_PRESENT) )
     return -1;
 
   /* Compute index into page directory */
@@ -196,14 +191,14 @@ int get_pte(pte_s *pd, pt_t *pt, void *addr, pte_s *dst)
  *
  *  @return 0 on success; a negative integer error code on failure.
  **/
-int set_pte(pte_s *pd, pt_t *pt, void *addr, pte_s *pte)
+int set_pte(pte_t *pd, pt_t *pt, void *addr, pte_t *pte)
 {
   int pdi, pti;
-  pte_s pde;
+  pte_t pde;
   
-  /* Return an error if the PDE isn't present */
+  /* Return an error if the PDE isn't present */ 
   pde = get_pde(pd, addr);
-  if (!pde.present)
+  if ( !(pde & PG_TBL_PRESENT) )
     return -1;
 
   /* Compute index into page directory */

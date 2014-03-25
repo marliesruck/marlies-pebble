@@ -152,8 +152,8 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
  **/
 void *raw_init_pd(void)
 {
-  pte_s *pd = retrieve_head();
-  update_head_wrapper(pd);
+  pte_t *pd = retrieve_head();
+  update_head(*(void **)pd);
   init_pd(pd, pd);
   return pd;
 }
@@ -173,15 +173,9 @@ void init_kdata_structures(void)
   install_sys_handlers(); 
   clear_console();
 
-  /* Initalize frame allocator data structure */
-  init_frame_allocator();
-
-  /* Initialized kernel page tables */
-  init_kern_pt();
-
-  /* Allocate dummy frame for admiring zeroes */
-  zfod = smemalign(PAGE_SIZE, PAGE_SIZE);
-  memset(zfod,0,PAGE_SIZE);
+  /* Initalize memory modules...starts with virtual memory and peels away each
+   * layer of abstraction until reaching the frame allocator */
+  vm_init_allocator();
 
   return;
 }

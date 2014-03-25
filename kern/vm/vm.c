@@ -101,11 +101,6 @@ mem_region_s *mreg_extract_any(cll_list *map)
  *  VM Information manipulation
  *************************************************************************/
 
-
-/*************************************************************************
- *  The actual vm allocator
- *************************************************************************/
-
 /** @brief Initialize a VM info struct.
  *
  *  @param vmi The vm info struct to initialize.
@@ -114,7 +109,7 @@ mem_region_s *mreg_extract_any(cll_list *map)
  *
  *  @return Void.
  **/
-void vm_init(vm_info_s *vmi, pte_s *pd, pt_t *pt)
+void vm_init(vm_info_s *vmi, pte_t *pd, pt_t *pt)
 {
   vmi->pg_info.pg_dir = pd;
   vmi->pg_info.pg_tbls = pt;
@@ -122,6 +117,23 @@ void vm_init(vm_info_s *vmi, pte_s *pd, pt_t *pt)
 
   return;
 }
+
+
+/*************************************************************************
+ *  The actual vm allocator
+ *************************************************************************/
+
+/** @brief Intitialize the VM sub-system.
+ *
+ *  @return Void.
+ **/
+void vm_init_allocator(void)
+{
+  pg_init_allocator();
+
+  return;
+}
+
 /*  @brief Allocates region struct but no physical frames to back it
  *
  *  This function allocates a region of virtual memory in the address-space
@@ -298,7 +310,7 @@ int vm_copy(vm_info_s *dst, vm_info_s *src)
 
     /* Allocate pages for the region */
     for (addr = sreg->start; addr < sreg->limit; addr += PAGE_SIZE)
-      assert( !copy_page(&dst->pg_info, &src->pg_info, addr, sreg->attrs) );
+      assert( !copy_page(&dst->pg_info, &src->pg_info, addr) );
   }
 
   return 0;

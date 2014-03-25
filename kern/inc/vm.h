@@ -37,7 +37,8 @@ struct vm_info {
 };
 typedef struct vm_info vm_info_s;
 
-void vm_init(vm_info_s *vmi, pte_s *pd, pt_t *pt);
+void vm_init_allocator(void);
+void vm_init(vm_info_s *vmi, pte_t *pd, pt_t *pt);
 void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
                unsigned int attrs);
 void vm_free(vm_info_s *vmi, void *va_start);

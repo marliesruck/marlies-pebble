@@ -212,9 +212,10 @@ void int_gen_prot(void)
 #include <x86/cr.h>
 /* Libc includes */
 #include <string.h>
+extern void *zfod;
 void int_page_fault(void *pc, void *error_code)
 {
-  pte_s pte;
+  pte_t pte;
 
   /* Retrieve PTE for faulting address */
   void *addr = (void *)get_cr2();
@@ -222,48 +223,22 @@ void int_page_fault(void *pc, void *error_code)
   if (get_pte(pgi->pg_dir, pgi->pg_tbls, addr, &pte)) {
     lprintf("Error: Page fault on table-less address %p by instruction %p", 
             addr, pc);
-    MAGIC_BREAK;
     panic("Error: Page fault!");
   }
 
-  /* oooops...ZFOD */
-
-  /* TO DO: get rid of this extra bit */
-  if(pte.zfod){
-
-    /* Serialize access to the free list */
-    mutex_lock(&frame_allocator_lock);
-
-    /* Grab the head of free list */
-    void *frame = retrieve_head();
-    //lprintf("frame: %p", frame);
-    if (!frame){
-      lprintf("Error: No frames left to back zfod page"); 
-      panic("Error: Page fault!");
-    }
-
-    pte.addr = ((unsigned int) frame) >> PG_TBL_SHIFT;
-    pte.writable = 1;
-    pte.user = 1;
-    pte.present = 1;
+  /* TODO: get rid of this extra bit */
+  if (GET_ADDR(pte) == zfod) {
+    void *frame = pg_alloc_phys(pgi, addr);
+    assert(frame);
+    pte = PACK_PTE( frame, GET_ATTRS(pte) | PG_TBL_WRITABLE );
     assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, addr, &pte) );
-
-    tlb_inval_page(addr);
-
-    update_head_wrapper(addr);
-
-    /* Relinquish the lock */
-    mutex_unlock(&frame_allocator_lock);
-
     memset((void *)(FLOOR(addr, PAGE_SIZE)), 0, PAGE_SIZE);
-
     return;
   }
 
   /* It's a real fault */
   lprintf("Error: Page fault on table-less address %p by instruction %p", 
           addr, pc);
-  MAGIC_BREAK;
   panic("Error: Page fault!");
 
   return;
