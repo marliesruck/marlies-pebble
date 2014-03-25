@@ -1,5 +1,7 @@
 /* @file thread.h
  *
+ * @brief Declares structures and functions for thread manipulation.
+ *
  * @author Enrique Naudon (esn)
  * @author Marlies Ruck (mruck)
  *
@@ -32,7 +34,7 @@ enum thread_state {
 typedef enum thread_state thr_state_e;
 
 struct thread {
-  task_t *task_info;
+  struct task *task_info;
   thr_state_e state;
   mutex_s lock;
   int tid;
@@ -43,8 +45,7 @@ struct thread {
 typedef struct thread thread_t;
 
 /* Initialization routines */
-thread_t *task_init(void);
-thread_t *thread_init(task_t *task);
+thread_t *thread_init(struct task *t);
 
 /* Manipulation routines */
 void thrlist_enqueue(thread_t *thread, queue_s *q);

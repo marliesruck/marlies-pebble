@@ -1,16 +1,25 @@
-/* @file process.h
+/** @file process.h
  *
- */
+ *  @brief Declares structures and functions for task manipulation.
+ *
+ *  @author Enrique Naudon (esn)
+ *  @author Marlies Ruck (mruck)
+ **/
 #ifndef __PROCESS_H__
 #define __PROCESS_H__
 
-#include <vm.h>
-
+/* x86 specific inclues */
 #include <x86/page.h>
-#include <stdint.h>
+
+/* Pebbles specific includes */
+#include <vm.h>
+#include <thread.h>
 #include <cllist.h>
 #include <mutex.h>
-#include  <cvar.h>
+#include <cvar.h>
+
+/* Libc specific includes */
+#include <stdint.h>
 
 extern mutex_s task_list_lock;
 
@@ -38,13 +47,15 @@ typedef struct task{
   int status;
 }task_t;
 
-/* This does not belong here */
+/* Keep track of init for zombie children */
 task_t *init;
+
+/* Task manipulation routines */
+struct thread *task_init(void);
 
 /* Task list manipulation routines */
 int tasklist_add(task_t *t);
 int tasklist_del(task_t *t);
 task_t *tasklist_find(task_t *t);
-
 
 #endif /* _PROCESS_H */

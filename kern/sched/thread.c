@@ -13,14 +13,14 @@
  */
 #include <simics.h>
 
+/* Pebble specific includes */
+#include <thread.h>
 #include <cllist.h>
 #include <process.h>
 #include <pg_table.h>
-#include <sched.h>
-#include <spin.h>
-#include <thread.h>
 #include <vm.h>
 
+/* Libc specific includes */
 #include <assert.h>
 #include <stdlib.h>
 #include <malloc.h>
@@ -28,44 +28,12 @@
 
 /* Atomically acquire a tid */
 static int tid = 0;
-static spin_s tid_lock = SPIN_INITIALIZER();
+static mutex_s tid_lock = MUTEX_INITIALIZER(tid_lock); 
 
 /* Thread list */
 static cll_list thread_list = CLL_LIST_INITIALIZER(thread_list);
 static mutex_s thrlist_lock = MUTEX_INITIALIZER(thrlist_lock);
 
-/* @brief Initialize a task and its root thread.
- *
- * @return Address of the initializaed root thread.
- */
-thread_t *task_init(void)
-{
-  task_t *task = malloc(sizeof(task_t));
-
-  /* Initialize vm? */
-  vm_init(&task->vmi, PG_TBL_ADDR[PG_SELFREF_INDEX], PG_TBL_ADDR);
-
-  /* Keep track of threads in a task */
-  task->num_threads = 1;
-  cll_init_list(&task->peer_threads);
-
-  /* Keep track of children alive and dead */
-  task->live_children = 0;
-  queue_init(&task->dead_children);
-  cvar_init((&task->cv));
-
-  task->parent = curr->task_info;
-
-  /* Initialize the task struct lock */
-  mutex_init(&task->lock);
-
-  /* Initialize root thread with new task */
-  thread_t *thread = thread_init(task);
-  task->orig_tid = thread->tid;
-
-
-  return thread;
-}
 
 /* @brief Initialize a thread.
  *
@@ -94,9 +62,9 @@ thread_t *thread_init(task_t *task)
   mutex_init(&thread->lock);
 
   /* Atomically acquire TID */
-  spin_lock(&tid_lock);
+  mutex_lock(&tid_lock);
   thread->tid = ++tid;
-  spin_unlock(&tid_lock);
+  mutex_unlock(&tid_lock);
 
   /* Add to thread list */
   thrlist_add(thread);

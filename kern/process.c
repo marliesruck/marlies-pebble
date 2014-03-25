@@ -11,8 +11,10 @@
 /* Pebble specific includes */
 #include <cllist.h>
 #include <process.h>
+#include <thread.h>
+#include <sched.h>
 
-/* Libc includes */
+/* Libc specific includes */
 #include <assert.h>
 #include <stdlib.h>
 #include <malloc.h>
@@ -21,6 +23,38 @@
 static cll_list task_list = CLL_LIST_INITIALIZER(task_list);
 /* And make all accesses atomic */
 mutex_s task_list_lock = MUTEX_INITIALIZER(task_list_lock);
+
+/* @brief Initialize a task and its root thread.
+ *
+ * @return Address of the initializaed root thread.
+ */
+thread_t *task_init(void)
+{
+  task_t *task = malloc(sizeof(task_t));
+
+  /* Initialize vm */
+  vm_init(&task->vmi, PG_TBL_ADDR[PG_SELFREF_INDEX], PG_TBL_ADDR);
+
+  /* Keep track of threads in a task */
+  task->num_threads = 1;
+  cll_init_list(&task->peer_threads);
+
+  /* Keep track of children alive and dead */
+  task->live_children = 0;
+  queue_init(&task->dead_children);
+  cvar_init((&task->cv));
+
+  task->parent = curr->task_info;
+
+  /* Initialize the task struct lock */
+  mutex_init(&task->lock);
+
+  /* Initialize root thread with new task */
+  thread_t *thread = thread_init(task);
+  task->orig_tid = thread->tid;
+
+  return thread;
+}
 
 /** @brief Add a task to the task list.
  *
