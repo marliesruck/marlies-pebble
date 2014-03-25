@@ -1,4 +1,4 @@
-/** @file vm.c
+/** @file page_alloc.c
  *
  *  @brief Implements out page allocator.
  *
@@ -193,7 +193,7 @@ void pg_init_allocator(void)
  *  @param vaddr The virtual address to allocate.
  *  @param attrs The attributes for the allocation.
  *
- *  @return Void.
+ *  @return A pointer to the frame backing the allocated page.
  **/
 void *alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs)
 {
@@ -286,7 +286,7 @@ int copy_page(pg_info_s *dst, pg_info_s *src, void *vaddr)
   if (get_pte(src->pg_dir, src->pg_tbls, vaddr, &pte))
     return -1;
 
-  /* Only copy non zfod pages*/
+  /* Only copy non-ZFOD pages*/
   if (GET_ADDR(pte) != zfod) {
     frame = buffered_copy(src, vaddr);
     pte = PACK_PTE(frame, GET_ATTRS(pte));
@@ -369,3 +369,37 @@ void free_unmapped_frame(void *frame, pg_info_s *pgi)
  tlb_inval_page(buf);
  sfree(buf, PAGE_SIZE);
 }
+
+/** @brief Handle page faults.
+ *
+ *  We try to back faulting ZFOD pages with real physical frames; nothing
+ *  is done with non-ZFOD pages.
+ *
+ *  @param pgi Page table information.
+ *  @param vaddr The faulting virtual address.
+ *
+ *  @return 0 on success; a negative integer error code on failure.
+ **/
+int pg_page_fault_handler(pg_info_s *pgi, void *vaddr)
+{
+  pte_t pte;
+
+  /* Get the faulting address' PTE */
+  if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte))
+    return -1;
+
+  /* Back ZFOD pages */
+  if (GET_ADDR(pte) == zfod)
+  {
+    /* Try to get a real frame */
+    if ( !pg_alloc_phys(pgi, vaddr) )
+      return -1;
+
+    /* Make the page writable and zero it */
+    page_set_attrs(pgi, vaddr, GET_ATTRS(pte) | PG_TBL_WRITABLE);
+    memset((void *)(FLOOR(vaddr, PAGE_SIZE)), 0, PAGE_SIZE);
+  }
+
+  return 0;
+}
+
