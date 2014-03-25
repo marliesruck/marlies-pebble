@@ -49,10 +49,11 @@ task_t *init;
 
 /* Task manipulation routines */
 struct thread *task_init(void);
+void task_free(task_t *task);
+void task_signal_parent(task_t *task);
 
 /* Task list manipulation routines */
 int tasklist_add(task_t *t);
 int tasklist_del(task_t *t);
-task_t *tasklist_find(task_t *t);
 
 #endif /* _PROCESS_H */

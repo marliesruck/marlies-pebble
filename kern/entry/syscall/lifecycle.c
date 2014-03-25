@@ -36,7 +36,6 @@
  *  Internal helper functions
  *************************************************************************/
 
-/* TODO: Maybe these get headers? */
 int finish_fork(void);
 
 void *init_child_tcb(void *child_cr3, pte_t *pd, pt_t *pt)
@@ -184,8 +183,6 @@ void sys_set_status(int status)
 
 void sys_vanish(void)
 {
-  cll_node *n;
-
   thrlist_del(curr);
 
   task_t *task = curr->task_info;
@@ -198,53 +195,12 @@ void sys_vanish(void)
   /* You are the last thread. Tell your parent to reap you */
   if(live_threads == 0){
 
-    /* Remove yourself from the task list so that your children cannot add
-     * themselves to your dead children list */
-    tasklist_del(task);
+    /* Free your resources */
+    task_free(task);
 
-    /* Acquire and release your lock in case your child grabbed your task lock
-     * before you removed yourself from the task list */
-    mutex_lock(&task->lock);
-    mutex_unlock(&task->lock);
-
-    /* Free your virtual memory */
-    vm_final(&task->vmi);
-
-    /* Make your dead children the responsibility of init */
-    while(!cll_empty(&task->dead_children)){
-      n = cll_extract(&task->dead_children, task->dead_children.next);
-      mutex_lock(&init->lock);
-      cll_insert(&init->dead_children, n);
-      mutex_unlock(&init->lock);
-    }
-
-    /* Check if your parent is still alive...
-     * This function does NOT release the list lock so that you can add 
-     * yourself as dead child before the parent exits (since you must
-     * lock the task list to exit) */
-    task_t *parent = task->parent;
-    if(!tasklist_find(parent)) 
-      parent = init; /* Your parent is dead. Tell init instead */
-    else
-    /* Live children count is for direct descendents only.  Don't do this if
-     * your parent is init */
-      parent->live_children--;
-
-    /* Grab your parent's lock to prevent them from exiting while you are trying
-     * to add yourself as a dead child */
-    mutex_lock(&parent->lock);
-
-    /* Release the list lock */
-    mutex_unlock(&task_list_lock);
-
-    /* Add yourself as a dead child */
-    n = malloc(sizeof(cll_node));
-    cll_init_node(n, task);
-    cll_insert(&parent->dead_children, n);
-    cvar_signal(&parent->cv);
-
-    /* Your parent should not reap you until you've descheduled yourself */
-    sched_mutex_unlock_and_block(curr, &parent->lock);
+    /* Wake your parent if he/she is waiting on you and
+     * remove yourself from the runnable queue */
+    task_signal_parent(task);
   }
   /* Remove yourself from the runnable queue */
   else{
