@@ -8,7 +8,7 @@
 
 #include <sched.h>
 
-#include <ctx_switch.h>
+#include <dispatch.h>
 
 #include <asm.h>
 #include <assert.h>

@@ -1,4 +1,4 @@
-/** @files asm_ctx_switch.S
+/** @files asm_dispatch.S
  *
  *  @brief Assembly routines for context and mode switches.
  *
@@ -6,7 +6,7 @@
  *  @author Marlies Ruck (mruck)
  *
  *  @bug We could pass the address of the prev and next tcb if we want to reduce
- *  the number of args we are passing to asm_ctx_switch
+ *  the number of args we are passing to asm_dispatch
  **/
 
 #include <x86/seg.h>
@@ -16,8 +16,8 @@
 
 .extern set_esp0
 
-.global ctx_switch
-ctx_switch:
+.global dispatch
+dispatch:
   # Prologue
   push    %ebp
   mov     %esp, %ebp
@@ -68,8 +68,8 @@ store_and_switch:
   mov     %edi, %cr3           # Load correct PTBR
   jmp     *%esi                # Jump to new thread's EIP
 
-.global mode_switch
-mode_switch:
+.global half_dispatch
+half_dispatch:
 
   # Prologue
   push  %ebp                      # Store old EBP

@@ -44,7 +44,8 @@
 #include <thread.h>
 #include <usr_stack.h>
 #include <vm.h>
-#include <ctx_switch.h>
+#include <sched.h>
+#include <dispatch.h>
 
 /* --- Internal helper routines --- */
 void init_kdata_structures(void);
@@ -95,7 +96,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   set_esp0((uint32_t)(&curr->kstack[KSTACK_SIZE]));
 
   /* Launch init and enter user space...The iret enables interrupts */
-  mode_switch(curr->pc, curr->sp);
+  half_dispatch(curr->pc, curr->sp);
 
   /* We should never reach here! */
   assert(0);
@@ -167,7 +168,7 @@ thread_t *hand_load_task(void *pd, const char *fname)
   return thread;
 }
 
-/** @brief Prepare the kernel stack for mode_switch().
+/** @brief Prepare the kernel stack for half_dispatch().
  *
  *  This is only used for making idle a valid scheduleable unit, but it can be
  *  called for any other thread that needs to initialize its kernel stack in
@@ -186,7 +187,7 @@ void init_stack(thread_t *thr)
   PUSH(esp, 0);
 
   /* Set the correct program counter and stack pointer */
-  thr->pc = mode_switch;
+  thr->pc = half_dispatch;
   thr->sp = esp;
 
   return;

@@ -1,4 +1,4 @@
-#include <ctx_switch.h>
+#include <dispatch.h>
 
 /* Pebbles specific includes */
 #include <thread.h>
@@ -17,7 +17,7 @@ void dispatch_wrapper(thread_t *next)
   prev = curr;
   curr = next;
 
-  ctx_switch(&prev->sp, &prev->pc, next->sp, next->pc,
+  dispatch(&prev->sp, &prev->pc, next->sp, next->pc,
                next->task_info->cr3, &next->kstack[KSTACK_SIZE]);
   return;
 }

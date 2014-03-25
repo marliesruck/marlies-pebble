@@ -10,7 +10,7 @@
 #include <sc_utils.h>
 
 /* Pebble includes */
-#include <ctx_switch.h>
+#include <dispatch.h>
 #include <cvar.h>
 #include <frame_alloc.h>
 #include <loader.h>
@@ -171,7 +171,7 @@ int sys_exec(char *execname, char *argvec[])
   free(execname_k);
 
   /* Execute the new program */
-  mode_switch(entry_point, usr_sp);
+  half_dispatch(entry_point, usr_sp);
 
   return 0;
 }

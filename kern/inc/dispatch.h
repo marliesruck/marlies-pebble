@@ -1,4 +1,4 @@
-/** @file ctx_switch.h
+/** @file dispatch.h
  *
  *  @brief Declares our ctx_switch API.
  *
@@ -16,8 +16,8 @@
  *
  *  @bug No known bugs
  **/
-#ifndef __CTX_SWITCH_H__
-#define __CTX_SWITCH_H__
+#ifndef __DISPATCH_H__
+#define __DISPATCH_H__
 
 #include <thread.h>
 
@@ -42,13 +42,13 @@
  *
  *  @return Void.
  */
-void ctx_switch(void *prev_sp, void *prev_pc, void *next_sp, void *next_pc,
+void dispatch(void *prev_sp, void *prev_pc, void *next_sp, void *next_pc,
                 unsigned int next_cr3, void *kstack_high);
 
 
 void dispatch_wrapper(thread_t *next);
 
-void mode_switch(void *entry_point, void *sp);
+void half_dispatch(void *entry_point, void *sp);
 
-#endif /* __CTX_SWITCH_H__ */
+#endif /* __DISPATCH_H__ */
 
