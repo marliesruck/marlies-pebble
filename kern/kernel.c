@@ -90,7 +90,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 
   /* Hand load init */
   set_cr3((uint32_t)(init_pd));
-  hand_load_task(init_pd, "init");
+  hand_load_task(init_pd, "regression");
 
   /* Keep track of init's task */
   init = curr->task_info;
