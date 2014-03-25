@@ -12,6 +12,7 @@
 #include <string.h>
 #include <simics.h>
 
+#define LIM 100
 #define DELAY (16*1024)
 
 int gcc_please_do_not_optimize_too_much = 0;
@@ -28,7 +29,7 @@ void slow() {
 }
 
 int main(int argc, char **argv) {
-
+  int i;
   int tid = gettid();
 
   char buf[16];
@@ -51,6 +52,9 @@ int main(int argc, char **argv) {
   else
     sprintf(msg, "Hello!");
 
-  lprintf("Message from merchant #%d:\t%s", tid, msg);
+  for(i = 0; i < LIMl i++){
+    lprintf("Message from merchant #%d:\t%s", tid, msg);
+  }
+
   vanish();
 }

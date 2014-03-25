@@ -186,11 +186,10 @@ void sys_set_status(int status)
 void sys_vanish(void)
 {
   cll_node *n;
+
   thrlist_del(curr);
 
   task_t *task = curr->task_info;
-
-  /* Sock lock? */
 
   /* Decrement the number of living threads */
   mutex_lock(&task->lock);
