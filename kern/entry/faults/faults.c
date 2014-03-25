@@ -201,45 +201,27 @@ void int_gen_prot(void)
  *  @return Void.
  **/
 /* Pebbles specific includes */
-#include <process.h>
-#include <thread.h>
-#include <vm.h>
 #include <sched.h>
-#include <tlb.h>
-#include <frame_alloc.h>
-#include <util.h>
 /* x86 specific includes */
 #include <x86/cr.h>
 /* Libc includes */
 #include <string.h>
-extern void *zfod;
 void int_page_fault(void *pc, void *error_code)
 {
-  pte_t pte;
+  void *addr;
+  pg_info_s *pgi;
 
-  /* Retrieve PTE for faulting address */
-  void *addr = (void *)get_cr2();
-  pg_info_s *pgi = &curr->task_info->vmi.pg_info;
-  if (get_pte(pgi->pg_dir, pgi->pg_tbls, addr, &pte)) {
+  /* Grab the faulting address and page info */
+  addr = (void *)get_cr2();
+  pgi = &curr->task_info->vmi.pg_info;
+
+  /* Try to handle the fault */
+  if (pg_page_fault_handler(pgi, addr))
+  {
     lprintf("Error: Page fault on table-less address %p by instruction %p", 
             addr, pc);
     panic("Error: Page fault!");
   }
-
-  /* TODO: get rid of this extra bit */
-  if (GET_ADDR(pte) == zfod) {
-    void *frame = pg_alloc_phys(pgi, addr);
-    assert(frame);
-    pte = PACK_PTE( frame, GET_ATTRS(pte) | PG_TBL_WRITABLE );
-    assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, addr, &pte) );
-    memset((void *)(FLOOR(addr, PAGE_SIZE)), 0, PAGE_SIZE);
-    return;
-  }
-
-  /* It's a real fault */
-  lprintf("Error: Page fault on table-less address %p by instruction %p", 
-          addr, pc);
-  panic("Error: Page fault!");
 
   return;
 }
