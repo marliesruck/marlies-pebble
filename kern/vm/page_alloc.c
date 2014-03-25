@@ -117,7 +117,7 @@ void *alloc_page_really(pg_info_s *pgi, void *vaddr, unsigned int attrs)
   pte_t pde;
 
   /* If the PDE isn't valid, make it so */
-  if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, NULL)) {
+  if (get_pde(pgi->pg_dir, vaddr, NULL)) {
     alloc_page_table(pgi, vaddr);
   }
 
@@ -201,7 +201,7 @@ void *alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs)
   unsigned int real_attrs;
 
   /* If the PDE isn't valid, make it so */
-  if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, NULL)) {
+  if (get_pde(pgi->pg_dir, vaddr, NULL)) {
     alloc_page_table(pgi, vaddr);
   }
 
@@ -221,7 +221,7 @@ void *pg_alloc_phys(pg_info_s *pgi, void *vaddr)
   void *frame, *new_head;
   pte_t pte;
 
-  /* If there's no PDE, we can't back the address */
+  /* Don't back unallocated pages */
   if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte))
     return NULL;
 

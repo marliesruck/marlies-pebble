@@ -37,15 +37,13 @@ static pte_t *kern_pt[KERN_PD_ENTRIES];
  **/
 void init_kern_pt(void)
 {
-  void *frame;
   int i, j;
 
   for (i = 0; i < KERN_PD_ENTRIES; i++)
   {
     /* Allocate kernel page table */
-    frame = retrieve_head();
-    kern_pt[i] = frame;
-    update_head(*(void **)frame);
+    kern_pt[i] = retrieve_head();
+    update_head(*(void **)kern_pt[i]);
 
     /* Direct map kernel pages */
     for (j = 0; j < PG_TBL_ENTRIES; j++) {
@@ -95,11 +93,18 @@ void init_pd(pte_t *pd, void *frame)
  *
  *  @return The page directory entry for the specified virtual address.
  **/
-pte_t get_pde(pte_t *pd, void *addr)
+int get_pde(pte_t *pd, void *addr, pte_t *dst)
 {
   int pdi;
   pdi = PG_DIR_INDEX(addr);
-  return pd[pdi];
+
+  /* Return an error if the PDE isn't present */
+  if ( !(pd[pdi] & PG_TBL_PRESENT) )
+    return -1;
+
+  /* "Return" the PDE and return */
+  if (dst) *dst = pd[pdi];
+  return 0;
 }
 
 /** @brief Set a page directory entry.
@@ -165,20 +170,18 @@ void init_pt(pte_t *pt)
 int get_pte(pte_t *pd, pt_t *pt, void *addr, pte_t *dst)
 {
   int pdi, pti;
-  pte_t pde;
   
   /* Return an error if the PDE isn't present */
-  pde = get_pde(pd, addr);
-  if ( !(pde & PG_TBL_PRESENT) )
+  if (get_pde(pd, addr, NULL))
     return -1;
 
   /* Compute index into page directory */
   pdi = PG_DIR_INDEX(addr); 
   pti = PG_TBL_INDEX(addr); 
 
-//  /* Return an error if the PTE isn't present */
-//  if ( !(pt[pdi][pti] & PG_TBL_PRESENT) )
-//    return -1;
+  /* Return an error if the PTE isn't present */
+  if ( !(pt[pdi][pti] & PG_TBL_PRESENT) )
+    return -1;
 
   /* "Return" the entry */
   if (dst) *dst = pt[pdi][pti];
@@ -197,11 +200,9 @@ int get_pte(pte_t *pd, pt_t *pt, void *addr, pte_t *dst)
 int set_pte(pte_t *pd, pt_t *pt, void *addr, pte_t *pte)
 {
   int pdi, pti;
-  pte_t pde;
   
   /* Return an error if the PDE isn't present */ 
-  pde = get_pde(pd, addr);
-  if ( !(pde & PG_TBL_PRESENT) )
+  if (get_pde(pd, addr, NULL))
     return -1;
 
   /* Compute index into page directory */
