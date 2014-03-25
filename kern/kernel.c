@@ -31,6 +31,7 @@
 /* x86 specific includes */
 #include <x86/asm.h>                /* enable_interrupts() */
 #include <x86/cr.h>
+#include <page_util.h>
 
 /* Pebbles includes */
 #include <console.h>
@@ -51,45 +52,6 @@ void *raw_init_pd(void);
 void init_stack(thread_t *thr);
 thread_t *hand_load_task(void *pd, const char *fname);
 
-/*************************************************************************
- *  Random paging stuff that should really be elsewhere
- *************************************************************************/
-
-#include <x86/cr.h>
-
-
-void enable_write_protect(void)
-{
-  uint32_t cr0;
-  
-  cr0 = get_cr0();
-  cr0 |= CR0_WP;
-  set_cr0(cr0);
-
-  return;
-}
-
-void enable_paging(void)
-{
-  uint32_t cr0;
-  
-  cr0 = get_cr0();
-  cr0 |= CR0_PG;
-  set_cr0(cr0);
-
-  return;
-}
-
-void disable_paging(void)
-{
-  uint32_t cr0;
-  
-  cr0 = get_cr0();
-  cr0 &= ~CR0_PG;
-  set_cr0(cr0);
-
-  return;
-}
 
 /*************************************************************************
  *  Kernel main
