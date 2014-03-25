@@ -270,7 +270,7 @@ int sys_wait(int *status_ptr)
     if(task->live_children == 0){
         /* Avoid unbounded blocking */
         mutex_unlock(&task->lock);
-        return -1;
+        return 0;
       }
     else{
       cvar_wait(&task->cv, &task->lock);

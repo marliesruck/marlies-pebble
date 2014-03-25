@@ -52,7 +52,8 @@ int main(int argc, char **argv) {
   else
     sprintf(msg, "Hello!");
 
-  for(i = 0; i < LIMl i++){
+  for(i = 0; i < LIM; i++){
+    slow();
     lprintf("Message from merchant #%d:\t%s", tid, msg);
   }
 
