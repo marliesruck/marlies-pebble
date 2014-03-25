@@ -35,25 +35,22 @@
 
 /* Pebbles includes */
 #include <console.h>
-#include <frame_alloc.h>
 #include <idt.h>
+#include <frame_alloc.h>
 #include <loader.h>
-#include <pg_table.h>
 #include <process.h>
 #include <sched.h>
 #include <sc_utils.h>
 #include <thread.h>
 #include <usr_stack.h>
 #include <vm.h>
+#include <ctx_switch.h>
 
 /* --- Internal helper routines --- */
 void init_kdata_structures(void);
 void *raw_init_pd(void);
 void init_stack(thread_t *thr);
 thread_t *hand_load_task(void *pd, const char *fname);
-
-/* TODO: this should not be here */
-void mode_switch(void *entry_point, void *sp);
 
 /*************************************************************************
  *  Kernel main

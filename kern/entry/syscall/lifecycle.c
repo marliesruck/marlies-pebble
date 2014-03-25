@@ -37,7 +37,6 @@
  *************************************************************************/
 
 /* TODO: Maybe these get headers? */
-void mode_switch(void *entry_point, void *sp);
 int finish_fork(void);
 
 void *init_child_tcb(void *child_cr3, pte_t *pd, pt_t *pt)

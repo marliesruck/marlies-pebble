@@ -188,7 +188,7 @@ int remove_from_runnable(thread_t *thr)
  **/
 void schedule(void)
 {
-  thread_t *prev, *next;
+  thread_t *next;
   queue_node_s *q;
 
   /* The runnable queue should never be empty */
@@ -202,17 +202,10 @@ void schedule(void)
   }
   queue_enqueue(&runnable, q);
 
-
   /* Only switch if the next thread is different */
   if (next != curr) {
-    prev = curr;
-    curr = next;
-    ctx_switch(&prev->sp, &prev->pc, next->sp, next->pc,
-               next->task_info->cr3, &next->kstack[KSTACK_SIZE]);
+    dispatch_wrapper(next);
   }
-
-  /* Release the schedule lock */
-  enable_interrupts();
 
   return;
 }

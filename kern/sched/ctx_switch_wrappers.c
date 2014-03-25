@@ -1,31 +1,23 @@
 #include <ctx_switch.h>
+
+/* Pebbles specific includes */
+#include <thread.h>
 #include <sched.h>
 
-#include <asm.h>
+/* Libc specific */
 #include <assert.h>
 
-void half_ctx_switch_wrapper(void)
+/* x86 specific include */
+#include <asm.h>
+
+void dispatch_wrapper(thread_t *next)
 {
-  /* Function is not ctx switch safe beyond this point */
-  disable_interrupts();
+  thread_t *prev;
 
-  /* Remove yourself from the runnable queue */
-  remove_from_runnable(curr);
+  prev = curr;
+  curr = next;
 
-  /* There should still be someone to switch to */
-  assert( !queue_empty(&runnable) );
-
-  /* Dequeue the thread we are switching to */
-  queue_node_s *q = queue_dequeue(&runnable);
-  thread_t *next = queue_entry(thread_t *, q);
-
-  /* Move the thread to the back of the queue */
-  assert(next->state == THR_RUNNING);
-  queue_enqueue(&runnable, q);
-
-  curr = next; 
-
-  half_ctx_switch(next->sp, next->pc, next->task_info->cr3,
-                  &next->kstack[KSTACK_SIZE]);
-
+  ctx_switch(&prev->sp, &prev->pc, next->sp, next->pc,
+               next->task_info->cr3, &next->kstack[KSTACK_SIZE]);
+  return;
 }
