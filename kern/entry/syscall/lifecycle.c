@@ -44,6 +44,8 @@ void *init_child_tcb(void *child_cr3, pte_t *pd, pt_t *pt)
 {
   /* Initialize vm struct */
   thread_t *thread = task_init();
+  if(!thread)
+    return NULL;
   task_t *task = thread->task_info;
 
   /* Initialize pg dir */
@@ -114,11 +116,6 @@ int sys_fork(unsigned int esp)
   child_task->vmi.pg_info.pg_tbls = PG_TBL_ADDR;
   child_thread->sp = &child_thread->kstack[offset];
   child_thread->pc = finish_fork;
-
-  /* Add the new task to the task list...should this be done
-   * in task init? */
-  if(tasklist_add(child_task) < 0)
-    return -1;  /* Out of memory! */
 
   /* Keep track of live children */
   curr_task->live_children++;

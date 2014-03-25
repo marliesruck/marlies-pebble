@@ -26,7 +26,7 @@ mutex_s task_list_lock = MUTEX_INITIALIZER(task_list_lock);
 
 /* @brief Initialize a task and its root thread.
  *
- * @return Address of the initializaed root thread.
+ * @return Address of the initializaed root thread or NULL if our of memory.
  */
 thread_t *task_init(void)
 {
@@ -52,6 +52,11 @@ thread_t *task_init(void)
   /* Initialize root thread with new task */
   thread_t *thread = thread_init(task);
   task->orig_tid = thread->tid;
+
+  /* Add to task list */
+  if(tasklist_add(task) < 0)
+    return NULL;  /* Out of memory! */
+
 
   return thread;
 }
