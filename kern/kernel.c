@@ -45,7 +45,11 @@
 #include <usr_stack.h>
 #include <vm.h>
 
-/* ZFOD includes */
+/* --- Internal helper routines --- */
+void init_kdata_structures(void);
+void *raw_init_pd(void);
+void init_stack(thread_t *thr);
+thread_t *hand_load_task(void *pd, const char *fname);
 
 /*************************************************************************
  *  Random paging stuff that should really be elsewhere
@@ -87,15 +91,12 @@ void disable_paging(void)
   return;
 }
 
-
 /*************************************************************************
  *  Kernel main
  *************************************************************************/
 
 /** This does not belong here... */
 void mode_switch(void *entry_point, void *sp);
-
-thread_t *load_task(void *pd, const char *fname);
 
 /** @brief Kernel entrypoint.
  *  
@@ -105,8 +106,67 @@ thread_t *load_task(void *pd, const char *fname);
  */
 int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 {
-                      /* --- IDT setup --- */
+  /* Initialize kernel data structures */
+  init_kdata_structures();
 
+  /* Init's page directory */
+  void *init_pd = raw_init_pd();
+
+  /* Idle's page directory */
+  void *idle_pd = raw_init_pd();
+
+  /* Enable paging */
+  set_cr3((uint32_t)(idle_pd));
+  enable_write_protect();
+  enable_paging();
+
+  /* Hand load idle */
+  thread_t *idle = hand_load_task(idle_pd, "idle");
+
+  /* Prepare idle's stack */
+  init_stack(idle);
+
+  /* Hand load init */
+  set_cr3((uint32_t)(init_pd));
+  hand_load_task(init_pd, "init");
+
+  /* Keep track of init's task */
+  init = curr->task_info;
+
+  /* Give up the kernel stack that was given to us by the bootloader */
+  set_esp0((uint32_t)(&curr->kstack[KSTACK_SIZE]));
+
+  /* Launch init and enter user space...The iret enables interrupts */
+  mode_switch(curr->pc, curr->sp);
+
+  /* We should never reach here! */
+  assert(0);
+
+  /* To placate the compiler */
+  return 0;
+}
+
+/** @brief Initialize a page directory when paging and interrupts are disabled.
+ *
+ *  @return Base of address of page directory initalized.
+ **/
+void *raw_init_pd(void)
+{
+  pte_s *pd = retrieve_head();
+  update_head_wrapper(pd);
+  init_pd(pd, pd);
+  return pd;
+}
+
+/** @brief Initialize kernel data structures.
+ *
+ *  Initializes IDT, frame allocator, kernel page tables and dummy frame for
+ *  ZFOD.
+ *
+ *  @return Void.
+ */
+void init_kdata_structures(void)
+{
   /* Install interrupt handlers */
   install_device_handlers();
   install_fault_handlers(); 
@@ -119,41 +179,21 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   /* Initialized kernel page tables */
   init_kern_pt();
 
-  /* First executable page directory */
-  pte_s *pd = retrieve_head();
-  update_head_wrapper(pd);
-
-  init_pd(pd, pd);
-
-  set_cr3((uint32_t) pd);
-  enable_write_protect();
-  enable_paging();
-
   /* Allocate dummy frame for admiring zeroes */
   zfod = smemalign(PAGE_SIZE, PAGE_SIZE);
   memset(zfod,0,PAGE_SIZE);
 
-  /* Load the first executable */
-  thread_t *thread = load_task(pd, "init");
-
-  /* Init curr and enable interrupts */
-  enable_interrupts();
-
-  /* Keep track of init's task */
-  init = curr->task_info;
-
-  /* Give up the kernel stack that was given to us by the bootloader */
-  set_esp0((uint32_t)(&thread->kstack[KSTACK_SIZE]));
-
-  /* Head to user-space */
-  mode_switch(thread->pc, thread->sp);
-
-  /* We should never reach here! */
-  assert(0);
-  return 0;
+  return;
 }
 
-thread_t *load_task(void *pd, const char *fname)
+/** @brief Hand load a task.
+ *
+ *  @param pd Page directory in task struct.
+ *  @param fname Filename of task.
+ *
+ *  @return Address of root thread.
+ **/
+thread_t *hand_load_task(void *pd, const char *fname)
 {
   thread_t *thread = task_init();
   curr = thread;
@@ -168,10 +208,35 @@ thread_t *load_task(void *pd, const char *fname)
   thread->pc = load_file(&task->vmi, fname);
   thread->sp = usr_stack_init(&task->vmi, NULL);
 
-  /* This enables interrupts */
+  /* Add the task to the runnable queue */
   assert( sched_unblock(thread, 0) == 0 );
 
   sim_reg_process(pd, fname);
   return thread;
+}
+
+/** @brief Prepare the kernel stack for mode_switch().
+ *
+ *  This is only used for making idle a valid scheduleable unit, but it can be
+ *  called for any other thread that needs to initialize its kernel stack in
+ *  preparation for a mode switch.
+ *
+ *  @param thr Thread to prepare.
+ *
+ *  @return Void.
+ **/
+void init_stack(thread_t *thr)
+{
+  /* Push the arguments on the kernel stack */
+  void *esp = &thr->kstack[KSTACK_SIZE];
+  PUSH(esp, thr->sp);
+  PUSH(esp, thr->pc);
+  PUSH(esp, 0);
+
+  /* Set the correct program counter and stack pointer */
+  thr->pc = mode_switch;
+  thr->sp = esp;
+
+  return;
 }
 
