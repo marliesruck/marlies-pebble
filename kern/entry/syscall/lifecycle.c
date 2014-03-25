@@ -121,7 +121,7 @@ int sys_fork(unsigned int esp)
 
   /* Enqueue new tcb */
   assert( thrlist_add(child_thread) == 0 );
-  assert( sched_unblock(child_thread, 1) == 0 );
+  assert((sched_unblock(child_thread)) == 0);
 
   return child_thread->tid;
 }

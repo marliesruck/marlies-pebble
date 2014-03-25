@@ -27,7 +27,8 @@ thread_t *curr;
 int sched_block(thread_t *thr);
 int sched_mutex_unlock_and_block(thread_t *thr, mutex_s *lock);
 int sched_spin_unlock_and_block(thread_t *thr, spin_s *lock);
-int sched_unblock(thread_t *thr, int atomic);
+void raw_unblock(thread_t *thr, queue_node_s *n);
+int sched_unblock(thread_t *thr);
 int remove_from_runnable(thread_t *thr);
 void schedule(void);
 

@@ -151,7 +151,7 @@ void raw_unblock(thread_t *thr, queue_node_s *n)
  *
  *  @return 0 on success; a negative integer error code on failure.
  **/
-int sched_unblock(thread_t *thr, int atomic)
+int sched_unblock(thread_t *thr)
 {
   queue_node_s *n;
 
@@ -160,18 +160,11 @@ int sched_unblock(thread_t *thr, int atomic)
   if (!n) return -1;
   queue_init_node(n, thr);
 
-
   /* Lock, enqueue, unlock */
-  if (atomic) disable_interrupts();
-  /*
-  queue_enqueue(&runnable, n);
-  thr->state = THR_RUNNING;
-  */
+  disable_interrupts();
   raw_unblock(thr,n);
+  enable_interrupts();
 
-  if (atomic) enable_interrupts();
-
-  if(atomic)
   schedule();
 
   return 0;

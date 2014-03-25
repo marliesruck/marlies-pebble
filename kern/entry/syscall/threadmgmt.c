@@ -49,7 +49,7 @@ int sys_make_runnable(int tid)
   if (!thr || thr->state == THR_RUNNING)
     return -1;
 
-  ret = sched_unblock(thr, 1);
+  ret = sched_unblock(thr);
   mutex_unlock(&thr->lock);
 
   return ret;

@@ -162,7 +162,9 @@ thread_t *hand_load_task(void *pd, const char *fname)
   thread->sp = usr_stack_init(&task->vmi, NULL);
 
   /* Add the task to the runnable queue */
-  assert( sched_unblock(thread, 0) == 0 );
+  cll_node *n = malloc(sizeof(cll_node));
+  queue_init_node(n, thread);
+  raw_unblock(thread, n);
 
   sim_reg_process(pd, fname);
   return thread;
