@@ -52,13 +52,12 @@ void *raw_init_pd(void);
 void init_stack(thread_t *thr);
 thread_t *hand_load_task(void *pd, const char *fname);
 
+/* TODO: this should not be here */
+void mode_switch(void *entry_point, void *sp);
 
 /*************************************************************************
  *  Kernel main
  *************************************************************************/
-
-/** This does not belong here... */
-void mode_switch(void *entry_point, void *sp);
 
 /** @brief Kernel entrypoint.
  *  

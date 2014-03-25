@@ -1,3 +1,10 @@
+/** @file finish_fork.S
+ *
+ *  @brief Contrived routine to return to user land
+ *
+ *  @author Enrique Naudon (esn)
+ *  @author Marlies Ruck (mruck)
+ **/
 .global finish_fork
 
 finish_fork:

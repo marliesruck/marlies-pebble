@@ -41,7 +41,7 @@ thread_t *task_init(void)
 
   /* Keep track of children alive and dead */
   task->live_children = 0;
-  queue_init(&task->dead_children);
+  cll_init_list(&task->dead_children);
   cvar_init((&task->cv));
 
   task->parent = curr->task_info;

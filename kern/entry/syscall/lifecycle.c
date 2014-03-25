@@ -186,7 +186,6 @@ void sys_set_status(int status)
 void sys_vanish(void)
 {
   cll_node *n;
-
   thrlist_del(curr);
 
   task_t *task = curr->task_info;
@@ -213,16 +212,16 @@ void sys_vanish(void)
     /* Free your virtual memory */
     vm_final(&task->vmi);
 
-    /* Enqueue your dead children as children of init */
+    /* Make your dead children the responsibility of init */
     while(!cll_empty(&task->dead_children)){
-      n = queue_dequeue(&task->dead_children);
+      n = cll_extract(&task->dead_children, task->dead_children.next);
       mutex_lock(&init->lock);
       cll_insert(&init->dead_children, n);
       mutex_unlock(&init->lock);
     }
 
     /* Check if your parent is still alive...
-     * This function does NOT release the list lock so that you can enqueue
+     * This function does NOT release the list lock so that you can add 
      * yourself as dead child before the parent exits (since you must
      * lock the task list to exit) */
     task_t *parent = task->parent;
@@ -234,7 +233,7 @@ void sys_vanish(void)
       parent->live_children--;
 
     /* Grab your parent's lock to prevent them from exiting while you are trying
-     * to enqueue yourself as a dead child */
+     * to add yourself as a dead child */
     mutex_lock(&parent->lock);
 
     /* Release the list lock */
@@ -262,12 +261,13 @@ void sys_vanish(void)
 
 int sys_wait(int *status_ptr)
 {
+  cll_node *n;
   task_t *task = curr->task_info;
 
   /* Atomically check for dead children */
   mutex_lock(&task->lock);
 
-  while(queue_empty(&task->dead_children)){
+  while(cll_empty(&task->dead_children)){
     if(task->live_children == 0){
         /* Avoid unbounded blocking */
         mutex_unlock(&task->lock);
@@ -277,10 +277,11 @@ int sys_wait(int *status_ptr)
       cvar_wait(&task->cv, &task->lock);
     }
   }
- /* Dequeue dead child */
- queue_node_s *q = queue_dequeue(&task->dead_children);
- task_t *child_task = cll_entry(task_t*, q);
- free(q);
+ /* Remove dead child */
+ n = cll_extract(&task->dead_children, task->dead_children.next);
+
+ task_t *child_task = cll_entry(task_t*, n);
+ free(n);
 
  /* Relinquish lock */
  mutex_unlock(&task->lock);

@@ -24,11 +24,8 @@
 extern mutex_s task_list_lock;
 
 typedef struct task{
-  struct task *parent;    /* Enqueue the last thread_t to exit in my parent's
-                             list of dead children...that makes the parent
-                             responsible for reaping that thread_t */
-  queue_s dead_children;  /* List of threads for MY dead children to enqueue 
-                             themselves in.  This is the list I wait() on */
+  struct task *parent;    /* Responsible for reaping my dead children */
+  cll_list dead_children; /* The list I wait() on */
   cvar_s  cv;             /* For the parent to sleep on while it's waiting to
                              reap its children */
   cll_list peer_threads;  /* As the task spawns thread, add them here. When the
@@ -43,8 +40,8 @@ typedef struct task{
                              to vanish */
   int live_children;      /* This and dead_children determine whether or not
                              wait should block */
-  mutex_s  lock;           /* Hold this lock when modifying the task struct */
-  int status;
+  mutex_s  lock;          /* Hold this lock when modifying the task struct */
+  int status;             /* My exit status */
 }task_t;
 
 /* Keep track of init for zombie children */
