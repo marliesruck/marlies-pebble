@@ -25,7 +25,7 @@ extern mutex_s task_list_lock;
 
 typedef struct task{
   struct task *parent;    /* Responsible for reaping my dead children */
-  cll_list dead_children; /* The list I wait() on */
+  queue_s  dead_children; /* The list I wait() on */
   cvar_s  cv;             /* For the parent to sleep on while it's waiting to
                              reap its children */
   cll_list peer_threads;  /* As the task spawns thread, add them here. When the

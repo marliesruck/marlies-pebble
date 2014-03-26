@@ -161,18 +161,3 @@ node *cll_extract(list *l, node *victim)
 
   return victim;
 }
-/** @brief Free a cll list and all the elements in it.
- *
- *  @param l The list to free.
- *  @return Void.
- **/
-void cll_free(list *l)
-{
-  node *n;
-
-  while(!cll_empty(l)){
-    n = cll_extract(l, l->next);
-    free(n->data);
-    free(n);
-  }
-}

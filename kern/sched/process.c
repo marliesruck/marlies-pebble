@@ -46,7 +46,7 @@ thread_t *task_init(void)
 
   /* Keep track of children alive and dead */
   task->live_children = 0;
-  cll_init_list(&task->dead_children);
+  queue_init(&task->dead_children);
   cvar_init((&task->cv));
 
   task->parent = curr->task_info;
@@ -159,8 +159,8 @@ void task_free(task_t *task)
   vm_final(&task->vmi);
 
   /* Free your kids' resources */
-  while(!cll_empty(&task->dead_children)){
-    n = cll_extract(&task->dead_children, task->dead_children.next);
+  while(!queue_empty(&task->dead_children)){
+    n = queue_dequeue(&task->dead_children);
     victim = cll_entry(task_t *, n);
     task_reap(victim, task);
   }
@@ -212,7 +212,7 @@ task_t *task_find_and_lock_parent(task_t *parent)
  **/
 void task_signal_parent(task_t *task)
 {
-  cll_node n;
+  queue_node_s n;
 
   task_t *parent = task_find_and_lock_parent(task->parent);
 
@@ -221,8 +221,8 @@ void task_signal_parent(task_t *task)
     parent->live_children--;
 
   /* Add yourself as a dead child */
-  cll_init_node(&n, task);
-  cll_insert(&parent->dead_children, &n);
+  queue_init_node(&n, task);
+  queue_enqueue(&parent->dead_children, &n);
 
   /* Signal your parent */
   cvar_signal(&parent->cv);
@@ -240,12 +240,12 @@ void task_signal_parent(task_t *task)
  **/
 task_t *task_find_zombie(task_t *task)
 {
-  cll_node *n;
+  queue_node_s *n;
 
   /* Atomically check for dead children */
   mutex_lock(&task->lock);
 
-  while(cll_empty(&task->dead_children)){
+  while(queue_empty(&task->dead_children)){
     if(task->live_children == 0){
         /* Avoid unbounded blocking */
         mutex_unlock(&task->lock);
@@ -257,9 +257,8 @@ task_t *task_find_zombie(task_t *task)
   }
 
   /* Remove dead child */
-  n = cll_extract(&task->dead_children, task->dead_children.next);
- 
-  task_t *child_task = cll_entry(task_t*, n);
+  n = queue_dequeue(&task->dead_children);
+  task_t *child_task = queue_entry(task_t*, n);
  
   /* Relinquish lock */
   mutex_unlock(&task->lock);
@@ -277,11 +276,17 @@ task_t *task_find_zombie(task_t *task)
  **/
 void task_reap(task_t *victim, task_t *reaper)
 {
+  cll_node *n;
+
   /* Free task's page directory */
   free_unmapped_frame((void *)(victim->cr3), &reaper->vmi.pg_info);
 
-  /* Free task's thread resources... */
-  cll_free(&victim->peer_threads);
+  /* Free task's thread resources */
+  while(!cll_empty(&victim->peer_threads)){
+    n = cll_extract(&victim->peer_threads, victim->peer_threads.next);
+    free(n->data);
+    free(n);
+  }
 
   /* Free task struct */
   free(victim);
