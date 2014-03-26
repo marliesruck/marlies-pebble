@@ -26,6 +26,9 @@ static cll_list task_list = CLL_LIST_INITIALIZER(task_list);
 /* And make all accesses atomic */
 mutex_s task_list_lock = MUTEX_INITIALIZER(task_list_lock);
 
+/*** --- Internal helper routines --- ***/
+task_t *task_find_and_lock_parent(task_t *parent);
+
 /* @brief Initialize a task and its root thread.
  *
  * @return Address of the initializaed root thread or NULL if our of memory.
@@ -128,10 +131,13 @@ int tasklist_del(task_t *t)
 
 /** @brief Free a task's resources.
  *
- *  Removes task from global task list, frees its virtual memory and gives it
- *  dead children to init.
+ *  Removes task from global task list, frees its virtual memory, reaps its dead
+ *  children and gives it dead children to init.  Note that all these are
+ *  operations that can be done easily by the vanishing task.  The parent is
+ *  responisble for freeing the vanishing task's kernel stacks, page directory
+ *  and task struct in task_reap().
  *
- *  @param task Take to free.
+ *  @param task Task to free.
  *
  *  @return Void.
  **/
@@ -161,6 +167,42 @@ void task_free(task_t *task)
 
   return;
 }
+/** @brief Find your parent and lock their task struct
+ *
+ *  Atomically searches the task list for your parent's task struct in order to
+ *  determine if your parent is still alive.  If so, locks your parent's task
+ *  struct before releasing the task list lock.
+ *
+ *  Assumes the caller will release the parent's lock.
+ *
+ *  @param parent Address of your parent.
+ *
+ *  @return Address of init if your parent is dead, else address of your parent.
+ **/
+task_t *task_find_and_lock_parent(task_t *parent)
+{
+  cll_node *n;
+  task_t *t = NULL; 
+
+  mutex_lock(&task_list_lock);
+  cll_foreach(&task_list, n) {
+    t = cll_entry(task_t *,n);
+    if (t == parent) break;
+  }
+
+  /* Your parent is dead. Tell init instead */
+  if(t != parent) 
+    parent = init; 
+
+  /* Grab your parent's lock to prevent him/her from exiting while you are trying
+   * to add yourself as a dead child */
+  mutex_lock(&parent->lock);
+
+  /* Release the list lock */
+  mutex_unlock(&task_list_lock);
+
+  return parent;
+}
 
 /** @brief Wake your parent and remove yourself from the runnable queue.
  *
@@ -170,37 +212,19 @@ void task_free(task_t *task)
  **/
 void task_signal_parent(task_t *task)
 {
-  cll_node *n;
-  task_t *t = NULL; 
+  cll_node n;
 
-  /* Check if your parent is still alive */
-  task_t *parent = task->parent;
+  task_t *parent = task_find_and_lock_parent(task->parent);
 
-  mutex_lock(&task_list_lock);
-  cll_foreach(&task_list, n) {
-    t = cll_entry(task_t *,n);
-    if (t == parent) break;
-  }
-
-  if(t != parent) 
-    /* Your parent is dead. Tell init instead */
-    parent = init; 
-  else
-  /* Live children count is for direct descendents only.  Don't do this if
-   * your parent is init */
+  /* Live children count is for nuclear family only */
+  if(parent == task->parent)
     parent->live_children--;
 
-  /* Grab your parent's lock to prevent him/her from exiting while you are trying
-   * to add yourself as a dead child */
-  mutex_lock(&parent->lock);
-
-  /* Release the list lock */
-  mutex_unlock(&task_list_lock);
-
   /* Add yourself as a dead child */
-  n = malloc(sizeof(cll_node));
-  cll_init_node(n, task);
-  cll_insert(&parent->dead_children, n);
+  cll_init_node(&n, task);
+  cll_insert(&parent->dead_children, &n);
+
+  /* Signal your parent */
   cvar_signal(&parent->cv);
 
   /* Your parent should not reap you until you've descheduled yourself */
@@ -240,11 +264,17 @@ task_t *task_find_zombie(task_t *task)
   /* Relinquish lock */
   mutex_unlock(&task->lock);
  
-  free(n);
- 
   return child_task;
 }
-
+/** @brief Reap a child task.
+ *
+ *  The parent frees the child's page directory, kernel stacks and task struct.
+ *  Note how this differs from task_free(): these are all resources that are
+ *  difficult for the vanishing task itself to free.
+ *
+ *  @param victim Task whose resources should be freed.
+ *  @param reaper Task responsible for reaping.
+ **/
 void task_reap(task_t *victim, task_t *reaper)
 {
   /* Free task's page directory */
