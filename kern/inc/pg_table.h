@@ -105,7 +105,7 @@ extern tome_t *tomes;
 void init_kern_pt(void);
 
 /* Page directory operations */
-void init_pd(pte_t *pd, void *frame);
+pte_t *pd_init(void);
 int get_pde(pte_t *pd, void *addr, pte_t *dst);
 void set_pde(pte_t *pd, void *addr, pte_t *pt);
 

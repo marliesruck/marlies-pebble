@@ -38,7 +38,8 @@ thread_t *task_init(void)
   task_t *task = malloc(sizeof(task_t));
 
   /* Initialize vm */
-  vm_init(&task->vmi, PG_TBL_ADDR[PG_SELFREF_INDEX], PG_TBL_ADDR);
+  vm_init(&task->vmi);
+  task->cr3 = (uint32_t) task->vmi.pg_info.pg_dir;
 
   /* Keep track of threads in a task */
   task->num_threads = 1;
@@ -281,7 +282,7 @@ void task_reap(task_t *victim, task_t *reaper)
   cll_node *n;
 
   /* Free task's page directory */
-  free_unmapped_frame((void *)(victim->cr3), &reaper->vmi.pg_info);
+  sfree((void *)(victim->cr3), PAGE_SIZE);
 
   /* Free task's thread resources */
   while(!cll_empty(&victim->peer_threads)){

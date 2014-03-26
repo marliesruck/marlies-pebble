@@ -30,7 +30,6 @@
 /* x86 includes */
 #include <x86/asm.h>
 
-#define CHILD_PDE ( (void *)tomes[PG_TBL_ENTRIES - 2] )
 
 /*************************************************************************
  *  Internal helper functions
@@ -38,21 +37,14 @@
 
 int finish_fork(void);
 
-void *init_child_tcb(void *child_cr3, pte_t *pd, pt_t *pt)
+void *kstack_copy(char *dst, char *src, unsigned int esp)
 {
-  /* Initialize vm struct */
-  thread_t *thread = task_init();
-  if(!thread)
-    return NULL;
-  task_t *task = thread->task_info;
+  /* Copy the parent's kstack */
+  unsigned int offset = esp - ((unsigned int) src);
+  size_t len = ((unsigned int) &src[KSTACK_SIZE]) - esp;
+  memcpy(&dst[offset], (void *)esp, len);
 
-  /* Initialize pg dir */
-  task->cr3 = (uint32_t)(child_cr3);
-  task->vmi.pg_info.pg_tbls = pt;
-  task->vmi.pg_info.pg_dir = pd;
-  task->parent = curr->task_info;
-
-  return thread;
+  return &dst[offset];
 }
 
 
@@ -74,70 +66,51 @@ void *init_child_tcb(void *child_cr3, pte_t *pd, pt_t *pt)
  * state
  *
  * @param child_cr3 Physical address of child's page directory
- * @return Address of malloced child pcb 
+ * @return Address of malloc'd child pcb 
  */
 int sys_fork(unsigned int esp)
 {
-  pte_t pde;
-  pt_t *child_pg_tables = CHILD_PDE;
-  pte_t *child_pd = child_pg_tables[PG_SELFREF_INDEX];
-  task_t *curr_task = curr->task_info;
+  task_t *parent, *ctask;
+  thread_t *cthread;
 
-  /* Map the child's PD into the parent's address space */
-  void *child_cr3 = alloc_page_table(&curr_task->vmi.pg_info, CHILD_PDE);
-  pde = PACK_PTE(child_cr3, PG_SELFREF_ATTRS);
-  set_pte(curr_task->vmi.pg_info.pg_dir, curr_task->vmi.pg_info.pg_tbls,
-          child_pd, &pde);
+  parent = curr->task_info;
 
-  /* Initialize child stuffs */
-  init_pd(child_pd, child_cr3);
+  cthread = task_init();
+  if(!cthread) return -1;
+  ctask = cthread->task_info;
 
-  thread_t *child_thread = init_child_tcb(child_cr3, child_pd, child_pg_tables);
+  /* Copy address space */
+  vm_copy(&ctask->vmi, &parent->vmi);
 
-  task_t *child_task = child_thread->task_info;
-  vm_copy(&child_task->vmi, &curr_task->vmi);
-
-  /* Unmap child PD */
-  pde = PACK_PTE(NULL, 0);
-  set_pde(curr_task->vmi.pg_info.pg_dir, child_pd, &pde);
-  tlb_inval_tome(child_pg_tables);
-  tlb_inval_page(curr_task->vmi.pg_info.pg_tbls[PG_DIR_INDEX(child_pd)]);
-
-  /* Copy the parent's kstack */
-  unsigned int offset = esp - ((unsigned int) curr->kstack);
-  size_t len = ((unsigned int) &curr->kstack[KSTACK_SIZE]) - esp;
-  void *dest = &child_thread->kstack[offset];
-  memcpy(dest, (void *)esp, len);
-
-  /* Last touches to the child */
-  child_task->vmi.pg_info.pg_dir = PG_TBL_ADDR[PG_SELFREF_INDEX];
-  child_task->vmi.pg_info.pg_tbls = PG_TBL_ADDR;
-  child_thread->sp = &child_thread->kstack[offset];
-  child_thread->pc = finish_fork;
+  /* Initialize child thread */
+  cthread->sp = kstack_copy(cthread->kstack, curr->kstack, esp);
+  cthread->pc = finish_fork;
 
   /* Keep track of live children */
-  curr_task->live_children++;
+  parent->live_children++;
 
-  /* Enqueue new tcb */
-  assert( thrlist_add(child_thread) == 0 );
-  assert((sched_unblock(child_thread)) == 0);
+  /* Enqueue the child */
+  assert( thrlist_add(cthread) == 0 );
+  assert((sched_unblock(cthread)) == 0);
 
-  return child_thread->tid;
+  return cthread->tid;
 }
+
 /* @bug Add a pcb final function for reinitializing pcb */
 int sys_exec(char *execname, char *argvec[])
 {
   char *execname_k, **argvec_k;
-  int i, j;
+  void *entry, *stack;
   simple_elf_t se;
+  int i, j;
 
   /* Copy execname from user-space */
   execname_k = malloc(strlen(execname) + 1);
   if (!execname_k) return -1;
 
   /* Invalid memory or filename */
-  if ((copy_from_user(execname_k, execname, strlen(execname) + 1)) || 
-      (validate_file(&se, execname) < 0)){
+  if ((copy_from_user(execname_k, execname, strlen(execname) + 1))
+      || (validate_file(&se, execname) < 0)){
       free(execname_k);
       return -1;
   }
@@ -159,10 +132,8 @@ int sys_exec(char *execname, char *argvec[])
 
   /* Destroy the old address space; setup the new */
   vm_final(&curr->task_info->vmi);
-
-  void *entry_point = load_file(&curr->task_info->vmi, execname_k);
-
-  void *usr_sp = usr_stack_init(&curr->task_info->vmi, argvec_k);
+  entry = load_file(&curr->task_info->vmi, execname_k);
+  stack = usr_stack_init(&curr->task_info->vmi, argvec_k);
 
   /* Free copied parameters*/
   for (j = 0; j < i; ++j) free(argvec_k[j]);
@@ -170,7 +141,7 @@ int sys_exec(char *execname, char *argvec[])
   free(execname_k);
 
   /* Execute the new program */
-  half_dispatch(entry_point, usr_sp);
+  half_dispatch(entry, stack);
 
   return 0;
 }

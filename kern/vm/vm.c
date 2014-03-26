@@ -109,10 +109,10 @@ mem_region_s *mreg_extract_any(cll_list *map)
  *
  *  @return Void.
  **/
-void vm_init(vm_info_s *vmi, pte_t *pd, pt_t *pt)
+void vm_init(vm_info_s *vmi)
 {
-  vmi->pg_info.pg_dir = pd;
-  vmi->pg_info.pg_tbls = pt;
+  vmi->pg_info.pg_dir = pd_init();
+  vmi->pg_info.pg_tbls = PG_TBL_ADDR;
   cll_init_list(&vmi->mmap);
 
   return;
@@ -290,6 +290,8 @@ void vm_free(vm_info_s *vmi, void *va_start)
  *
  *  @return 0 on success; a negative integer error code on failure.
  **/
+#include <tlb.h>
+#define CHILD_PDE ( (void *)tomes[PG_TBL_ENTRIES - 2] )
 int vm_copy(vm_info_s *dst, vm_info_s *src)
 {
   mem_region_s *dreg;
@@ -299,6 +301,11 @@ int vm_copy(vm_info_s *dst, vm_info_s *src)
 
   /* Don't copy unless the dest is empty */
   if (!cll_empty(&dst->mmap)) return -1;
+
+  /* Map in the dst tables */
+  dst->pg_info.pg_tbls = CHILD_PDE;
+  pte_t pde = PACK_PTE(dst->pg_info.pg_dir, PG_SELFREF_ATTRS);
+  set_pde(src->pg_info.pg_dir, CHILD_PDE, &pde);
 
   cll_foreach(&src->mmap, n)
   {
@@ -312,6 +319,13 @@ int vm_copy(vm_info_s *dst, vm_info_s *src)
     for (addr = sreg->start; addr < sreg->limit; addr += PAGE_SIZE)
       assert( !copy_page(&dst->pg_info, &src->pg_info, addr) );
   }
+
+  /* Unmap dest tables */
+  pde = PACK_PTE(NULL, 0);
+  set_pde(src->pg_info.pg_dir, CHILD_PDE, &pde);
+  tlb_inval_tome(CHILD_PDE);
+  tlb_inval_page(src->pg_info.pg_tbls[PG_DIR_INDEX(dst->pg_info.pg_tbls)]);
+  dst->pg_info.pg_tbls = PG_TBL_ADDR;
 
   return 0;
 }

@@ -26,7 +26,6 @@ void *alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs);
 void *pg_alloc_phys(pg_info_s *pgi, void *vaddr);
 void free_page(pg_info_s *pgi, void *vaddr);
 int page_set_attrs(pg_info_s *pgi, void *vaddr, unsigned int attrs);
-void free_unmapped_frame(void *frame, pg_info_s *pgi);
 int copy_page(pg_info_s *dst, pg_info_s *src, void *vaddr);
 int pg_page_fault_handler(pg_info_s *pgi, void *addr);
 

@@ -13,7 +13,7 @@
  *  @author Harry Q. Bovik (hqbovik)
  *  @author Fred Hacker (fhacker)
  *  @bug No known bugs.
- */
+ **/
 
 #include <common_kern.h>
 
@@ -51,7 +51,7 @@
 void init_kdata_structures(void);
 void *raw_init_pd(void);
 void init_stack(thread_t *thr);
-thread_t *hand_load_task(void *pd, const char *fname);
+thread_t *hand_load_task(const char *fname);
 
 /*************************************************************************
  *  Kernel main
@@ -67,27 +67,14 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 {
   /* Initialize kernel data structures */
   init_kdata_structures();
-
-  /* Init's page directory */
-  void *init_pd = raw_init_pd();
-
-  /* Idle's page directory */
-  void *idle_pd = raw_init_pd();
-
-  /* Enable paging */
-  set_cr3((uint32_t)(idle_pd));
   enable_write_protect();
-  enable_paging();
 
   /* Hand load idle */
-  thread_t *idle = hand_load_task(idle_pd, "idle");
-
-  /* Prepare idle's stack */
+  thread_t *idle = hand_load_task("idle");
   init_stack(idle);
 
   /* Hand load init */
-  set_cr3((uint32_t)(init_pd));
-  hand_load_task(init_pd, "regression");
+  hand_load_task("regression");
 
   /* Keep track of init's task */
   init = curr->task_info;
@@ -103,18 +90,6 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 
   /* To placate the compiler */
   return 0;
-}
-
-/** @brief Initialize a page directory when paging and interrupts are disabled.
- *
- *  @return Base of address of page directory initalized.
- **/
-void *raw_init_pd(void)
-{
-  pte_t *pd = retrieve_head();
-  update_head(*(void **)pd);
-  init_pd(pd, pd);
-  return pd;
 }
 
 /** @brief Initialize kernel data structures.
@@ -146,16 +121,15 @@ void init_kdata_structures(void)
  *
  *  @return Address of root thread.
  **/
-thread_t *hand_load_task(void *pd, const char *fname)
+thread_t *hand_load_task(const char *fname)
 {
   thread_t *thread = task_init();
   curr = thread;
-
   task_t *task = thread->task_info;
 
-  /* Initialize pg dir and tid in prototype tcb */
-  task->cr3 = (uint32_t)(pd);
-  thread->task_info = task;
+  /* Enable paging */
+  set_cr3(task->cr3);
+  enable_paging();
 
   /* Prepare to drop into user mode */
   thread->pc = load_file(&task->vmi, fname);
@@ -166,9 +140,10 @@ thread_t *hand_load_task(void *pd, const char *fname)
   queue_init_node(n, thread);
   raw_unblock(thread, n);
 
-  sim_reg_process(pd, fname);
+  sim_reg_process((void *)task->cr3, fname);
   return thread;
 }
+
 
 /** @brief Prepare the kernel stack for half_dispatch().
  *

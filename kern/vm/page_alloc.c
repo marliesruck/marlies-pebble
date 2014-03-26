@@ -335,40 +335,6 @@ void free_page(pg_info_s *pgi, void *vaddr)
 
   return;
 }
-/** @brief Free a frame that is not mapped in to the current address space.
- *
- *  @param frame Frame to free. Assumes frame is page aligned.
- *  @param pgi Virtual memory information.
- *  @return Void.
- **/
-void free_unmapped_frame(void *frame, pg_info_s *pgi)
-{
- pte_t pte, pte_buf;
- unsigned int attrs;
-
- /* Grab an address to map the frame in */
- void *buf = smemalign(PAGE_SIZE,PAGE_SIZE);
-
- /* Store out that pte */
- assert(!get_pte(pgi->pg_dir, pgi->pg_tbls, buf, &pte_buf));
-
- attrs = PG_TBL_PRESENT | PG_TBL_WRITABLE;
- pte = PACK_PTE(frame, attrs);
-
- assert(!set_pte(pgi->pg_dir, pgi->pg_tbls, buf, &pte));
- tlb_inval_page(buf);
-
- /* Add to free list */
- mutex_lock(&frame_allocator_lock);
- *(uint32_t *)(buf) = (uint32_t)retrieve_head();
- update_head(frame);
- mutex_unlock(&frame_allocator_lock);
-
- /* Restore and free smemaligned frame */
- assert(!set_pte(pgi->pg_dir, pgi->pg_tbls, buf, &pte_buf));
- tlb_inval_page(buf);
- sfree(buf, PAGE_SIZE);
-}
 
 /** @brief Handle page faults.
  *
