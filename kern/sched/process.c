@@ -161,8 +161,9 @@ void task_free(task_t *task)
   /* Free your kids' resources */
   while(!queue_empty(&task->dead_children)){
     n = queue_dequeue(&task->dead_children);
-    victim = cll_entry(task_t *, n);
+    victim = queue_entry(task_t *, n);
     task_reap(victim, task);
+    /* Node is statically allocated so we don't free it */
   }
 
   return;
@@ -175,14 +176,15 @@ void task_free(task_t *task)
  *
  *  Assumes the caller will release the parent's lock.
  *
- *  @param parent Address of your parent.
+ *  @param task Task whose parent to search for.
  *
  *  @return Address of init if your parent is dead, else address of your parent.
  **/
-task_t *task_find_and_lock_parent(task_t *parent)
+task_t *task_find_and_lock_parent(task_t *task)
 {
   cll_node *n;
   task_t *t = NULL; 
+  task_t *parent = task->parent;
 
   mutex_lock(&task_list_lock);
   cll_foreach(&task_list, n) {
@@ -214,7 +216,7 @@ void task_signal_parent(task_t *task)
 {
   queue_node_s n;
 
-  task_t *parent = task_find_and_lock_parent(task->parent);
+  task_t *parent = task_find_and_lock_parent(task);
 
   /* Live children count is for nuclear family only */
   if(parent == task->parent)

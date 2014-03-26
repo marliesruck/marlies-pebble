@@ -39,6 +39,9 @@ void tmr_int_handler(void)
   ticks += 1;
 
   schedule();
+
+  enable_interrupts();
+
   return;
 }
 

@@ -228,10 +228,6 @@ void schedule(void)
     dispatch_wrapper(next);
   }
 
-  /* If a process calls sched_unblock() or sched_block(), we need to ensure that
-   * the next process that runs re-enables interrupts */
-  enable_interrupts();
-
   return;
 }
 
