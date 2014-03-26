@@ -41,7 +41,7 @@ static mutex_s thrlist_lock = MUTEX_INITIALIZER(thrlist_lock);
  * Allocate a thread_t struct and atomically acquires a TID.
  *
  * @param task Task that thread belongs to.
- * @return Addres of initialized thread.
+ * @return Addres of initialized thread, or NULL if our of memory.
  */
 thread_t *thread_init(task_t *task)
 {
@@ -49,11 +49,17 @@ thread_t *thread_init(task_t *task)
 
   /* Initalize thread structure */
   thread_t *thread = malloc(sizeof(thread_t));
+  if(!thread) return NULL;
+
   thread->task_info = task;
   thread->state = THR_NASCENT;
 
   /* Keep track of peer threads */
   cll_node *n = malloc(sizeof(cll_node));
+  if(!n){
+    free(thread);
+    return NULL;
+  }
   cll_init_node(n, thread);
 
   mutex_lock(&task->lock);
@@ -68,7 +74,11 @@ thread_t *thread_init(task_t *task)
   mutex_unlock(&tid_lock);
 
   /* Add to thread list */
-  thrlist_add(thread);
+  if(thrlist_add(thread) < 0){
+    free(thread);
+    free(n);
+    return NULL;
+  }
 
   thread->sp = NULL;
   thread->pc = NULL;
@@ -85,7 +95,7 @@ thread_t *thread_init(task_t *task)
  *
  *  @param t The thread to add.
  *
- *  @return Void.
+ *  @return -1 on error, else 0.
  **/
 int thrlist_add(thread_t *t)
 {
@@ -108,7 +118,7 @@ int thrlist_add(thread_t *t)
  *
  *  @param t The thread to delete.
  *
- *  @return Void.
+ *  @return -1 if thread not found, else 0.
  **/
 int thrlist_del(thread_t *t)
 {

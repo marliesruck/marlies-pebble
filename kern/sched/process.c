@@ -36,6 +36,7 @@ task_t *task_find_and_lock_parent(task_t *parent);
 thread_t *task_init(void)
 {
   task_t *task = malloc(sizeof(task_t));
+  if(!task) return NULL;
 
   /* Initialize vm */
   vm_init(&task->vmi, PG_TBL_ADDR[PG_SELFREF_INDEX], PG_TBL_ADDR);
@@ -56,11 +57,14 @@ thread_t *task_init(void)
 
   /* Initialize root thread with new task */
   thread_t *thread = thread_init(task);
+  if(!thread){
+    free(task);
+    return NULL;
+  }
   task->orig_tid = thread->tid;
 
   /* Add to task list */
-  if(tasklist_add(task) < 0)
-    return NULL;  /* Out of memory! */
+  if(tasklist_add(task) < 0) return NULL;  
 
 
   return thread;
@@ -148,7 +152,7 @@ void task_free(task_t *task)
 
   /* Remove yourself from the task list so that your children cannot add
    * themselves to your dead children list */
-  tasklist_del(task);
+  assert(tasklist_del(task) == 0);
 
   /* Acquire and release your lock in case your child grabbed your task lock
    * before you removed yourself from the task list */

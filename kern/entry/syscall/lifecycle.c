@@ -94,6 +94,9 @@ int sys_fork(unsigned int esp)
 
   thread_t *child_thread = init_child_tcb(child_cr3, child_pd, child_pg_tables);
 
+  /* TODO: free child's cr3 */
+  if(!child_thread) return -1;
+
   task_t *child_task = child_thread->task_info;
   vm_copy(&child_task->vmi, &curr_task->vmi);
 
@@ -183,7 +186,7 @@ void sys_set_status(int status)
 
 void sys_vanish(void)
 {
-  thrlist_del(curr);
+  assert(thrlist_del(curr) == 0);
 
   task_t *task = curr->task_info;
 
@@ -213,9 +216,9 @@ void sys_vanish(void)
 
 int sys_wait(int *status_ptr)
 {
-  task_t *task = curr->task_info;
+  task_t *reaper = curr->task_info;
 
-  task_t *child_task = task_find_zombie(task);
+  task_t *child_task = task_find_zombie(reaper);
 
   /* You have no children to reap */
   if(!child_task) return 0;
@@ -227,7 +230,7 @@ int sys_wait(int *status_ptr)
   if(status_ptr)
     *status_ptr = child_task->status;
 
-  task_reap(child_task, task);
+  task_reap(child_task, reaper);
  
   return tid;
 }
