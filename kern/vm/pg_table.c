@@ -15,6 +15,7 @@
 #include <frame_alloc.h>
 
 /* Libc includes */
+#include <malloc.h>
 #include <stddef.h>
 #include <string.h>
 #include <stdint.h>
@@ -59,18 +60,21 @@ void init_kern_pt(void)
  *  Page directory manipulation
  *************************************************************************/
 
-/** @brief Initialize a page directory.
+/** @brief Allocate and initialize a page directory.
  *
- *  @param pd The page table to initialize.
- *
- *  @return Void.
+ *  @return A pointer to the new page directory.
  **/
-void init_pd(pte_t *pd, void *frame)
+pte_t *pd_init(void)
 {
+  pte_t *pd;
   int i;
 
+  /* Allocate memory for the page directory */
+  pd = smemalign(PAGE_SIZE, PAGE_SIZE);
+  if (!pd) return NULL;
+
   /* The page directory is also a page table... */
-  pd[PG_SELFREF_INDEX] = PACK_PTE(frame, PG_SELFREF_ATTRS);
+  pd[PG_SELFREF_INDEX] = PACK_PTE(pd, PG_SELFREF_ATTRS);
 
   /* Map the kernel's page table */
   for (i = 0; i < KERN_PD_ENTRIES; i++) {
@@ -83,7 +87,7 @@ void init_pd(pte_t *pd, void *frame)
     init_pte(&pd[i], NULL);
   }
 
-  return;
+  return pd;
 }
 
 /** @brief Get a page directory entry.
