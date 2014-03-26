@@ -144,6 +144,7 @@ int tasklist_del(task_t *t)
 void task_free(task_t *task)
 {
   cll_node *n;
+  task_t *victim;
 
   /* Remove yourself from the task list so that your children cannot add
    * themselves to your dead children list */
@@ -157,12 +158,11 @@ void task_free(task_t *task)
   /* Free your virtual memory */
   vm_final(&task->vmi);
 
-  /* Make your dead children the responsibility of init */
+  /* Free your kids' resources */
   while(!cll_empty(&task->dead_children)){
     n = cll_extract(&task->dead_children, task->dead_children.next);
-    mutex_lock(&init->lock);
-    cll_insert(&init->dead_children, n);
-    mutex_unlock(&init->lock);
+    victim = cll_entry(task_t *, n);
+    task_reap(victim, task);
   }
 
   return;
