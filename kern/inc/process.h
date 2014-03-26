@@ -51,6 +51,8 @@ task_t *init;
 struct thread *task_init(void);
 void task_free(task_t *task);
 void task_signal_parent(task_t *task);
+task_t *task_find_zombie(task_t *task);
+void task_reap(task_t *victim, task_t *reaper);
 
 /* Task list manipulation routines */
 int tasklist_add(task_t *t);

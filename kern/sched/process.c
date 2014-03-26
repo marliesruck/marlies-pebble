@@ -208,3 +208,52 @@ void task_signal_parent(task_t *task)
 
   return;
 }
+/** @brief Search for a zombie child.
+ *
+ *  @param task Task to search for.
+ *
+ *  @return NULL if you have no child, else the address of the zombie.
+ **/
+task_t *task_find_zombie(task_t *task)
+{
+  cll_node *n;
+
+  /* Atomically check for dead children */
+  mutex_lock(&task->lock);
+
+  while(cll_empty(&task->dead_children)){
+    if(task->live_children == 0){
+        /* Avoid unbounded blocking */
+        mutex_unlock(&task->lock);
+        return NULL;
+      }
+    else{
+      cvar_wait(&task->cv, &task->lock);
+    }
+  }
+
+  /* Remove dead child */
+  n = cll_extract(&task->dead_children, task->dead_children.next);
+ 
+  task_t *child_task = cll_entry(task_t*, n);
+ 
+  /* Relinquish lock */
+  mutex_unlock(&task->lock);
+ 
+  free(n);
+ 
+  return child_task;
+}
+
+void task_reap(task_t *victim, task_t *reaper)
+{
+  /* Free task's page directory */
+  free_unmapped_frame((void *)(victim->cr3), &reaper->vmi.pg_info);
+
+  /* Free task's thread resources... */
+  cll_free(&victim->peer_threads);
+
+  /* Free task struct */
+  free(victim);
+}
+ 

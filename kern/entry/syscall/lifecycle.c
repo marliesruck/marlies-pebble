@@ -10,8 +10,8 @@
 #include <sc_utils.h>
 
 /* Pebble includes */
-#include <dispatch.h>
 #include <cvar.h>
+#include <dispatch.h>
 #include <frame_alloc.h>
 #include <loader.h>
 #include <mutex.h>
@@ -213,48 +213,23 @@ void sys_vanish(void)
 
 int sys_wait(int *status_ptr)
 {
-  cll_node *n;
   task_t *task = curr->task_info;
 
-  /* Atomically check for dead children */
-  mutex_lock(&task->lock);
+  task_t *child_task = task_find_zombie(task);
 
-  while(cll_empty(&task->dead_children)){
-    if(task->live_children == 0){
-        /* Avoid unbounded blocking */
-        mutex_unlock(&task->lock);
-        return 0;
-      }
-    else{
-      cvar_wait(&task->cv, &task->lock);
-    }
-  }
- /* Remove dead child */
- n = cll_extract(&task->dead_children, task->dead_children.next);
+  /* You have no children to reap */
+  if(!child_task) return 0;
 
- task_t *child_task = cll_entry(task_t*, n);
- free(n);
+  /* Store out root task tid to return */
+  int tid = child_task->orig_tid;
+ 
+  /* Scribble to status */
+  if(status_ptr)
+    *status_ptr = child_task->status;
 
- /* Relinquish lock */
- mutex_unlock(&task->lock);
-
- /* Store out root task tid to return */
- int tid = child_task->orig_tid;
-
- /* Scribble to status */
- if(status_ptr)
-   *status_ptr = child_task->status;
-
- /* Free child's page directory */
- free_unmapped_frame((void *)(child_task->cr3), &task->vmi.pg_info);
-
- /* Free child's thread resources... */
- cll_free(&child_task->peer_threads);
-
- /* Free child's task struct */
- free(child_task);
-
- return tid;
+  task_reap(child_task, task);
+ 
+  return tid;
 }
 
 void sys_task_vanish(int status)
