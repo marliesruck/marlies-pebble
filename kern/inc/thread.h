@@ -46,10 +46,7 @@ typedef struct thread thread_t;
 
 /* Initialization routines */
 thread_t *thread_init(struct task *t);
-
-/* Manipulation routines */
-void thrlist_enqueue(thread_t *thread, queue_s *q);
-thread_t *thrlist_dequeue(queue_s *q);
+int thr_launch(thread_t *t, void *sp, void *pc);
 
 /* Thread list manipulation */
 int thrlist_add(thread_t *t);

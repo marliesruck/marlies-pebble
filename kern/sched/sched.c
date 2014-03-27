@@ -166,9 +166,8 @@ int sched_unblock(thread_t *thr)
   /* Lock, enqueue, unlock */
   disable_interrupts();
   raw_unblock(thr,n);
-  enable_interrupts();
-
   schedule();
+  enable_interrupts();
 
   return 0;
 }

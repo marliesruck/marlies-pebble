@@ -72,6 +72,7 @@ int sys_fork(unsigned int esp)
 {
   task_t *parent, *ctask;
   thread_t *cthread;
+  void *sp, *pc;
 
   parent = curr->task_info;
 
@@ -82,16 +83,13 @@ int sys_fork(unsigned int esp)
   /* Copy address space */
   assert(vm_copy(&ctask->vmi, &parent->vmi) == 0);
 
-  /* Initialize child thread */
-  cthread->sp = kstack_copy(cthread->kstack, curr->kstack, esp);
-  cthread->pc = finish_fork;
-
   /* Keep track of live children */
   parent->live_children++;
 
-  /* Enqueue the child */
-  assert( thrlist_add(cthread) == 0 );
-  assert((sched_unblock(cthread)) == 0);
+  /* Launch the child thread */
+  sp = kstack_copy(cthread->kstack, curr->kstack, esp);
+  pc = finish_fork;
+  thr_launch(cthread, sp, pc);
 
   return cthread->tid;
 }
