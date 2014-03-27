@@ -297,10 +297,14 @@ int vm_copy(vm_info_s *dst, vm_info_s *src)
   mem_region_s *dreg;
   const mem_region_s *sreg;
   cll_node *n;
-  void *addr;
+  void *addr, *buf;
 
   /* Don't copy unless the dest is empty */
   if (!cll_empty(&dst->mmap)) return -1;
+
+  /* Allocate a buffer for copying frames */
+  buf = smemalign(PAGE_SIZE, PAGE_SIZE);
+  if (!buf) return -1;
 
   /* Map in the dst tables */
   dst->pg_info.pg_tbls = CHILD_PDE;
@@ -313,11 +317,14 @@ int vm_copy(vm_info_s *dst, vm_info_s *src)
 
     /* Allocate a dst region struct */
     dreg = vm_region(dst, sreg->start, sreg->limit-sreg->start, sreg->attrs);
-    if (!dreg) return -1;
+    if (!dreg) {
+      sfree(buf, PAGE_SIZE);
+      return -1;
+    }
 
     /* Allocate pages for the region */
     for (addr = sreg->start; addr < sreg->limit; addr += PAGE_SIZE)
-      assert( !copy_page(&dst->pg_info, &src->pg_info, addr) );
+      assert( !copy_page(&dst->pg_info, &src->pg_info, addr, buf) );
   }
 
   /* Unmap dest tables */
@@ -327,6 +334,7 @@ int vm_copy(vm_info_s *dst, vm_info_s *src)
   tlb_inval_page(src->pg_info.pg_tbls[PG_DIR_INDEX(dst->pg_info.pg_tbls)]);
   dst->pg_info.pg_tbls = PG_TBL_ADDR;
 
+  sfree(buf, PAGE_SIZE);
   return 0;
 }
 

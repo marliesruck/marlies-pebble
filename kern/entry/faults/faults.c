@@ -204,19 +204,15 @@ void int_gen_prot(void)
 #include <sched.h>
 /* x86 specific includes */
 #include <x86/cr.h>
-/* Libc includes */
-#include <string.h>
 void int_page_fault(void *pc, void *error_code)
 {
   void *addr;
-  pg_info_s *pgi;
 
   /* Grab the faulting address and page info */
   addr = (void *)get_cr2();
-  pgi = &curr->task_info->vmi.pg_info;
 
   /* Try to handle the fault */
-  if (pg_page_fault_handler(pgi, addr))
+  if (pg_page_fault_handler(addr))
   {
     lprintf("Error: Page fault on table-less address %p by instruction %p", 
             addr, pc);

@@ -29,7 +29,6 @@ void *zfod = NULL;
 
 /* TODO: make these dynamic */
 #define CHILD_PDE ( (void *)tomes[PG_TBL_ENTRIES - 2] )
-#define BUF ( (void *)&tomes[PG_TBL_ENTRIES - 4][PG_TBL_ENTRIES - 1])
 
 
 /*************************************************************************
@@ -50,6 +49,8 @@ void translate_attrs(pte_t *pte, unsigned int attrs)
 
 void free_frame(void *frame, void *vaddr)
 {
+  assert(vaddr != zfod);
+
   /* The implicit pointer should be stored in the lowest addressable word */
   uint32_t *floor = (uint32_t *)(FLOOR(vaddr, PAGE_SIZE));
 
@@ -139,34 +140,29 @@ void *alloc_page_really(pg_info_s *pgi, void *vaddr, unsigned int attrs)
   void *new_head = *(void **)FLOOR(vaddr, PAGE_SIZE);
   update_head(new_head);
 
-  /* Relinquish the lock */
   mutex_unlock(&frame_allocator_lock);
-
   return frame;
 }
 
-void *buffered_copy(pg_info_s *src, void *vaddr)
+void *copy_frame(pg_info_s *src, void *vaddr, void *buf)
 {
   pte_t pte;
 
   /* Allocate the dest page and map it into the current address 
    * space for copying
    */
-  void *frame = alloc_page_really(src, BUF, VM_ATTR_RDWR);
-  if (!frame) {
-    mutex_unlock(&frame_allocator_lock);
-    return NULL;
-  }
+  void *frame = pg_alloc_phys(src, buf);
+  if (!frame) return NULL;
 
   /* Copy data */
-  memcpy(BUF, vaddr, PAGE_SIZE);
+  memcpy(buf, vaddr, PAGE_SIZE);
 
   /* Unmap the dest page
    * We just checked the PDE; set_pte(...) shouldn't fail
    */
-  init_pte(&pte, NULL);
-  assert( !set_pte(src->pg_dir, src->pg_tbls, BUF, &pte) );
-  tlb_inval_page(BUF);
+  pte = PACK_PTE(buf, KERN_PTE_ATTRS);
+  assert( !set_pte(src->pg_dir, src->pg_tbls, buf, &pte) );
+  tlb_inval_page(buf);
 
   return frame;
 }
@@ -294,7 +290,7 @@ int page_set_attrs(pg_info_s *pgi, void *vaddr, unsigned int attrs)
  *
  *  @return 0 on success; a negative integer error code on failure.
  **/
-int copy_page(pg_info_s *dst, pg_info_s *src, void *vaddr)
+int copy_page(pg_info_s *dst, pg_info_s *src, void *vaddr, void *buf)
 {
   pte_t pte;
   void *frame = NULL;
@@ -305,7 +301,7 @@ int copy_page(pg_info_s *dst, pg_info_s *src, void *vaddr)
 
   /* Only copy non-ZFOD pages*/
   if (GET_ADDR(pte) != zfod) {
-    frame = buffered_copy(src, vaddr);
+    frame = copy_frame(src, vaddr, buf);
     if (!frame) return -1;
     pte = PACK_PTE(frame, GET_ATTRS(pte));
   }
@@ -314,7 +310,8 @@ int copy_page(pg_info_s *dst, pg_info_s *src, void *vaddr)
   if (get_pde(dst->pg_dir, vaddr, NULL))
   {
     if (!alloc_page_table(dst, vaddr)) {
-      if (frame) free_frame(frame, vaddr);
+      if (frame && frame != zfod)
+        free_frame(frame, vaddr);
       return 1;
     }
   }
@@ -370,9 +367,14 @@ void free_page(pg_info_s *pgi, void *vaddr)
  *
  *  @return 0 on success; a negative integer error code on failure.
  **/
-int pg_page_fault_handler(pg_info_s *pgi, void *vaddr)
+#include <sched.h>
+int pg_page_fault_handler(void *vaddr)
 {
   pte_t pte;
+  pg_info_s *pgi;
+
+  /* Grab the faulter's page info */
+  pgi = &curr->task_info->vmi.pg_info;
 
   /* Get the faulting address' PTE */
   if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte))
