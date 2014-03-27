@@ -184,21 +184,19 @@ void sys_vanish(void)
 
 int sys_wait(int *status_ptr)
 {
-  task_t *reaper = curr->task_info;
-
-  task_t *child_task = task_find_zombie(reaper);
+  task_t *child_task = task_find_zombie(curr->task_info);
 
   /* You have no children to reap */
   if(!child_task) return 0;
 
   /* Store out root task tid to return */
-  int tid = child_task->orig_tid;
+  int tid = child_task->tid;
  
   /* Scribble to status */
   if(status_ptr)
     *status_ptr = child_task->status;
 
-  task_reap(child_task, reaper);
+  task_reap(child_task);
  
   return tid;
 }

@@ -34,7 +34,7 @@ UPDATE_METHOD = web
 # A list of the test programs you want compiled in from the 410user/progs
 # directory.
 #
-410TESTS = ck1 merchant peon knife fork_test1 exec_basic_helper exec_basic exec_nonexist coolness new_pages mem_permissions print_basic readline_basic deschedule_hang loader_test1 loader_test2 fork_wait getpid_test1 wait_getpid stack_test1
+410TESTS = ck1 merchant peon knife fork_test1 exec_basic_helper exec_basic exec_nonexist coolness new_pages mem_permissions print_basic readline_basic deschedule_hang loader_test1 loader_test2 fork_wait getpid_test1 wait_getpid stack_test1 fork_exit_bomb fork_wait_bomb
 
 ###########################################################################
 # Test programs you have written which you wish to run

@@ -27,7 +27,7 @@ static cll_list task_list = CLL_LIST_INITIALIZER(task_list);
 mutex_s task_list_lock = MUTEX_INITIALIZER(task_list_lock);
 
 /*** --- Internal helper routines --- ***/
-task_t *task_find_and_lock_parent(task_t *parent);
+task_t *task_find_and_lock_parent(task_t *task);
 
 /* @brief Initialize a task and its root thread.
  *
@@ -51,7 +51,7 @@ thread_t *task_init(void)
   queue_init(&task->dead_children);
   cvar_init((&task->cv));
 
-  task->parent = curr->task_info;
+  task->parent_tid = curr->task_info->tid;
 
   /* Initialize the task struct lock */
   mutex_init(&task->lock);
@@ -62,7 +62,7 @@ thread_t *task_init(void)
     free(task);
     return NULL;
   }
-  task->orig_tid = thread->tid;
+  task->tid = thread->tid;
 
   /* Add to task list */
   if(tasklist_add(task) < 0) return NULL;  
@@ -167,7 +167,7 @@ void task_free(task_t *task)
   while(!queue_empty(&task->dead_children)){
     n = queue_dequeue(&task->dead_children);
     victim = queue_entry(task_t *, n);
-    task_reap(victim, task);
+    task_reap(victim);
     /* Node is statically allocated so we don't free it */
   }
 
@@ -189,17 +189,20 @@ task_t *task_find_and_lock_parent(task_t *task)
 {
   cll_node *n;
   task_t *t = NULL; 
-  task_t *parent = task->parent;
+  task_t *parent;
+  int parent_tid = task->parent_tid;
 
   mutex_lock(&task_list_lock);
   cll_foreach(&task_list, n) {
     t = cll_entry(task_t *,n);
-    if (t == parent) break;
+    if (t->tid == parent_tid) break;
   }
 
   /* Your parent is dead. Tell init instead */
-  if(t != parent) 
+  if(t->tid != parent_tid) 
     parent = init; 
+  else
+    parent = t;
 
   /* Grab your parent's lock to prevent him/her from exiting while you are trying
    * to add yourself as a dead child */
@@ -224,7 +227,7 @@ void task_signal_parent(task_t *task)
   task_t *parent = task_find_and_lock_parent(task);
 
   /* Live children count is for nuclear family only */
-  if(parent == task->parent)
+  if(parent->tid == task->parent_tid)
     parent->live_children--;
 
   /* Add yourself as a dead child */
@@ -279,9 +282,10 @@ task_t *task_find_zombie(task_t *task)
  *  difficult for the vanishing task itself to free.
  *
  *  @param victim Task whose resources should be freed.
- *  @param reaper Task responsible for reaping.
+ *
+ *  @return Void.
  **/
-void task_reap(task_t *victim, task_t *reaper)
+void task_reap(task_t *victim)
 {
   cll_node *n;
 

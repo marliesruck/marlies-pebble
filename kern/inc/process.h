@@ -24,7 +24,7 @@
 extern mutex_s task_list_lock;
 
 typedef struct task{
-  struct task *parent;    /* Responsible for reaping my dead children */
+  int parent_tid;         /* Tid of root thread in my parent */
   queue_s  dead_children; /* The list I wait() on */
   cvar_s  cv;             /* For the parent to sleep on while it's waiting to
                              reap its children */
@@ -35,7 +35,7 @@ typedef struct task{
   vm_info_s vmi;          /* Virtual Memory */
   uint32_t num_threads;   /* For knowing when vanish() should 
                              deallocate ALL resources */
-  int orig_tid;           /* Wait() returns the TID of the origin thread of the 
+  int tid;                /* Wait() returns the TID of the origin thread of the 
                              exiting tasks, not the tid of the last thread 
                              to vanish */
   int live_children;      /* This and dead_children determine whether or not
@@ -52,7 +52,7 @@ struct thread *task_init(void);
 void task_free(task_t *task);
 void task_signal_parent(task_t *task);
 task_t *task_find_zombie(task_t *task);
-void task_reap(task_t *victim, task_t *reaper);
+void task_reap(task_t *victim);
 
 /* Task list manipulation routines */
 int tasklist_add(task_t *t);

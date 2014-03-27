@@ -218,6 +218,7 @@ void int_page_fault(void *pc, void *error_code)
   /* Try to handle the fault */
   if (pg_page_fault_handler(pgi, addr))
   {
+    MAGIC_BREAK;
     lprintf("Error: Page fault on table-less address %p by instruction %p", 
             addr, pc);
     panic("Error: Page fault!");

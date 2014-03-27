@@ -12,15 +12,16 @@
 int main(){
   int tid, status;
   while(1){
+    lprintf("forking");
     if((tid = fork()) != 0){
-      lprintf("parent waiting for child");
+      lprintf("waiting");
       wait(&status);
-      lprintf("status = %d", status);
+      lprintf("reaped child with status = %d", status);
     }
     else{
-        lprintf("in child setting status");
+        lprintf("setting status");
         set_status(gettid());
-        lprintf("In child vanishing");
+        lprintf("vanishing");
         vanish();
     }
   }
