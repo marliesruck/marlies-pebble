@@ -148,7 +148,9 @@ int sys_exec(char *execname, char *argvec[])
 
 void sys_set_status(int status)
 {
+  mutex_lock(&curr->task_info->lock);
   curr->task_info->status = status;
+  mutex_unlock(&curr->task_info->lock);
   return;
 }
 
