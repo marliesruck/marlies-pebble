@@ -65,17 +65,24 @@ mem_region_s *mreg_lookup(cll_list *map, mem_region_s *targ)
 
   return NULL;
 }
-int mreg_insert(cll_list *map, mem_region_s *mreg)
+int mreg_insert(cll_list *map, mem_region_s *new)
 {
-  cll_node *n;
+  cll_node *n, *p;
+  mem_region_s *mreg;
 
   /* Try to allocate a cll node */
   n = malloc(sizeof(cll_node));
   if (!n) return -1;
 
-  /* Insert the region into the mem map*/
-  cll_init_node(n, mreg);
-  cll_insert(map, n);
+  /* Ordered insertion by address into the mem map*/
+  cll_foreach(map, p){
+    mreg = cll_entry(mem_region_s *, p);
+    if(new->limit <= mreg->start)
+      break;
+  }
+
+  cll_init_node(n, new);
+  cll_insert(p, n);
 
   return 0;
 }

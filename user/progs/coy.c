@@ -10,16 +10,11 @@
 #include <stdlib.h>
 
 int main(){
-  lprintf("dereferncing NULL...");
-  int *test = (int *)(NULL);
-  *test = 5;
-  lprintf("done");
-  int tid, status;
+  int tid;
   while(1){
-    if((tid = fork()) != 0){
-      lprintf("1");
-      wait(&status);
-      lprintf("2");
+    if(fork()){
+      tid = wait(NULL);
+      lprintf("parent reaped %d", tid);
     }
     else{
         vanish();
