@@ -94,8 +94,9 @@ pte_t *pd_init(void)
  *
  *  @param pd The page directory the entry is in.
  *  @param addr The virtual address whose entry we want.
+ *  @param dst A pointer where we will store the requested entry.
  *
- *  @return The page directory entry for the specified virtual address.
+ *  @return 0 on success; a negative integer error code on failure.
  **/
 int get_pde(pte_t *pd, void *addr, pte_t *dst)
 {
@@ -135,6 +136,7 @@ void set_pde(pte_t *pd, void *addr, pte_t *pte)
 /** @brief Initialize a page table entry.
  *
  *  @param pt The page table entry to initialize.
+ *  @param frame The physical frame to back the entry.
  *
  *  @return Void.
  **/
@@ -167,7 +169,7 @@ void init_pt(pte_t *pt)
  *  @param pd The page directory the entry's page table is in.
  *  @param pt The page table the entry is in.
  *  @param addr The virtual address whose entry we want.
- *  @param dst A pointer to into which to write the entry.
+ *  @param dst A pointer where we will store the requested entry.
  *
  *  @return 0 on success; a negative integer error code on failure.
  **/

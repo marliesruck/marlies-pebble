@@ -20,7 +20,7 @@ struct page_info {
 };
 typedef struct page_info pg_info_s;
 
-void pg_init_allocator(void);
+int pg_init_allocator(void);
 void *alloc_page_table(pg_info_s *pgi, void *vaddr);
 void *alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs);
 void *pg_alloc_phys(pg_info_s *pgi, void *vaddr);
