@@ -85,10 +85,12 @@ void cvar_wait(cvar_s *cv, mutex_s *mp)
 
   /* Release world mutex, unlock-and-block and deschedule */
   mutex_unlock(mp);
+
   sched_spin_unlock_and_block(curr, &cv->lock);
 
   /* Lock world mutex and make progress */
   mutex_lock(mp);
+
   return;
 }
 

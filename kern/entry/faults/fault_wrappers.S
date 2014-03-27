@@ -49,14 +49,14 @@ asm_int_page_fault:
   push %fs                        # Store FS data segment
   push %gs                        # Store GS data segment
 
-  mov 52(%esp), %eax              # Grab error code
+  mov 4(%ebp), %eax               # Grab error code
   push %eax
-  mov 56(%esp), %eax              # Grab address of faulting instruction
+  mov 8(%ebp), %eax               # Grab EIP 
   push %eax
   
   call int_page_fault             # Call the interrupt handler
   add  $8, %esp                   # Readjust ESP to account for the error code
-                                  # push as an argument
+                                  # pushed as an argument
 
   # Epilogue
   pop %gs                         # Restore GS data segment

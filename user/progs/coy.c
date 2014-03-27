@@ -10,18 +10,18 @@
 #include <stdlib.h>
 
 int main(){
+  lprintf("dereferncing NULL...");
+  int *test = (int *)(NULL);
+  *test = 5;
+  lprintf("done");
   int tid, status;
   while(1){
-    lprintf("forking");
     if((tid = fork()) != 0){
-      lprintf("waiting");
+      lprintf("1");
       wait(&status);
-      lprintf("reaped child with status = %d", status);
+      lprintf("2");
     }
     else{
-        lprintf("setting status");
-        set_status(gettid());
-        lprintf("vanishing");
         vanish();
     }
   }

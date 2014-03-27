@@ -19,25 +19,25 @@
  **/
 void install_fault_handlers(void)
 {
-  install_trap_gate(IDT_DE, asm_int_divzero, IDT_KERN_DPL);
-  install_trap_gate(IDT_DB, asm_int_debug, IDT_KERN_DPL);
-  install_trap_gate(IDT_NMI, asm_int_nmi, IDT_KERN_DPL);
-  install_trap_gate(IDT_BP, asm_int_breakpoint, IDT_KERN_DPL);
-  install_trap_gate(IDT_OF, asm_int_overflow, IDT_KERN_DPL);
-  install_trap_gate(IDT_BR, asm_int_bound, IDT_KERN_DPL);
-  install_trap_gate(IDT_UD, asm_int_undef_opcode, IDT_KERN_DPL);
-  install_trap_gate(IDT_NM, asm_int_device_unavail, IDT_KERN_DPL);
-  install_trap_gate(IDT_DF, asm_int_double_fault, IDT_KERN_DPL);
-  install_trap_gate(IDT_CSO, asm_int_cso, IDT_KERN_DPL);
-  install_trap_gate(IDT_TS, asm_int_tss, IDT_KERN_DPL);
-  install_trap_gate(IDT_NP, asm_int_seg_not_present, IDT_KERN_DPL);
-  install_trap_gate(IDT_SS, asm_int_stack_seg, IDT_KERN_DPL);
-  install_trap_gate(IDT_GP, asm_int_gen_prot, IDT_KERN_DPL);
-  install_trap_gate(IDT_PF, asm_int_page_fault, IDT_KERN_DPL);
-  install_trap_gate(IDT_MF, asm_int_float, IDT_KERN_DPL);
-  install_trap_gate(IDT_AC, asm_int_align, IDT_KERN_DPL);
-  install_trap_gate(IDT_MC, asm_int_machine_check, IDT_KERN_DPL);
-  install_trap_gate(IDT_XF, asm_int_simd, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_DE, asm_int_divzero, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_DB, asm_int_debug, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_NMI, asm_int_nmi, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_BP, asm_int_breakpoint, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_OF, asm_int_overflow, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_BR, asm_int_bound, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_UD, asm_int_undef_opcode, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_NM, asm_int_device_unavail, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_DF, asm_int_double_fault, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_CSO, asm_int_cso, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_TS, asm_int_tss, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_NP, asm_int_seg_not_present, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_SS, asm_int_stack_seg, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_GP, asm_int_gen_prot, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_PF, asm_int_page_fault, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_MF, asm_int_float, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_AC, asm_int_align, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_MC, asm_int_machine_check, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_XF, asm_int_simd, IDT_KERN_DPL);
 
   return;
 }
@@ -206,7 +206,7 @@ void int_gen_prot(void)
 #include <x86/cr.h>
 /* Libc includes */
 #include <string.h>
-void int_page_fault(void *pc, void *error_code)
+void int_page_fault(void *eip, void *error_code)
 {
   void *addr;
   pg_info_s *pgi;
@@ -218,9 +218,9 @@ void int_page_fault(void *pc, void *error_code)
   /* Try to handle the fault */
   if (pg_page_fault_handler(pgi, addr))
   {
+    lprintf("Error: Page fault on table-less address %p from instruction %p", 
+            addr, eip);
     MAGIC_BREAK;
-    lprintf("Error: Page fault on table-less address %p by instruction %p", 
-            addr, pc);
     panic("Error: Page fault!");
   }
 

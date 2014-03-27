@@ -86,8 +86,11 @@ int sys_fork(unsigned int esp)
   cthread->sp = kstack_copy(cthread->kstack, curr->kstack, esp);
   cthread->pc = finish_fork;
 
-  /* Keep track of live children */
+  /* Atomically increment live children in case you are vying with another
+   * thread who is forking */
+  mutex_lock(&parent->lock);
   parent->live_children++;
+  mutex_unlock(&parent->lock);
 
   /* Enqueue the child */
   assert( thrlist_add(cthread) == 0 );
@@ -199,7 +202,7 @@ int sys_wait(int *status_ptr)
     *status_ptr = child_task->status;
 
   task_reap(child_task);
- 
+
   return tid;
 }
 

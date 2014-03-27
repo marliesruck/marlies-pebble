@@ -67,7 +67,6 @@ thread_t *task_init(void)
   /* Add to task list */
   if(tasklist_add(task) < 0) return NULL;  
 
-
   return thread;
 }
 
@@ -272,7 +271,7 @@ task_t *task_find_zombie(task_t *task)
  
   /* Relinquish lock */
   mutex_unlock(&task->lock);
- 
+
   return child_task;
 }
 /** @brief Reap a child task.

@@ -69,6 +69,7 @@ int sched_block(thread_t *thr)
   /* Lock, block, unlock */
   disable_interrupts();
   ret = raw_block(thr);
+  assert(ret == 0);
   enable_interrupts();
 
   return ret;
@@ -94,9 +95,11 @@ int sched_spin_unlock_and_block(thread_t *thr, spin_s *lock)
 
   /* Lock the run queue, unlock the world lock */
   disable_interrupts();
+
   if (lock) spin_unlock(lock);
 
   ret = raw_block(thr);
+  assert(ret == 0);
 
   /* Unlock and return */
   enable_interrupts();
@@ -124,6 +127,7 @@ int sched_mutex_unlock_and_block(thread_t *thr, mutex_s *lock)
   if (lock) mutex_unlock(lock);
 
   ret = raw_block(thr);
+  assert(ret == 0);
 
   /* Unlock and return */
   enable_interrupts();
