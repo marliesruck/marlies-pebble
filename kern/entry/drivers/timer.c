@@ -22,6 +22,70 @@
 volatile unsigned int ticks = 0;
 
 
+#include <cllist.h>
+#include <sched.h>
+
+#include <assert.h>
+#include <malloc.h>
+
+static cll_list sleep_list = CLL_LIST_INITIALIZER(sleep_list);
+static mutex_s sleep_lock = MUTEX_INITIALIZER(sleep_lock);
+
+struct sleep_list_entry {
+  thread_t *thread;
+  unsigned int wake_time;
+  cll_node *node;
+};
+typedef struct sleep_list_entry sl_entry;
+
+int go_to_sleep(thread_t *t, unsigned int wake_time)
+{
+  cll_node n, *cursor;
+  sl_entry ent, *temp;
+
+  ent.thread = t;
+  ent.wake_time = wake_time;
+  ent.node = malloc(sizeof(cll_node));
+  queue_init_node(ent.node, ent.thread);
+  cll_init_node(&n, &ent);
+
+  if (!ent.node) return -1;
+
+  mutex_lock(&sleep_lock);
+
+  /* Find the spot we're inserting at */
+  cll_foreach(&sleep_list, cursor) {
+    temp = cll_entry(sl_entry *, cursor);
+    if (temp->wake_time > wake_time) break;
+  }
+
+  cll_insert(cursor, &n);
+
+  return sched_mutex_unlock_and_block(t, &sleep_lock);
+}
+
+void wake_up(unsigned int time)
+{
+  sl_entry *sleeper;
+
+  /* Lock the thread list */
+  mutex_lock(&sleep_lock);
+
+  while (!cll_empty(&sleep_list))
+  {
+    sleeper = cll_entry(sl_entry *, sleep_list.next);
+    if (sleeper->wake_time > time) break;
+    assert(cll_extract(&sleep_list, sleep_list.next));
+
+    raw_unblock(sleeper->thread, sleeper->node);
+  }
+
+  /* Unlock, free and return */
+  mutex_unlock(&sleep_lock);
+  return;
+}
+
+
 /*************************************************************************/
 /* External Interface                                                    */
 /*************************************************************************/
@@ -38,6 +102,7 @@ void tmr_int_handler(void)
   outb(INT_CTL_PORT, INT_ACK_CURRENT);
   ticks += 1;
 
+  wake_up(ticks);
   schedule();
   enable_interrupts();
 

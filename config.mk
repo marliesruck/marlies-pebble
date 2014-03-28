@@ -34,7 +34,7 @@ UPDATE_METHOD = web
 # A list of the test programs you want compiled in from the 410user/progs
 # directory.
 #
-410TESTS = ck1 merchant peon knife fork_test1 exec_basic_helper exec_basic exec_nonexist coolness new_pages remove_pages_test1 remove_pages_test2 mem_permissions print_basic readline_basic deschedule_hang loader_test1 loader_test2 fork_wait getpid_test1 wait_getpid stack_test1
+410TESTS = ck1 merchant peon knife fork_test1 exec_basic_helper exec_basic exec_nonexist coolness new_pages remove_pages_test1 remove_pages_test2 mem_permissions print_basic readline_basic deschedule_hang loader_test1 loader_test2 fork_wait getpid_test1 wait_getpid stack_test1 sleep_test1
 
 ###########################################################################
 # Test programs you have written which you wish to run
@@ -42,7 +42,7 @@ UPDATE_METHOD = web
 # A list of the test programs you want compiled in from the user/progs
 # directory.
 #
-STUDENTTESTS =  introspective schizo introvert garrulous mimic zfod cooperative annoying coquettish coy cooperative_terminate merchant_terminate peon_terminate coolness_terminate coy_terminate regression
+STUDENTTESTS =  introspective schizo introvert garrulous mimic zfod cooperative annoying coquettish coy cooperative_terminate merchant_terminate peon_terminate coolness_terminate coy_terminate regression epileptic
 
 ###########################################################################
 # Data files provided by course staff to build into the RAM disk
