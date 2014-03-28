@@ -393,3 +393,67 @@ int pg_page_fault_handler(pg_info_s *pgi, void *vaddr)
   return 0;
 }
 
+void pg_tbl_free(void *addr)
+{
+  return;
+}
+
+/**********************
+ * Invariant checkers *
+ **********************/
+
+/** @brief Ensure that if a PDE is present, there is a valid PTE in that page
+ *  table as well.
+ *
+ *  Basically, we just want to ensure we are not leaking page tables.
+ *
+ *  @param pd Page directory to check.
+ *  @param pt Page tables to check.
+ *
+ *  @return Void.
+ **/
+void validate_pd(pte_t *pd, pt_t *pt)
+{
+  int i, j, found;
+  pte_t pte;
+
+  for(i = KERN_PD_ENTRIES; i < PG_TBL_ENTRIES - 1; i++){
+    /* PDE is present, make sure PTEs are present too */
+    if(get_pde(pd, tomes[i], &pte) == 0){
+      found = 0;
+      for(j = 0; j < PG_TBL_ENTRIES; j++){
+        /* valid PTE found */
+        if(!get_pte(pd, pt, tomes[i][j], &pte)){
+          found = 1;
+          break;
+        }
+      }
+      /* Uh ooh...no valid PTE found */
+      if(!found)
+        lprintf("Page directory entry is mapped but there are no valid ptes "
+                "in the page table!");
+    }
+  }
+  return;
+}
+/** @brief Ensure that if are freeing a page table, all PTEs are invalid.
+ *
+ *  @param pd Page directory to check.
+ *  @param pt Page tables to check.
+ *
+ *  @return Void.
+ **/
+void validate_pt(pte_t *pd, pt_t *pt, page_t *pages)
+{
+  int i;
+  pte_t pte;
+
+  for(i = 0; i < PG_TBL_ENTRIES; i++){
+    /* Valid PTE found */
+    if(!get_pte(pd, pt, pages[i], &pte)){
+      lprintf("You are freeing a page table with valid PTE!");
+    }
+  }
+}
+
+

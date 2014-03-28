@@ -95,6 +95,8 @@ extern page_t *pages;
 typedef page_t tome_t[PG_TBL_ENTRIES];
 extern tome_t *tomes;
 
+#define TOME_SIZE (PAGE_SIZE * PAGE_SIZE)
+
 #define PG_TBL_ATTRS ( PG_TBL_PRESENT | PG_TBL_WRITABLE | PG_TBL_USER )
 
 #define PG_SELFREF_ATTRS ( PG_TBL_PRESENT | PG_TBL_WRITABLE )
@@ -114,7 +116,6 @@ void init_pt(pte_t *pt);
 void init_pte(pte_t *pte, void *frame);
 int get_pte(pte_t *pd, pt_t *pt, void *addr, pte_t *dst);
 int set_pte(pte_t *pd, pt_t *pt, void *addr, pte_t *pte);
-
 
 #endif /* __PG_TABLE_H__ */
 

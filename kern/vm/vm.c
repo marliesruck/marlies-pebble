@@ -69,6 +69,7 @@ int mreg_insert(cll_list *map, mem_region_s *new)
 {
   cll_node *n, *p;
   mem_region_s *mreg;
+  ord_e ord;
 
   /* Try to allocate a cll node */
   n = malloc(sizeof(cll_node));
@@ -77,7 +78,8 @@ int mreg_insert(cll_list *map, mem_region_s *new)
   /* Ordered insertion by address into the mem map*/
   cll_foreach(map, p){
     mreg = cll_entry(mem_region_s *, p);
-    if(new->limit <= mreg->start)
+    ord = mreg_compare(new, mreg);
+    if((ord == ORD_LT) || (ord == ORD_EQ))
       break;
   }
 
@@ -264,6 +266,67 @@ int vm_set_attrs(vm_info_s *vmi, void *va_start, unsigned int attrs)
   return 0;
 }
 
+/** @brief Frees a region's page tables if they are not shared by neighbor
+ * regions.
+ *
+ *  @param map Memory map to search.
+ *  @param targ Region to check.
+ *
+ *  @return Void.
+ **/
+void vm_boundaries(cll_list *map, mem_region_s *targ)
+{
+  cll_node *n;
+  mem_region_s *curr, *prev, *next;
+  int targ_lo, targ_hi, i;
+
+  /* Make these impossible values for the case when you have no neighbors */
+  int index_lo = -1;
+  int index_hi = PG_TBL_ENTRIES;
+
+  /* Find your neighbors */
+  cll_foreach(map, n){
+    curr = cll_entry(mem_region_s *, n);
+    if (mreg_compare(curr, targ) == ORD_EQ) {
+      break;
+    }
+  }
+  assert(cll_entry(mem_region_s *, n) == targ);
+
+  /* Compute your bounds */
+  targ_lo = PG_DIR_INDEX(targ->start);
+  targ_hi = PG_DIR_INDEX(targ->limit);
+
+  /* TODO: add/sub 1? */
+  /* Extract your neighbors */
+
+  /* There's a neighbor below you in memory */
+  if(n->prev != map){
+    prev = cll_entry(mem_region_s *, n->prev);
+    index_lo = PG_DIR_INDEX(prev->limit);
+  }
+  /* There's a neighbor above you in memory */
+  if(n->next != map){
+    next = cll_entry(mem_region_s *, n->next);
+    index_hi = PG_DIR_INDEX(next->start);
+  }
+
+  /* Free your lower boundary */
+  if(targ_lo != index_lo)
+    pg_tbl_free(targ->start);
+
+  /* Free your upper boundary */
+  if(targ_hi != index_hi)
+    pg_tbl_free(targ->limit);
+
+  /* Free anywhere in between */
+  for(i = ++targ_lo; i < targ_hi; i++){
+    pg_tbl_free(tomes[i]);
+  }
+
+  return;
+}
+
 /** @brief Frees a region previously allocated by vm_alloc(...).
  *
  *  @param vmi The vm_info struct for this allocation.
@@ -285,6 +348,9 @@ void vm_free(vm_info_s *vmi, void *va_start)
   for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE) {
     free_page(&vmi->pg_info, addr);
   }
+
+  /* Check if page tables should be freed */
+  vm_boundaries(&vmi->mmap, mreg);
 
   free(mreg);
   return;
@@ -361,6 +427,9 @@ void vm_final(vm_info_s *vmi)
     /* Free the region's struct */
     free(mreg);
   }
+
+  /* Sanity check */
+  validate_pd(vmi->pg_info.pg_dir, vmi->pg_info.pg_tbls);
 
   return;
 }

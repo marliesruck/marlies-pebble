@@ -29,6 +29,12 @@ int page_set_attrs(pg_info_s *pgi, void *vaddr, unsigned int attrs);
 int copy_page(pg_info_s *dst, pg_info_s *src, void *vaddr);
 int pg_page_fault_handler(pg_info_s *pgi, void *addr);
 
+void pg_tbl_free(void *addr);
+
+/*** Invariant checkers ***/
+void validate_pd(pte_t *pd, pt_t *pt);
+void validate_pt(pte_t *pd, pt_t *pt, page_t *pages);
+  
 
 #endif /* __PAGE_ALLOC_H__ */
 
