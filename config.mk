@@ -20,7 +20,7 @@ TABSTOP = 8
 # "offline" is strongly not recommended as you may miss important project
 # updates.
 #
-UPDATE_METHOD = web
+UPDATE_METHOD = offline
 
 ###########################################################################
 # WARNING: When we test your code, the two TESTS variables below will be

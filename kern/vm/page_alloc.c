@@ -393,8 +393,24 @@ int pg_page_fault_handler(pg_info_s *pgi, void *vaddr)
   return 0;
 }
 
-void pg_tbl_free(void *addr)
+void pg_tbl_free(pg_info_s *pgi, void *vaddr)
 {
+  pte_t pte;
+
+  /* Ensure all PTEs in this page table are invalid */
+  validate_pt(pgi, vaddr);
+
+  /* Retrieve the PDE entry */
+  get_pde(pgi->pg_dir, vaddr, &pte);
+
+  /* Free the frame */
+  void *frame = (void *)GET_ADDR(pte);
+  free_frame(frame, &pgi->pg_tbls[PG_DIR_INDEX(vaddr)][0]);
+
+  /* Unmap the PDE */
+  init_pte(&pte, NULL);
+  set_pde(pgi->pg_dir, vaddr, &pte);
+
   return;
 }
 
@@ -407,23 +423,22 @@ void pg_tbl_free(void *addr)
  *
  *  Basically, we just want to ensure we are not leaking page tables.
  *
- *  @param pd Page directory to check.
- *  @param pt Page tables to check.
+ *  @param pgi Page directory and table information.
  *
  *  @return Void.
  **/
-void validate_pd(pte_t *pd, pt_t *pt)
+void validate_pd(pg_info_s *pgi)
 {
   int i, j, found;
   pte_t pte;
 
   for(i = KERN_PD_ENTRIES; i < PG_TBL_ENTRIES - 1; i++){
     /* PDE is present, make sure PTEs are present too */
-    if(get_pde(pd, tomes[i], &pte) == 0){
+    if(!get_pde(pgi->pg_dir, &tomes[i], &pte)){
       found = 0;
       for(j = 0; j < PG_TBL_ENTRIES; j++){
         /* valid PTE found */
-        if(!get_pte(pd, pt, tomes[i][j], &pte)){
+        if(!get_pte(pgi->pg_dir, pgi->pg_tbls, &tomes[i][j], &pte)){
           found = 1;
           break;
         }
@@ -438,22 +453,25 @@ void validate_pd(pte_t *pd, pt_t *pt)
 }
 /** @brief Ensure that if are freeing a page table, all PTEs are invalid.
  *
- *  @param pd Page directory to check.
- *  @param pt Page tables to check.
+ *  @param pgi Page directory and table information.
+ *  @param vaddr Virtual address that maps to page table we are checking.
  *
  *  @return Void.
  **/
-void validate_pt(pte_t *pd, pt_t *pt, page_t *pages)
+void validate_pt(pg_info_s *pgi, void *vaddr)
 {
-  int i;
   pte_t pte;
+  page_t *tome;
+  int i;
+
+  tome = tomes[PG_DIR_INDEX(vaddr)];
 
   for(i = 0; i < PG_TBL_ENTRIES; i++){
-    /* Valid PTE found */
-    if(!get_pte(pd, pt, pages[i], &pte)){
-      lprintf("You are freeing a page table with valid PTE!");
-    }
+    /* Ensure no PTE is valid */
+    assert(get_pte(pgi->pg_dir, pgi->pg_tbls, &tome[i], &pte));
   }
+
+  return;
 }
 
 

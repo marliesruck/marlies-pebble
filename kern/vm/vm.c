@@ -274,7 +274,7 @@ int vm_set_attrs(vm_info_s *vmi, void *va_start, unsigned int attrs)
  *
  *  @return Void.
  **/
-void vm_boundaries(cll_list *map, mem_region_s *targ)
+void vm_boundaries(vm_info_s *vmi, mem_region_s *targ)
 {
   cll_node *n;
   mem_region_s *curr, *prev, *next;
@@ -285,7 +285,7 @@ void vm_boundaries(cll_list *map, mem_region_s *targ)
   int index_hi = PG_TBL_ENTRIES;
 
   /* Find your neighbors */
-  cll_foreach(map, n){
+  cll_foreach(&vmi->mmap, n){
     curr = cll_entry(mem_region_s *, n);
     if (mreg_compare(curr, targ) == ORD_EQ) {
       break;
@@ -301,27 +301,27 @@ void vm_boundaries(cll_list *map, mem_region_s *targ)
   /* Extract your neighbors */
 
   /* There's a neighbor below you in memory */
-  if(n->prev != map){
+  if(n->prev != &vmi->mmap){
     prev = cll_entry(mem_region_s *, n->prev);
     index_lo = PG_DIR_INDEX(prev->limit);
   }
   /* There's a neighbor above you in memory */
-  if(n->next != map){
+  if(n->next != &vmi->mmap){
     next = cll_entry(mem_region_s *, n->next);
     index_hi = PG_DIR_INDEX(next->start);
   }
 
   /* Free your lower boundary */
   if(targ_lo != index_lo)
-    pg_tbl_free(targ->start);
+    pg_tbl_free(&vmi->pg_info, targ->start);
 
   /* Free your upper boundary */
   if(targ_hi != index_hi)
-    pg_tbl_free(targ->limit);
+    pg_tbl_free(&vmi->pg_info, targ->limit);
 
   /* Free anywhere in between */
   for(i = ++targ_lo; i < targ_hi; i++){
-    pg_tbl_free(tomes[i]);
+    pg_tbl_free(&vmi->pg_info, tomes[i]);
   }
 
   return;
@@ -350,9 +350,13 @@ void vm_free(vm_info_s *vmi, void *va_start)
   }
 
   /* Check if page tables should be freed */
-  vm_boundaries(&vmi->mmap, mreg);
+  vm_boundaries(vmi, mreg);
 
   free(mreg);
+
+  /* Sanity check */
+  validate_pd(&vmi->pg_info);
+
   return;
 }
 
@@ -402,7 +406,33 @@ int vm_copy(vm_info_s *dst, vm_info_s *src)
 
   return 0;
 }
+void vm_region_free(vm_info_s *vmi)
+{
+  mem_region_s *mreg;
+  void *addr;
+  int prev_pdi = -1;
 
+  while ( (mreg = mreg_extract_any(&vmi->mmap)) )
+  {
+    /* Avoid freeing a page table twice */
+    if((PG_DIR_INDEX(mreg->start) == prev_pdi))
+      addr = mreg->start + TOME_SIZE;
+    else 
+      addr = mreg->start;
+
+    /* Free the page tables */
+    for(; addr < mreg->limit; addr += TOME_SIZE) 
+      pg_tbl_free(&vmi->pg_info, addr);
+
+    /* Store out the index of the last page table freed */
+    prev_pdi = PG_DIR_INDEX(mreg->limit);
+
+    /* Free the region */
+    free(mreg);
+  }
+
+  return;
+}
 /** @brief Frees a process' entire address space.
  *
  *  Technically, this function only free those parts allocated with
@@ -429,8 +459,9 @@ void vm_final(vm_info_s *vmi)
   }
 
   /* Sanity check */
-  validate_pd(vmi->pg_info.pg_dir, vmi->pg_info.pg_tbls);
+  validate_pd(&vmi->pg_info);
 
   return;
 }
+
 
