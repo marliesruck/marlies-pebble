@@ -131,6 +131,7 @@ int sys_exec(char *execname, char *argvec[])
   /* Destroy the old address space; setup the new */
   vm_final(&curr->task_info->vmi);
   entry = load_file(&curr->task_info->vmi, execname_k);
+  sim_reg_process(&curr->task_info->cr3, execname_k);
   stack = usr_stack_init(&curr->task_info->vmi, argvec_k);
 
   /* Free copied parameters*/

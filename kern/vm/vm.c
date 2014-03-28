@@ -65,6 +65,7 @@ mem_region_s *mreg_lookup(cll_list *map, mem_region_s *targ)
 
   return NULL;
 }
+
 int mreg_insert(cll_list *map, mem_region_s *mreg)
 {
   cll_node *n;
@@ -78,6 +79,23 @@ int mreg_insert(cll_list *map, mem_region_s *mreg)
   cll_insert(map, n);
 
   return 0;
+}
+
+mem_region_s *mreg_extract(cll_list *map, mem_region_s *targ)
+{
+  cll_node *n;
+  mem_region_s *mreg;
+
+  cll_foreach(map, n) {
+    mreg = cll_entry(mem_region_s *, n);
+    if (mreg_compare(mreg, targ) == ORD_EQ) {
+      cll_extract(map, n);
+      free(n);
+      return mreg;
+    }
+  }
+
+  return NULL;
 }
 
 mem_region_s *mreg_extract_any(cll_list *map)
@@ -257,6 +275,27 @@ int vm_set_attrs(vm_info_s *vmi, void *va_start, unsigned int attrs)
   return 0;
 }
 
+/** @brief Gets the attributes for a region.
+ *
+ *  @param vmi The vm_info struct for this allocation.
+ *  @param va_start The starting address for the allocation.
+ *  @param dst A pointer to write the attributes.
+ *
+ *  @return 0 on success; a negative integer error code on failure.
+ **/
+int vm_get_attrs(vm_info_s *vmi, void *va_start, unsigned int *dst)
+{
+  mem_region_s temp, *mreg;
+
+  /* Find the allocated region */
+  mreg_init(&temp, va_start, va_start, 0); 
+  mreg = mreg_lookup(&vmi->mmap, &temp);
+  if (!mreg) return -1;
+
+  *dst = mreg->attrs;
+  return 0;
+}
+
 /** @brief Frees a region previously allocated by vm_alloc(...).
  *
  *  @param vmi The vm_info struct for this allocation.
@@ -271,7 +310,7 @@ void vm_free(vm_info_s *vmi, void *va_start)
 
   /* Find the allocated region */
   mreg_init(&temp, va_start, va_start, 0); 
-  mreg = mreg_lookup(&vmi->mmap, &temp);
+  mreg = mreg_extract(&vmi->mmap, &temp);
   if (!mreg) return;
 
   /* Free pages in that region */

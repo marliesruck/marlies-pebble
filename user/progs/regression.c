@@ -13,22 +13,23 @@ int main()
 {
   /*** --- Regression tests --- ***/
 
-  if(!fork()){
-    exec("cooperative_terminate", NULL);
-  }
-
+  if(!fork()) exec("new_pages", NULL);
   while(wait(NULL));
 
-  if(!fork()){
-    exec("coolness_terminate", NULL);
-  }
-
+  if(!fork()) exec("remove_pages_test1", NULL);
   while(wait(NULL));
 
-  if(!fork()){
-    exec("coy_terminate", NULL);
-  }
+  /* TODO: Uncomment when we kill faulting processes */
+//  if(!fork()) exec("remove_pages_test2", NULL);
+//  while(wait(NULL));
 
+  if(!fork()) exec("cooperative_terminate", NULL);
+  while(wait(NULL));
+
+  if(!fork()) exec("coolness_terminate", NULL);
+  while(wait(NULL));
+
+  if(!fork()) exec("coy_terminate", NULL); 
   while(wait(NULL));
 
   /*** --- Classic Init Routine --- ***/

@@ -43,6 +43,7 @@ void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
                unsigned int attrs);
 void vm_free(vm_info_s *vmi, void *va_start);
 int vm_set_attrs(vm_info_s *vmi, void *va_start, unsigned int attrs);
+int vm_get_attrs(vm_info_s *vmi, void *va_start, unsigned int *dst);
 int vm_copy(vm_info_s *dst, vm_info_s *src);
 void vm_final(vm_info_s *vmi);
 
