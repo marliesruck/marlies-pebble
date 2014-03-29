@@ -94,6 +94,26 @@ int sys_fork(unsigned int esp)
   return cthread->tid;
 }
 
+int sys_thread_fork(unsigned int esp)
+{
+  thread_t *t;
+  void *sp, *pc;
+
+  t = thread_init(curr->task_info);
+  if (!t) return -1;
+
+  if (task_add_thread(curr->task_info, t)) {
+    free(t);
+    return -1;
+  }
+
+  sp = kstack_copy(t->kstack, curr->kstack, esp);
+  pc = finish_fork;
+  thr_launch(t, sp, pc);
+
+  return t->tid;
+}
+
 /* @bug Add a pcb final function for reinitializing pcb */
 int sys_exec(char *execname, char *argvec[])
 {

@@ -21,9 +21,8 @@
 /* Libc specific includes */
 #include <stdint.h>
 
-extern mutex_s task_list_lock;
 
-typedef struct task{
+struct task {
   struct task *parent;    /* Responsible for reaping my dead children */
   queue_s  dead_children; /* The list I wait() on */
   cvar_s  cv;             /* For the parent to sleep on while it's waiting to
@@ -42,7 +41,8 @@ typedef struct task{
                              wait should block */
   mutex_s  lock;          /* Hold this lock when modifying the task struct */
   int status;             /* My exit status */
-}task_t;
+};
+typedef struct task task_t;
 
 /* Keep track of init for zombie children */
 task_t *init;
@@ -50,6 +50,7 @@ task_t *init;
 /* Task manipulation routines */
 struct thread *task_init(void);
 void task_free(task_t *task);
+int task_add_thread(task_t *tsk, struct thread *thr);
 void task_signal_parent(task_t *task);
 task_t *task_find_zombie(task_t *task);
 void task_reap(task_t *victim, task_t *reaper);
@@ -58,4 +59,6 @@ void task_reap(task_t *victim, task_t *reaper);
 int tasklist_add(task_t *t);
 int tasklist_del(task_t *t);
 
-#endif /* _PROCESS_H */
+
+#endif /* __PROCESS_H__ */
+

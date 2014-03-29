@@ -10,10 +10,19 @@
 
 #include <sc_utils.h>
 
-/* Special */
-.extern sys_fork
-.global asm_sys_fork
-asm_sys_fork:
+
+/** @brief Wraps a nullary system call handler.
+ *
+ *  @param scname The name of the system call.
+ *
+ *  @return Whatever the system call returns.
+ **/
+.macro FORK_SYSCALL scname
+
+# Export and label it...
+.extern \scname
+.global asm_\scname
+asm_\scname:
 
   # Save callee-saved registers for the child
   push %esi
@@ -28,7 +37,7 @@ asm_sys_fork:
 
   # Push the %esp as an argument
   push %esp
-  call sys_fork
+  call \scname
   pop %ecx
   
   # Restore data segments
@@ -45,10 +54,16 @@ asm_sys_fork:
   # To userland!
   iret
 
+.endm
+
+
+
 /*************************************************************************
  *  Life cycle
  *************************************************************************/
 
+FORK_SYSCALL sys_fork
+FORK_SYSCALL sys_thread_fork
 N_ARY_SYSCALL sys_exec,$2
 UNARY_SYSCALL sys_set_status
 NULLARY_SYSCALL sys_vanish

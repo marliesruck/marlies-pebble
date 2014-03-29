@@ -13,6 +13,9 @@ int main()
 {
   /*** --- Regression tests --- ***/
 
+  if(!fork()) exec("minclone_mem", NULL);
+  while(wait(NULL));
+
   if(!fork()) exec("new_pages", NULL);
   while(wait(NULL));
 

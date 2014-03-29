@@ -43,7 +43,7 @@ thread_t *task_init(void)
   task->cr3 = (uint32_t) task->vmi.pg_info.pg_dir;
 
   /* Keep track of threads in a task */
-  task->num_threads = 1;
+  task->num_threads = 0;
   cll_init_list(&task->peer_threads);
 
   /* Keep track of children alive and dead */
@@ -56,9 +56,16 @@ thread_t *task_init(void)
   /* Initialize the task struct lock */
   mutex_init(&task->lock);
 
-  /* Initialize root thread with new task */
+  /* Initialize root thread */
   thread_t *thread = thread_init(task);
-  if(!thread){
+  if(!thread) {
+    free(task);
+    return NULL;
+  }
+
+  /* Add it to the new task */
+  if (task_add_thread(task, thread)) {
+    free(thread);
     free(task);
     return NULL;
   }
@@ -69,6 +76,20 @@ thread_t *task_init(void)
 
 
   return thread;
+}
+
+int task_add_thread(task_t *tsk, thread_t *thr)
+{
+  /* Allocate a node */
+  cll_node *n = malloc(sizeof(cll_node));
+  if(!n) return -1;
+
+  /* Add the thread to the task */
+  cll_init_node(n, thr);
+  cll_insert(&tsk->peer_threads, n);
+  tsk->num_threads += 1;
+
+  return 0;
 }
 
 /** @brief Add a task to the task list.
