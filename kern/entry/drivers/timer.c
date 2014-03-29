@@ -51,7 +51,7 @@ int go_to_sleep(thread_t *t, unsigned int wake_time)
 
   if (!ent.node) return -1;
 
-  mutex_lock(&sleep_lock);
+  disable_interrupts();
 
   /* Find the spot we're inserting at */
   cll_foreach(&sleep_list, cursor) {
@@ -61,15 +61,13 @@ int go_to_sleep(thread_t *t, unsigned int wake_time)
 
   cll_insert(cursor, &n);
 
-  return sched_mutex_unlock_and_block(t, &sleep_lock);
+  /* sched_block(...) will enable interrupts */
+  return sched_block(t);
 }
 
 void wake_up(unsigned int time)
 {
   sl_entry *sleeper;
-
-  /* Lock the thread list */
-  mutex_lock(&sleep_lock);
 
   while (!cll_empty(&sleep_list))
   {
@@ -80,8 +78,6 @@ void wake_up(unsigned int time)
     raw_unblock(sleeper->thread, sleeper->node);
   }
 
-  /* Unlock, free and return */
-  mutex_unlock(&sleep_lock);
   return;
 }
 

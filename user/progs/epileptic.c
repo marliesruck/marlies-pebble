@@ -15,34 +15,36 @@
 #include "410_tests.h"
 #include <report.h>
 
-DEF_TEST_NAME("sleep_test1:");
+DEF_TEST_NAME("epileptic:");
 
 int main(int argc, char *argv[])
 {
-  int before, after;
+  int before, after, slept;
   int i;
   int tid;
   report_start(START_CMPLT);
-  report_misc("before sleeping");
 
   fork();
   fork();
 
   tid = gettid();
+  
+  /* To mix it a little */
+  sleep(tid);
 
   for (i = 0; i < 30; i += 5) {
-    lprintf("%d sleeping for %d ticks", i, tid);
+    lprintf("%d: sleeping for %d ticks", tid, i);
     before = get_ticks();
 	  sleep(i);
     after = get_ticks();
-    lprintf("%d is awake!", tid);
-    if (before + i > after) {
-      lprintf("%d under slept :(", tid);
+    slept = after - before;
+    lprintf("%d: slept for %d... that's enough!", tid, slept);
+    if (slept < i) {
+      lprintf("%d: slept for %d... we under slept :(", tid, slept);
       report_end(END_FAIL);
     }
   }
 
-  report_misc("after sleeping");
   report_end(END_SUCCESS);
   exit( 42 );
 }
