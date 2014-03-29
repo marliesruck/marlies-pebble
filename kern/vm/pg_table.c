@@ -24,7 +24,6 @@
 page_t *pages = (page_t *)NULL;
 tome_t *tomes = (tome_t *)NULL;
 
-#define KERN_PTE_ATTRS ( PG_TBL_PRESENT | PG_TBL_WRITABLE | PG_TBL_GLOBAL )
 static pte_t *kern_pt[KERN_PD_ENTRIES];
 
 

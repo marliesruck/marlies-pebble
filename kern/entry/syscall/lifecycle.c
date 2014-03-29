@@ -72,6 +72,7 @@ int sys_fork(unsigned int esp)
 {
   task_t *parent, *ctask;
   thread_t *cthread;
+  void *sp, *pc;
 
   parent = curr->task_info;
 
@@ -82,21 +83,38 @@ int sys_fork(unsigned int esp)
   /* Copy address space */
   assert(vm_copy(&ctask->vmi, &parent->vmi) == 0);
 
-  /* Initialize child thread */
-  cthread->sp = kstack_copy(cthread->kstack, curr->kstack, esp);
-  cthread->pc = finish_fork;
-
   /* Atomically increment live children in case you are vying with another
    * thread who is forking */
   mutex_lock(&parent->lock);
   parent->live_children++;
   mutex_unlock(&parent->lock);
 
-  /* Enqueue the child */
-  assert( thrlist_add(cthread) == 0 );
-  assert((sched_unblock(cthread)) == 0);
+  /* Launch the child thread */
+  sp = kstack_copy(cthread->kstack, curr->kstack, esp);
+  pc = finish_fork;
+  thr_launch(cthread, sp, pc);
 
   return cthread->tid;
+}
+
+int sys_thread_fork(unsigned int esp)
+{
+  thread_t *t;
+  void *sp, *pc;
+
+  t = thread_init(curr->task_info);
+  if (!t) return -1;
+
+  if (task_add_thread(curr->task_info, t)) {
+    free(t);
+    return -1;
+  }
+
+  sp = kstack_copy(t->kstack, curr->kstack, esp);
+  pc = finish_fork;
+  thr_launch(t, sp, pc);
+
+  return t->tid;
 }
 
 /* @bug Add a pcb final function for reinitializing pcb */
@@ -137,6 +155,7 @@ int sys_exec(char *execname, char *argvec[])
   /* Destroy the old address space; setup the new */
   vm_final(&curr->task_info->vmi);
   entry = load_file(&curr->task_info->vmi, execname_k);
+  sim_reg_process(&curr->task_info->cr3, execname_k);
   stack = usr_stack_init(&curr->task_info->vmi, argvec_k);
 
   /* Free copied parameters*/

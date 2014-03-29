@@ -12,6 +12,8 @@
 
 void tmr_init(unsigned short rate);
 unsigned int tmr_get_ticks();
+#include <thread.h>
+int go_to_sleep(thread_t *t, unsigned int wake_time);
 
 
 #endif /* __TIMER_H__ */

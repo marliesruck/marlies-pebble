@@ -58,6 +58,7 @@ int copy_from_user(char *dst, const char *src, size_t bytes)
 void install_sys_handlers(void)
 {
   install_trap_gate(FORK_INT, asm_sys_fork, IDT_USER_DPL);
+  install_trap_gate(THREAD_FORK_INT, asm_sys_thread_fork, IDT_USER_DPL);
   install_trap_gate(EXEC_INT, asm_sys_exec, IDT_USER_DPL);
   install_trap_gate(SET_STATUS_INT, asm_sys_set_status, IDT_USER_DPL);
   install_trap_gate(VANISH_INT, asm_sys_vanish, IDT_USER_DPL);

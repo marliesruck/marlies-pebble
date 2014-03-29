@@ -84,6 +84,7 @@
   ( (unsigned int)(addr) | (attrs) )
 
 #define KERN_PD_ENTRIES PG_DIR_INDEX(USER_MEM_START)
+#define KERN_PTE_ATTRS ( PG_TBL_PRESENT | PG_TBL_WRITABLE | PG_TBL_GLOBAL )
 
 typedef unsigned int pte_t;
 

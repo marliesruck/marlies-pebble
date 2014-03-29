@@ -9,7 +9,9 @@
 #ifndef __SYSCALL_WRAPPERS_H__
 #define __SYSCALL_WRAPPERS_H__
 
+
 int asm_sys_fork(void);
+int asm_sys_thread_fork(void);
 void asm_sys_exec(void);
 void asm_sys_set_status(void);
 void asm_sys_vanish(void);
@@ -34,4 +36,6 @@ void asm_sys_misbehave(void);
 int asm_sys_deschedule(void);
 int asm_sys_make_runnable(void);
 
+
 #endif /* __SYSCALL_WRAPPERS_H__ */
+

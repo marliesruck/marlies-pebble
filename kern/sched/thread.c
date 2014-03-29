@@ -17,6 +17,7 @@
 #include <cllist.h>
 #include <pg_table.h>
 #include <process.h>
+#include <sched.h>
 #include <thread.h>
 #include <vm.h>
 
@@ -47,43 +48,39 @@ thread_t *thread_init(task_t *task)
 {
   assert(task);
 
-  /* Initalize thread structure */
+  /* Allocate the thread structure */
   thread_t *thread = malloc(sizeof(thread_t));
   if(!thread) return NULL;
-
-  thread->task_info = task;
-  thread->state = THR_NASCENT;
-
-  /* Keep track of peer threads */
-  cll_node *n = malloc(sizeof(cll_node));
-  if(!n){
-    free(thread);
-    return NULL;
-  }
-  cll_init_node(n, thread);
-
-  mutex_lock(&task->lock);
-  cll_insert(&task->peer_threads,n);
-  mutex_unlock(&task->lock);
-
-  mutex_init(&thread->lock);
 
   /* Atomically acquire TID */
   mutex_lock(&tid_lock);
   thread->tid = ++tid;
   mutex_unlock(&tid_lock);
 
-  /* Add to thread list */
-  if(thrlist_add(thread) < 0){
-    free(thread);
-    free(n);
-    return NULL;
-  }
-
+  /* Initialize other fields */
+  mutex_init(&thread->lock);
+  thread->state = THR_NASCENT;
+  thread->task_info = task;
   thread->sp = NULL;
   thread->pc = NULL;
     
   return thread;
+}
+
+int thr_launch(thread_t *t, void *sp, void *pc)
+{
+
+  /* Set stack and instruction pointers */
+  t->sp = sp;
+  t->pc = pc;
+
+  /* Add the thread to the thread list */
+  if (thrlist_add(t)) return -1;
+
+  /* Unblock (also sets state to THR_RUNNABLE */
+  if (sched_unblock(t)) return -1;
+
+  return 0;
 }
 
 

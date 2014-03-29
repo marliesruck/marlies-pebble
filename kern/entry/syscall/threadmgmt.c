@@ -62,7 +62,13 @@ unsigned int sys_get_ticks(void)
 
 int sys_sleep(int ticks)
 {
-  return -1;
-}
+  unsigned int time;
 
+  if (ticks < 0) return -1;
+
+  time = tmr_get_ticks();
+  go_to_sleep(curr, time + ticks);
+
+  return 0;
+}
 
