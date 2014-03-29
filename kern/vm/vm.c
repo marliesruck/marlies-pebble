@@ -164,6 +164,7 @@ void vm_init_allocator(void)
 void *vm_region(vm_info_s *vmi, void *va_start, size_t len,
                 unsigned attrs)
 {
+
   void *pg_start, *pg_limit;
   int pg_count;
   mem_region_s *mreg;
@@ -449,8 +450,6 @@ void vm_final(vm_info_s *vmi)
   mem_region_s *mreg;
   void *addr;
   cll_node *n;
-  lprintf("vm final with pg tbls %p", vmi->pg_info.pg_tbls);
-
   cll_foreach(&vmi->mmap, n)
   {
     mreg = cll_entry(mem_region_s *, n);
@@ -464,7 +463,7 @@ void vm_final(vm_info_s *vmi)
   vm_region_free(vmi);
 
   /* Sanity check */
-   validate_pd(&vmi->pg_info);
+  validate_pd(&vmi->pg_info);
 
   return;
 }

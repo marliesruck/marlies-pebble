@@ -168,6 +168,8 @@ void *buffered_copy(pg_info_s *src, void *vaddr)
   init_pte(&pte, NULL);
   assert( !set_pte(src->pg_dir, src->pg_tbls, BUF, &pte) );
   tlb_inval_page(BUF);
+  tlb_inval_page(&src->pg_tbls[PG_DIR_INDEX(BUF)][PG_TBL_INDEX(BUF)]);
+  lprintf("BUF: %p", BUF);
 
   return frame;
 }
@@ -439,6 +441,10 @@ void validate_pd(pg_info_s *pgi)
   for(i = KERN_PD_ENTRIES; i < PG_TBL_ENTRIES - 1; i++){
     /* PDE is present, make sure PTEs are present too */
     if(!get_pde(pgi->pg_dir, &tomes[i], &pte)){
+      lprintf("valid pde at vaddr: %p", &tomes[i]);
+      lprintf("&pgi->pg_tbls[PG_DIR_INDEX(&tomes[i])][PG_TBL_INDEX(&tomes[i])]: %p",
+&pgi->pg_tbls[PG_DIR_INDEX(&tomes[i])][PG_TBL_INDEX(&tomes[i])]);
+      lprintf("&pd[i]: %p",&pgi->pg_dir[i]);
       found = 0;
       for(j = 0; j < PG_TBL_ENTRIES; j++){
         /* valid PTE found */
