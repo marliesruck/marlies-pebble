@@ -102,6 +102,7 @@ int sys_fork(unsigned int esp)
 /* @bug Add a pcb final function for reinitializing pcb */
 int sys_exec(char *execname, char *argvec[])
 {
+  lprintf("execing %s", execname);
   char *execname_k, **argvec_k;
   void *entry, *stack;
   simple_elf_t se;
@@ -135,7 +136,9 @@ int sys_exec(char *execname, char *argvec[])
 
   /* Destroy the old address space; setup the new */
   vm_final(&curr->task_info->vmi);
+  lprintf("loading file...");
   entry = load_file(&curr->task_info->vmi, execname_k);
+  lprintf("loaded");
   stack = usr_stack_init(&curr->task_info->vmi, argvec_k);
 
   /* Free copied parameters*/

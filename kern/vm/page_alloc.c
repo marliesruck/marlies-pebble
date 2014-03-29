@@ -92,6 +92,7 @@ void *alloc_page_table(pg_info_s *pgi, void *vaddr)
   update_head(new_head);
 
   mutex_unlock(&frame_allocator_lock);
+
   return frame;
 }
 
@@ -222,6 +223,7 @@ void *alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs)
   real_attrs |= (attrs & VM_ATTR_USER) ? PG_TBL_USER : 0;
   pde = PACK_PTE(zfod, real_attrs);
   assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pde) );
+  tlb_inval_page(vaddr);
 
   return zfod;
 }
@@ -234,8 +236,7 @@ void *pg_alloc_phys(pg_info_s *pgi, void *vaddr)
   pte_t pte;
 
   /* Find the page's PTE */
-  if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte))
-    return NULL;
+  assert(!get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte));
 
   /* Serialize access to the free list */
   mutex_lock(&frame_allocator_lock);
@@ -259,6 +260,7 @@ void *pg_alloc_phys(pg_info_s *pgi, void *vaddr)
   update_head(new_head);
 
   mutex_unlock(&frame_allocator_lock);
+
   return frame;
 }
 
@@ -405,11 +407,13 @@ void pg_tbl_free(pg_info_s *pgi, void *vaddr)
 
   /* Free the frame */
   void *frame = (void *)GET_ADDR(pte);
+
   free_frame(frame, &pgi->pg_tbls[PG_DIR_INDEX(vaddr)][0]);
 
-  /* Unmap the PDE */
+  /* Unmap the PDE and invalidate the tlb */
   init_pte(&pte, NULL);
   set_pde(pgi->pg_dir, vaddr, &pte);
+  tlb_inval_page(&pgi->pg_tbls[PG_DIR_INDEX(vaddr)][PG_TBL_INDEX(vaddr)]);
 
   return;
 }
@@ -443,10 +447,8 @@ void validate_pd(pg_info_s *pgi)
           break;
         }
       }
-      /* Uh ooh...no valid PTE found */
-      if(!found)
-        lprintf("Page directory entry is mapped but there are no valid ptes "
-                "in the page table!");
+      /* Make sure a valid PTE was found */
+      assert(found);
     }
   }
   return;
@@ -466,7 +468,7 @@ void validate_pt(pg_info_s *pgi, void *vaddr)
 
   tome = tomes[PG_DIR_INDEX(vaddr)];
 
-  for(i = 0; i < PG_TBL_ENTRIES; i++){
+  for(i = 0; i < PG_TBL_ENTRIES - 1; i++){
     /* Ensure no PTE is valid */
     assert(get_pte(pgi->pg_dir, pgi->pg_tbls, &tome[i], &pte));
   }

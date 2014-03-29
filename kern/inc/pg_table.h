@@ -95,7 +95,7 @@ extern page_t *pages;
 typedef page_t tome_t[PG_TBL_ENTRIES];
 extern tome_t *tomes;
 
-#define TOME_SIZE (PAGE_SIZE * PAGE_SIZE)
+#define TOME_SIZE (PAGE_SIZE * PG_TBL_ENTRIES)
 
 #define PG_TBL_ATTRS ( PG_TBL_PRESENT | PG_TBL_WRITABLE | PG_TBL_USER )
 

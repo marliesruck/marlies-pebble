@@ -409,20 +409,22 @@ int vm_copy(vm_info_s *dst, vm_info_s *src)
 void vm_region_free(vm_info_s *vmi)
 {
   mem_region_s *mreg;
-  void *addr;
   int prev_pdi = -1;
+  int pdi;
 
   while ( (mreg = mreg_extract_any(&vmi->mmap)) )
   {
+    pdi = PG_DIR_INDEX(mreg->start);
+
     /* Avoid freeing a page table twice */
-    if((PG_DIR_INDEX(mreg->start) == prev_pdi))
-      addr = mreg->start + TOME_SIZE;
-    else 
-      addr = mreg->start;
+    if(pdi == prev_pdi){
+      ++pdi;
+    }
 
     /* Free the page tables */
-    for(; addr < mreg->limit; addr += TOME_SIZE) 
-      pg_tbl_free(&vmi->pg_info, addr);
+    for(;((void *)(&tomes[pdi])) < mreg->limit; pdi++){
+      pg_tbl_free(&vmi->pg_info,&tomes[pdi]);
+    }
 
     /* Store out the index of the last page table freed */
     prev_pdi = PG_DIR_INDEX(mreg->limit);
@@ -446,20 +448,23 @@ void vm_final(vm_info_s *vmi)
 {
   mem_region_s *mreg;
   void *addr;
+  cll_node *n;
+  lprintf("vm final with pg tbls %p", vmi->pg_info.pg_tbls);
 
-  while ( (mreg = mreg_extract_any(&vmi->mmap)) )
+  cll_foreach(&vmi->mmap, n)
   {
+    mreg = cll_entry(mem_region_s *, n);
+
     /* Free all of each region's pages */
     for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE) {
       free_page(&vmi->pg_info, addr);
     }
-
-    /* Free the region's struct */
-    free(mreg);
   }
 
+  vm_region_free(vmi);
+
   /* Sanity check */
-  validate_pd(&vmi->pg_info);
+   validate_pd(&vmi->pg_info);
 
   return;
 }
