@@ -50,7 +50,13 @@ ord_e mreg_compare(mem_region_s *lhs, mem_region_s *rhs)
   return ORD_EQ;
 }
 
-
+/** @brief Identify a memory region WITHOUT extracting it.
+ *
+ *  @param map Memory map to search.
+ *  @param targ Memory region start address to search for.
+ *
+ *  @return NULL if not found, else the memory region.
+ **/
 mem_region_s *mreg_lookup(cll_list *map, mem_region_s *targ)
 {
   cll_node *n;
@@ -88,7 +94,13 @@ int mreg_insert(cll_list *map, mem_region_s *new)
 
   return 0;
 }
-
+/** @brief Identify a memory region AND extract it.
+ *
+ *  @param map Memory map to search.
+ *  @param targ Memory region start address to search for.
+ *
+ *  @return NULL if not found, else the memory region.
+ **/
 mem_region_s *mreg_extract(cll_list *map, mem_region_s *targ)
 {
   cll_node *n;
@@ -294,7 +306,6 @@ int vm_set_attrs(vm_info_s *vmi, void *va_start, unsigned int attrs)
  **/
 void vm_boundaries(vm_info_s *vmi, mem_region_s *targ)
 {
-  lprintf("VM BOUNDARIES");
   cll_node *n;
   mem_region_s *curr, *prev, *next;
   int targ_lo, targ_hi, i;
@@ -334,14 +345,18 @@ void vm_boundaries(vm_info_s *vmi, mem_region_s *targ)
   if(targ_lo != index_lo)
     pg_tbl_free(&vmi->pg_info, targ->start);
 
-  /* Free your upper boundary */
-  if(targ_hi != index_hi)
+  /* Free your upper boundary if span more than one tome */
+  if((targ_hi != index_hi) && (targ_hi != targ_lo))
     pg_tbl_free(&vmi->pg_info, targ->limit);
 
   /* Free anywhere in between */
-  for(i = ++targ_lo; i < targ_hi; i++){
+  for(i = ++targ_lo; i < targ_hi - 1; i++){
     pg_tbl_free(&vmi->pg_info, tomes[i]);
   }
+
+  /* Extract and free your cll node */
+  cll_extract(&vmi->mmap, n);
+  free(n);
 
   return;
 }
@@ -381,7 +396,8 @@ void vm_free(vm_info_s *vmi, void *va_start)
 
   /* Find the allocated region */
   mreg_init(&temp, va_start, va_start, 0); 
-  mreg = mreg_extract(&vmi->mmap, &temp);
+  mreg = mreg_lookup(&vmi->mmap, &temp);
+
   if (!mreg) return;
 
   /* Free pages in that region */

@@ -120,7 +120,6 @@ int sys_thread_fork(unsigned int esp)
 /* @bug Add a pcb final function for reinitializing pcb */
 int sys_exec(char *execname, char *argvec[])
 {
-  lprintf("execing %s", execname);
   char *execname_k, **argvec_k;
   void *entry, *stack;
   simple_elf_t se;

@@ -6,6 +6,8 @@
  *  @author Marlies Ruck (mruck)
  **/
 
+#include <simics.h>
+
 #include <sched.h>
 #include <vm.h>
 #include <mutex.h>

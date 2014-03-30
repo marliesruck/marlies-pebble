@@ -12,7 +12,6 @@
 int main()
 {
   /*** --- Regression tests --- ***/
-  /*
 
   if(!fork()) exec("minclone_mem", NULL);
   while(wait(NULL));
@@ -22,7 +21,6 @@ int main()
 
   if(!fork()) exec("remove_pages_test1", NULL);
   while(wait(NULL));
-  */
 
   /* TODO: Uncomment when we kill faulting processes */
 //  if(!fork()) exec("remove_pages_test2", NULL);
