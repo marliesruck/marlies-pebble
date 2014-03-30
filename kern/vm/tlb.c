@@ -7,9 +7,9 @@
  *
  *  @bug No known bugs.
  */
+#include <tlb.h>
 
-#include "tlb.h"
-
+/* Pebbles specific includes */
 #include <pg_table.h>
 #include <page_alloc.h>
 

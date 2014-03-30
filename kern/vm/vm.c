@@ -130,7 +130,9 @@ mem_region_s *mreg_extract(cll_list *map, mem_region_s *targ)
   return NULL;
 }
 
-/** @brief Extract any memory region.
+/** @brief Extract the memory region lowest in memory.
+ *
+ *  This assumes memory regions were inserted in order by calling mreg_insert().
  *
  *  @param map Memory map to search.
  *  @param targ Memory region to extract.
@@ -138,7 +140,7 @@ mem_region_s *mreg_extract(cll_list *map, mem_region_s *targ)
  *  @return NULL if the memory map is empty, else the first memory region in the
  *  list.
  **/
-mem_region_s *mreg_extract_any(cll_list *map)
+mem_region_s *mreg_extract_mem_lo(cll_list *map)
 {
   cll_node *n;
   mem_region_s *mreg;
@@ -490,13 +492,24 @@ int vm_copy(vm_info_s *dst, vm_info_s *src)
   sfree(buf, PAGE_SIZE);
   return 0;
 }
+
+/* @brief Free the memory regions in a VMI and any page tables they are
+ * associated with.
+ *
+ *  Frees any page tables that were allocated as a result to a call to
+ *  vm_alloc(). Also frees the memory regions themselves.
+ *
+ *  @param vmi The vm_info struct whose memory map we'll free.
+ *
+ *  @return Void.
+ **/
 void vm_region_free(vm_info_s *vmi)
 {
   mem_region_s *mreg;
   int prev_pdi = -1;
   int pdi;
 
-  while ( (mreg = mreg_extract_any(&vmi->mmap)) )
+  while ( (mreg = mreg_extract_mem_lo(&vmi->mmap)) )
   {
     pdi = PG_DIR_INDEX(mreg->start);
 
@@ -545,7 +558,7 @@ void vm_final(vm_info_s *vmi)
 
   vm_region_free(vmi);
 
-  /* Check our invariants */
+  /* Check our invariants to ensure we are not leaking page tables */
   validate_pd(&vmi->pg_info);
 
   return;
