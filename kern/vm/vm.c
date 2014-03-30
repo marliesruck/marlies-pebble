@@ -4,6 +4,9 @@
  *
  *  @author Enrique Naudon (esn)
  *  @author Marlies Ruck (mruck)
+ *
+ *  @bug For mreg_bounds, do I need to add/sub 1?
+ *
  **/
 #include <simics.h>
 
@@ -26,6 +29,11 @@
 /*************************************************************************
  *  Memory map and region manipulation
  *************************************************************************/
+typedef struct bounds{
+  int hi;
+  int lo;
+}bounds_t;
+
 
 void mreg_init(mem_region_s *mreg, void *start, void *limit, unsigned int attrs)
 {
@@ -156,6 +164,126 @@ mem_region_s *mreg_extract_mem_lo(cll_list *map)
   return mreg;
 }
 
+/** @brief Compute a memory region's boundaries 
+ *
+ *  Compute the page directory indices of your neighbors.
+ * 
+ *  @param map Memory map to search.
+ *  @param targ Region to check.
+ *  @param bounds Bounds struct to populate.
+ *
+ *  @return Void.
+ **/
+void mreg_bounds(vm_info_s *vmi, mem_region_s *targ, bounds_t *bounds)
+{
+  cll_node *n;
+  mem_region_s *curr, *prev, *next;
+
+  /* Find your neighbors */
+  cll_foreach(&vmi->mmap, n){
+    curr = cll_entry(mem_region_s *, n);
+    if (mreg_compare(curr, targ) == ORD_EQ) {
+      break;
+    }
+  }
+  assert(cll_entry(mem_region_s *, n) == targ);
+
+  /* There's a neighbor below you in memory */
+  if(n->prev != &vmi->mmap){
+    prev = cll_entry(mem_region_s *, n->prev);
+    bounds->lo = PG_DIR_INDEX(prev->limit);
+  }
+
+  /* There's a neighbor above you in memory */
+  if(n->next != &vmi->mmap){
+    next = cll_entry(mem_region_s *, n->next);
+    bounds->hi = PG_DIR_INDEX(next->start);
+  }
+
+  /* Now that we've got all the info we need, free your cll node */
+  cll_extract(&vmi->mmap, n);
+  free(n);
+
+  return;
+}
+
+/** @brief Frees a region's page tables if they are not shared by neighbor
+ *   regions.
+ *
+ *  @param map Memory map to search.
+ *  @param targ Region to check.
+ *
+ *  @return Void.
+ **/
+void mreg_neighbors(vm_info_s *vmi, mem_region_s *targ)
+{
+  int targ_lo, targ_hi, i;
+
+  /* Make these impossible values for the case when you have no neighbors */
+  bounds_t bounds = {-1, -1};
+
+  /* Compute your neighbors bounds */
+  mreg_bounds(vmi, targ, &bounds);
+
+  /* Compute your bounds */
+  targ_lo = PG_DIR_INDEX(targ->start);
+  targ_hi = PG_DIR_INDEX(targ->limit);
+
+  /* Free your lower boundary */
+  if(targ_lo != bounds.lo)
+    pg_tbl_free(&vmi->pg_info, targ->start);
+
+  /* Free your upper boundary if span more than one tome */
+  if((targ_hi != bounds.hi) && (targ_hi != targ_lo))
+    pg_tbl_free(&vmi->pg_info, targ->limit);
+
+  /* Free anywhere in between */
+  for(i = ++targ_lo; i < targ_hi - 1; i++){
+    pg_tbl_free(&vmi->pg_info, &tomes[i]);
+  }
+
+  return;
+}
+
+/* @brief Free the memory regions in a VMI and any page tables they are
+ * associated with.
+ *
+ * Frees any page tables that were allocated as a result to a call to
+ * vm_alloc(). Also frees the memory regions themselves.
+ *
+ * @param vmi The vm_info struct whose memory map we'll free.
+ *
+ * @return Void.
+ **/
+void mreg_final(vm_info_s *vmi)
+{
+  mem_region_s *mreg;
+  int prev_pdi = -1;
+  int pdi;
+
+  while ( (mreg = mreg_extract_mem_lo(&vmi->mmap)) )
+  {
+    pdi = PG_DIR_INDEX(mreg->start);
+
+    /* Avoid freeing a page table twice */
+    if(pdi == prev_pdi){
+      ++pdi;
+    }
+
+    /* Free the page tables */
+    for(;((void *)(&tomes[pdi])) < mreg->limit; pdi++){
+      pg_tbl_free(&vmi->pg_info,&tomes[pdi]);
+    }
+
+    /* Store out the index of the last page table freed */
+    prev_pdi = PG_DIR_INDEX(mreg->limit);
+
+    /* Free the region */
+    free(mreg);
+  }
+
+  return;
+}
 
 /*************************************************************************
  *  VM Information manipulation
@@ -318,71 +446,6 @@ int vm_set_attrs(vm_info_s *vmi, void *va_start, unsigned int attrs)
   return 0;
 }
 
-/** @brief Frees a region's page tables if they are not shared by neighbor
- *         regions.
- *
- *  @param map Memory map to search.
- *  @param targ Region to check.
- *
- *  @return Void.
- **/
-void vm_boundaries(vm_info_s *vmi, mem_region_s *targ)
-{
-  cll_node *n;
-  mem_region_s *curr, *prev, *next;
-  int targ_lo, targ_hi, i;
-
-  /* Make these impossible values for the case when you have no neighbors */
-  int index_lo = -1;
-  int index_hi = PG_TBL_ENTRIES;
-
-  /* Find your neighbors */
-  cll_foreach(&vmi->mmap, n){
-    curr = cll_entry(mem_region_s *, n);
-    if (mreg_compare(curr, targ) == ORD_EQ) {
-      break;
-    }
-  }
-  assert(cll_entry(mem_region_s *, n) == targ);
-
-  /* Compute your bounds */
-  targ_lo = PG_DIR_INDEX(targ->start);
-  targ_hi = PG_DIR_INDEX(targ->limit);
-
-  /* TODO: add/sub 1? */
-  /* Extract your neighbors */
-
-  /* There's a neighbor below you in memory */
-  if(n->prev != &vmi->mmap){
-    prev = cll_entry(mem_region_s *, n->prev);
-    index_lo = PG_DIR_INDEX(prev->limit);
-  }
-  /* There's a neighbor above you in memory */
-  if(n->next != &vmi->mmap){
-    next = cll_entry(mem_region_s *, n->next);
-    index_hi = PG_DIR_INDEX(next->start);
-  }
-
-  /* Free your lower boundary */
-  if(targ_lo != index_lo)
-    pg_tbl_free(&vmi->pg_info, targ->start);
-
-  /* Free your upper boundary if span more than one tome */
-  if((targ_hi != index_hi) && (targ_hi != targ_lo))
-    pg_tbl_free(&vmi->pg_info, targ->limit);
-
-  /* Free anywhere in between */
-  for(i = ++targ_lo; i < targ_hi - 1; i++){
-    pg_tbl_free(&vmi->pg_info, tomes[i]);
-  }
-
-  /* Extract and free your cll node */
-  cll_extract(&vmi->mmap, n);
-  free(n);
-
-  return;
-}
-
 /** @brief Gets the attributes for a region.
  *
  *  @param vmi The vm_info struct for this allocation.
@@ -428,7 +491,7 @@ void vm_free(vm_info_s *vmi, void *va_start)
   }
 
   /* Check if page tables should be freed */
-  vm_boundaries(vmi, mreg);
+  mreg_neighbors(vmi, mreg);
 
   free(mreg);
 
@@ -493,45 +556,6 @@ int vm_copy(vm_info_s *dst, vm_info_s *src)
   return 0;
 }
 
-/* @brief Free the memory regions in a VMI and any page tables they are
- * associated with.
- *
- *  Frees any page tables that were allocated as a result to a call to
- *  vm_alloc(). Also frees the memory regions themselves.
- *
- *  @param vmi The vm_info struct whose memory map we'll free.
- *
- *  @return Void.
- **/
-void vm_region_free(vm_info_s *vmi)
-{
-  mem_region_s *mreg;
-  int prev_pdi = -1;
-  int pdi;
-
-  while ( (mreg = mreg_extract_mem_lo(&vmi->mmap)) )
-  {
-    pdi = PG_DIR_INDEX(mreg->start);
-
-    /* Avoid freeing a page table twice */
-    if(pdi == prev_pdi){
-      ++pdi;
-    }
-
-    /* Free the page tables */
-    for(;((void *)(&tomes[pdi])) < mreg->limit; pdi++){
-      pg_tbl_free(&vmi->pg_info,&tomes[pdi]);
-    }
-
-    /* Store out the index of the last page table freed */
-    prev_pdi = PG_DIR_INDEX(mreg->limit);
-
-    /* Free the region */
-    free(mreg);
-  }
-
-  return;
-}
 /** @brief Frees a process' entire address space.
  *
  *  Technically, this function only free those parts allocated with
@@ -556,7 +580,8 @@ void vm_final(vm_info_s *vmi)
     }
   }
 
-  vm_region_free(vmi);
+  /* Free the memory regions */
+  mreg_final(vmi);
 
   /* Check our invariants to ensure we are not leaking page tables */
   validate_pd(&vmi->pg_info);
