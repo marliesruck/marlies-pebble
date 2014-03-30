@@ -6,7 +6,7 @@
  *  @author Marlies Ruck (mruck)
  **/
 
-#include <sc_utils.h>
+#include "sc_utils.h"
 #include "syscall_wrappers.h"
 
 /* Pebble includes */

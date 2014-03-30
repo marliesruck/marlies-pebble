@@ -117,7 +117,6 @@ int sys_thread_fork(unsigned int esp)
   return t->tid;
 }
 
-/* @bug Add a pcb final function for reinitializing pcb */
 int sys_exec(char *execname, char *argvec[])
 {
   char *execname_k, **argvec_k;

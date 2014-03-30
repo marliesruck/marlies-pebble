@@ -46,6 +46,7 @@
 #include <vm.h>
 #include <sched.h>
 #include <dispatch.h>
+#include <util.h>
 
 /* --- Internal helper routines --- */
 void init_kdata_structures(void);

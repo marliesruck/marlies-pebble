@@ -5,7 +5,6 @@
  *  @author Enrique Naudon (esn)
  *  @author Marlies Ruck (mruck)
  **/
-
 #include <x86/seg.h>
 #include <x86/eflags.h>
 

@@ -21,6 +21,7 @@
 
 int copy_from_user(char *dst, const char *src, size_t bytes);
 void install_sys_handlers(void);
+int sc_validate_argp(void *argp, int arity);
 
 #else /* ASSEMBLER */
 

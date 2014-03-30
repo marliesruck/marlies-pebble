@@ -5,13 +5,20 @@
  *  @author Enrique Naudon (esn)
  *  @author Marlies Ruck (mruck)
  **/
-
-#include <assert.h>
 #include <simics.h>
-#include <x86/idt.h>
 
-#include <idt.h>
 #include "fault_wrappers.h"
+#include "../syscall/swexn.h"
+
+/* Pebbles specific includes */
+#include <idt.h>
+#include <ureg.h>
+
+/* Libc specific includes */
+#include <assert.h>
+
+/* x86 specific includes */
+#include <x86/idt.h>
 
 /** @brief Installs our fault handlers.
  *
@@ -48,6 +55,24 @@ void install_fault_handlers(void)
  **/
 void int_divzero(void)
 {
+  ureg_t *state;
+
+  /* A software exception handler was installed by the user */
+  if(swexn_fun){
+
+    /* Retrieve execution state */
+    state = (ureg_t *)(get_ebp());
+
+    /* Clobber EBP */
+    state->cause = SWEXN_CAUSE_DIVIDE;
+
+    /* Clobber return address */
+    state->cr2 = 0;
+
+    /* Call handler */
+    run_handler(state);
+  }
+
   lprintf("Error: Division by zero!");
   panic("Error: Division by zero!!");
   return;
