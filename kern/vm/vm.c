@@ -294,6 +294,7 @@ int vm_set_attrs(vm_info_s *vmi, void *va_start, unsigned int attrs)
  **/
 void vm_boundaries(vm_info_s *vmi, mem_region_s *targ)
 {
+  lprintf("VM BOUNDARIES");
   cll_node *n;
   mem_region_s *curr, *prev, *next;
   int targ_lo, targ_hi, i;

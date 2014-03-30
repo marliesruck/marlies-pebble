@@ -70,7 +70,9 @@ void free_frame(void *frame, void *vaddr)
 
 void *alloc_page_table(pg_info_s *pgi, void *vaddr)
 {
-  pte_t pde;
+  pte_t pde, pte;
+  page_t *tome;
+  int i;
 
   /* Serialize access to the free list */
   mutex_lock(&frame_allocator_lock);
@@ -93,6 +95,13 @@ void *alloc_page_table(pg_info_s *pgi, void *vaddr)
   update_head(new_head);
 
   mutex_unlock(&frame_allocator_lock);
+
+  /* Zero all PTEs */
+  tome = tomes[PG_DIR_INDEX(vaddr)];
+  init_pte(&pte, NULL);
+  for(i = 0; i < PG_TBL_ENTRIES; i++){
+    assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, &tome[i], &pte) );
+  }
 
   return frame;
 }
@@ -441,11 +450,13 @@ void validate_pd(pg_info_s *pgi)
   for(i = KERN_PD_ENTRIES; i < PG_TBL_ENTRIES - 1; i++){
     /* PDE is present, make sure PTEs are present too */
     if(!get_pde(pgi->pg_dir, &tomes[i], &pte)){
+      found = 0;
+      /*
       lprintf("valid pde at vaddr: %p", &tomes[i]);
       lprintf("&pgi->pg_tbls[PG_DIR_INDEX(&tomes[i])][PG_TBL_INDEX(&tomes[i])]: %p",
 &pgi->pg_tbls[PG_DIR_INDEX(&tomes[i])][PG_TBL_INDEX(&tomes[i])]);
       lprintf("&pd[i]: %p",&pgi->pg_dir[i]);
-      found = 0;
+      */
       for(j = 0; j < PG_TBL_ENTRIES; j++){
         /* valid PTE found */
         if(!get_pte(pgi->pg_dir, pgi->pg_tbls, &tomes[i][j], &pte)){
@@ -476,7 +487,14 @@ void validate_pt(pg_info_s *pgi, void *vaddr)
 
   for(i = 0; i < PG_TBL_ENTRIES - 1; i++){
     /* Ensure no PTE is valid */
-    assert(get_pte(pgi->pg_dir, pgi->pg_tbls, &tome[i], &pte));
+    if(!get_pte(pgi->pg_dir, pgi->pg_tbls, &tome[i], &pte)){
+      lprintf("vaddr %p still mapped", &tome[i]);
+      lprintf("vaddr of pte: %p", 
+          &pgi->pg_tbls[PG_DIR_INDEX(&tome[i])][PG_TBL_INDEX(&tome[i])]);
+      lprintf("vaddr of &pd[i]: %p", 
+      &pgi->pg_dir[PG_DIR_INDEX(&tome[i])]);
+      assert(0);
+    }
   }
 
   return;
