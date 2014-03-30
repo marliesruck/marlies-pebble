@@ -10,6 +10,9 @@
 
 #include <mutex.h>
 
+/* The address of the next free frame is stored in the lowest word 
+ * of the current frame */
+#define FREE_FRAME_INDEX 0
 
 /* Serialize access to the frame allocator */
 extern mutex_s frame_allocator_lock;

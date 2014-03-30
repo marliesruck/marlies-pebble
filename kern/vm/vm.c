@@ -71,6 +71,17 @@ mem_region_s *mreg_lookup(cll_list *map, mem_region_s *targ)
 
   return NULL;
 }
+
+/** @brief Ordered insertion into a sorted memory map.
+ *
+ *  Order is based on memory address. Lower memory address occur earlier in the
+ *  list.
+ *
+ *  @param map Memory map to insert in.
+ *  @param new Memory region to add.
+ *
+ *  @return -1 if out of memory, else 0.
+ **/
 int mreg_insert(cll_list *map, mem_region_s *new)
 {
   cll_node *n, *p;
@@ -94,10 +105,11 @@ int mreg_insert(cll_list *map, mem_region_s *new)
 
   return 0;
 }
-/** @brief Identify a memory region AND extract it.
+
+/** @brief Identify extract a specific memory region
  *
  *  @param map Memory map to search.
- *  @param targ Memory region start address to search for.
+ *  @param targ Memory region to extract.
  *
  *  @return NULL if not found, else the memory region.
  **/
@@ -118,6 +130,14 @@ mem_region_s *mreg_extract(cll_list *map, mem_region_s *targ)
   return NULL;
 }
 
+/** @brief Extract any memory region.
+ *
+ *  @param map Memory map to search.
+ *  @param targ Memory region to extract.
+ *
+ *  @return NULL if the memory map is empty, else the first memory region in the
+ *  list.
+ **/
 mem_region_s *mreg_extract_any(cll_list *map)
 {
   cll_node *n;
@@ -297,7 +317,7 @@ int vm_set_attrs(vm_info_s *vmi, void *va_start, unsigned int attrs)
 }
 
 /** @brief Frees a region's page tables if they are not shared by neighbor
- * regions.
+ *         regions.
  *
  *  @param map Memory map to search.
  *  @param targ Region to check.
@@ -525,7 +545,7 @@ void vm_final(vm_info_s *vmi)
 
   vm_region_free(vmi);
 
-  /* Sanity check */
+  /* Check our invariants */
   validate_pd(&vmi->pg_info);
 
   return;

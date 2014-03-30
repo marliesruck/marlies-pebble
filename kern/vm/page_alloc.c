@@ -27,10 +27,6 @@
 /* ZFOD dummy frame */
 void *zfod = NULL;
 
-/* TODO: make these dynamic */
-#define CHILD_PDE ( (void *)tomes[PG_TBL_ENTRIES - 2] )
-
-
 /*************************************************************************
  *  Helper functions
  *************************************************************************/
@@ -405,12 +401,19 @@ int pg_page_fault_handler(void *vaddr)
 
   return 0;
 }
+/** @brief Free a page table.
+ *
+ *  @param pgi Page table information.
+ *  @param vaddr The faulting virtual address.
+ *
+ *  @return Void.
+ **/
 
 void pg_tbl_free(pg_info_s *pgi, void *vaddr)
 {
   pte_t pte;
 
-  /* Ensure all PTEs in this page table are invalid */
+  /* Invariant checker: Ensure all PTEs in this page table are invalid */
   validate_pt(pgi, vaddr);
 
   /* Retrieve the PDE entry */
@@ -418,13 +421,12 @@ void pg_tbl_free(pg_info_s *pgi, void *vaddr)
 
   /* Free the frame */
   void *frame = (void *)GET_ADDR(pte);
+  free_frame(frame, &pgi->pg_tbls[PG_DIR_INDEX(vaddr)][FREE_FRAME_INDEX]);
 
-  free_frame(frame, &pgi->pg_tbls[PG_DIR_INDEX(vaddr)][0]);
-
-  /* Unmap the PDE and invalidate the tlb */
+  /* Zero the PDE and invalidate the tlb */
   init_pte(&pte, NULL);
   set_pde(pgi->pg_dir, vaddr, &pte);
-  tlb_inval_page(&pgi->pg_tbls[PG_DIR_INDEX(vaddr)][PG_TBL_INDEX(vaddr)]);
+  tlb_inval_pde(pgi, vaddr);
 
   return;
 }
@@ -451,12 +453,6 @@ void validate_pd(pg_info_s *pgi)
     /* PDE is present, make sure PTEs are present too */
     if(!get_pde(pgi->pg_dir, &tomes[i], &pte)){
       found = 0;
-      /*
-      lprintf("valid pde at vaddr: %p", &tomes[i]);
-      lprintf("&pgi->pg_tbls[PG_DIR_INDEX(&tomes[i])][PG_TBL_INDEX(&tomes[i])]: %p",
-&pgi->pg_tbls[PG_DIR_INDEX(&tomes[i])][PG_TBL_INDEX(&tomes[i])]);
-      lprintf("&pd[i]: %p",&pgi->pg_dir[i]);
-      */
       for(j = 0; j < PG_TBL_ENTRIES; j++){
         /* valid PTE found */
         if(!get_pte(pgi->pg_dir, pgi->pg_tbls, &tomes[i][j], &pte)){
@@ -470,7 +466,8 @@ void validate_pd(pg_info_s *pgi)
   }
   return;
 }
-/** @brief Ensure that if are freeing a page table, all PTEs are invalid.
+
+/** @brief Ensure that if we are freeing a page table, all PTEs are invalid.
  *
  *  @param pgi Page directory and table information.
  *  @param vaddr Virtual address that maps to page table we are checking.
@@ -487,14 +484,7 @@ void validate_pt(pg_info_s *pgi, void *vaddr)
 
   for(i = 0; i < PG_TBL_ENTRIES - 1; i++){
     /* Ensure no PTE is valid */
-    if(!get_pte(pgi->pg_dir, pgi->pg_tbls, &tome[i], &pte)){
-      lprintf("vaddr %p still mapped", &tome[i]);
-      lprintf("vaddr of pte: %p", 
-          &pgi->pg_tbls[PG_DIR_INDEX(&tome[i])][PG_TBL_INDEX(&tome[i])]);
-      lprintf("vaddr of &pd[i]: %p", 
-      &pgi->pg_dir[PG_DIR_INDEX(&tome[i])]);
-      assert(0);
-    }
+    assert(get_pte(pgi->pg_dir, pgi->pg_tbls, &tome[i], &pte));
   }
 
   return;

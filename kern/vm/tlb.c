@@ -11,8 +11,7 @@
 #include "tlb.h"
 
 #include <pg_table.h>
-
-#include <simics.h>
+#include <page_alloc.h>
 
 
 /** @brief Invalidates page table-worth of TLB entries.
@@ -41,3 +40,16 @@ void tlb_inval_tome(void *pt)
   return;
 }
 
+/** @brief Invalidate a self referential PDE mapping
+ *
+ *  @param pgi Page table information.
+ *  @param vaddr The faulting virtual address.
+ *
+ *  @return Void.
+ **/
+void tlb_inval_pde(pg_info_s *pgi, void *vaddr)
+{
+  tlb_inval_page(&pgi->pg_tbls[PG_DIR_INDEX(vaddr)][PG_TBL_INDEX(vaddr)]);
+
+  return;
+}
