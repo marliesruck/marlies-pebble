@@ -18,6 +18,7 @@
 #include <pg_table.h>
 #include <process.h>
 #include <sched.h>
+#include <sc_utils.h>
 #include <thread.h>
 #include <vm.h>
 
@@ -63,6 +64,9 @@ thread_t *thread_init(task_t *task)
   thread->task_info = task;
   thread->sp = NULL;
   thread->pc = NULL;
+
+  /* No software exception handlers should be registered */
+  deregister(&thread->swexn); 
     
   return thread;
 }

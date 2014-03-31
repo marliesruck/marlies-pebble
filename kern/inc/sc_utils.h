@@ -16,8 +16,25 @@
 
 #ifndef ASSEMBLER
 
+/* Pebbles specific includes */
 #include <types.h>
 
+/* Libc specific includes */
+#include <ureg.h>
+#include <stdlib.h>
+
+typedef void (*swexn_handler_t)(void *arg, ureg_t *ureg);
+
+/** @brief Each thread may optionall register with the kernel a software
+ *         exception handler.
+ **/
+typedef struct swexn {
+  void *esp3;
+  swexn_handler_t eip;
+  void *arg;
+} swexn_t;
+
+void deregister(swexn_t *swexn);
 
 int copy_from_user(char *dst, const char *src, size_t bytes);
 void install_sys_handlers(void);

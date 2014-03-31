@@ -13,6 +13,9 @@ int main()
 {
   /*** --- Regression tests --- ***/
 
+  if(!fork()) exec("swexn_basic_test", NULL);
+  while(wait(NULL));
+
   if(!fork()) exec("minclone_mem", NULL);
   while(wait(NULL));
 
@@ -42,9 +45,6 @@ int main()
   while(wait(NULL));
 
   if(!fork()) exec("coy_terminate", NULL); 
-  while(wait(NULL));
-
-  if(!fork()) exec("intrepid", NULL); 
   while(wait(NULL));
 
   /*** --- Classic Init Routine --- ***/

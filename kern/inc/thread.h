@@ -14,6 +14,7 @@
 #include <mutex.h>
 #include <process.h>
 #include <queue.h>
+#include <sc_utils.h>
 #include <vm.h>
 
 /* Libc includes */
@@ -40,6 +41,7 @@ struct thread {
   int tid;
   void *sp;
   void *pc;
+  swexn_t swexn;
   char kstack[KSTACK_SIZE];
 };
 typedef struct thread thread_t;

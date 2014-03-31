@@ -9,13 +9,9 @@
 #ifndef __SWEXN_H__
 #define __SWEXN_H__
 
+/* Pebbles specfic includes */
 #include <ureg.h>
-
-typedef void (*swexn_handler_t)(void *arg, ureg_t *ureg);
-
-extern void *swexn_sp;
-extern swexn_handler_t swexn_fun;
-extern void *swexn_arg;
+#include <sc_utils.h>
 
 void init_exn_stack(ureg_t *state);
 

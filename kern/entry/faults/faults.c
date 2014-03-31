@@ -12,6 +12,7 @@
 
 /* Pebbles specific includes */
 #include <idt.h>
+#include <sched.h>
 #include <ureg.h>
 
 /* Libc specific includes */
@@ -58,7 +59,7 @@ void int_divzero(void)
   ureg_t *state;
 
   /* A software exception handler was installed by the user */
-  if(swexn_fun){
+  if(curr->swexn.eip){
     lprintf("In swexn");
 
     /* Retrieve execution state */
@@ -240,7 +241,7 @@ void int_page_fault(void)
   addr = (void *)get_cr2();
 
   /* A software exception handler was installed by the user */
-  if(swexn_fun){
+  if(curr->swexn.eip){
 
     /* Retrieve execution state */
     state = (ureg_t *)(get_ebp());

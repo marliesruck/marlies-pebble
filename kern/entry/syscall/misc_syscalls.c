@@ -24,10 +24,6 @@
 
 #define NUM_REGS 20
 
-void *swexn_sp = NULL;
-swexn_handler_t swexn_fun = NULL;
-void *swexn_arg = NULL;
-
 /*************************************************************************
  *  Miscellaneous system calls
  *************************************************************************/
@@ -42,6 +38,23 @@ int sys_readfile(char *filename, char *buf, int count, int offset)
   return -1;
 }
 
+/** @brief Deregister a software exception handler.
+ *
+ *  We use NULL to denote a deregistered handler.
+ *
+ *  @param swexn Address of handler to deregister.
+ *
+ *  @return Void.
+ */
+void deregister(swexn_t *swexn)
+{
+  swexn->esp3 = NULL;
+  swexn->eip = NULL;
+  swexn->arg = NULL;
+
+  return;
+}
+
 /** @brief Set up exception stack and deregister handler.
  *
  *  @param state Execution state to push on exception stack.
@@ -51,15 +64,13 @@ int sys_readfile(char *filename, char *buf, int count, int offset)
 void init_exn_stack(ureg_t *state)
 {
   /* Store out handler to call */
-  swexn_handler_t eip = swexn_fun;
-  void *esp3 = swexn_sp;
-  void *arg = swexn_arg;
+  swexn_handler_t eip = curr->swexn.eip;
+  void *esp3 = curr->swexn.esp3;
+  void *arg = curr->swexn.arg;
 
   /* Deregister old handler */
-  swexn_sp = NULL;
-  swexn_fun = NULL;
-  swexn_arg = NULL;
-  
+  deregister(&curr->swexn);
+
   /* Craft contents of exception stack */
   PUSH(esp3, state);    /* Executation state */
   PUSH(esp3, arg);      /* Opaque void * arg */
@@ -87,20 +98,16 @@ int sys_swexn(void *esp3, swexn_handler_t eip, void *arg, ureg_t *newureg)
     if((sc_validate_argp(eip, 1)) || (sc_validate_argp(esp3, 1))){
       return -1;
     }
-    swexn_sp = esp3;
-    swexn_fun = eip;
-    swexn_arg = arg;
+    curr->swexn.esp3 = esp3;
+    curr->swexn.eip = eip;
+    curr->swexn.arg = arg;
   }
   /* Or deregister old handler */
   else{
-    swexn_sp = NULL;
-    swexn_fun = NULL;
-    swexn_arg = NULL;
   }
 
   /* Install the registers and return to userland */
   if(newureg){
-    disable_interrupts();
     craft_state(*newureg);
   }
 
