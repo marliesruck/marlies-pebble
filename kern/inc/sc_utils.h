@@ -116,15 +116,15 @@ asm_\scname:
   # Prologue
   push  %ebp                      # Store USER EBP
   movl  %esp, %ebp                # Set up new EBP
-
-  push  %esi                      # Save ESI
-  push  %edi                      # Save EDI
-  push  %ebx                      # Save EBX
-
   push  %ds                       # Store DS data segment
   push  %es                       # Store ES data segment
   push  %fs                       # Store FS data segment
   push  %gs                       # Store GS data segment
+
+  # Store MOVS registers
+  push  %esi                      # Save ESI
+  push  %edi                      # Save EDI
+  push  %ebx                      # Save EBX
 
   movl \argc, %ecx                # ECX = argument count (for rep)
   leal (,%ecx, 4), %ebx           # Compute space on stack for args
@@ -136,21 +136,80 @@ asm_\scname:
   call \scname                    # Call the system call handler
   add   %ebx, %esp                # Clean up ESP from args pushed on by rep
 
+  # Restore MOVS registers
+  pop   %ebx                      # Restore EBX
+  pop   %edi                      # Restore EDI
+  pop   %esi                      # Restore ESI
+
   # Epilogue
   pop   %gs                       # Restore GS data segment
   pop   %fs                       # Restore FS data segment
   pop   %es                       # Restore ES data segment
   pop   %ds                       # Restore DS data segment
-
-  pop   %ebx                      # Restore EBX
-  pop   %edi                      # Restore EDI
-  pop   %esi                      # Restore ESI
-
   pop   %ebp                      # Restore USER EBP
-
   iret                            # Return from the system call
 
 .endm
+
+
+/** @brief Wraps the fork and thread fork system call handlers.
+ *
+ *  We need a special wrapper for these two because the C wrappers need to
+ *  know the value of ESP.
+ *
+ *  @param scname The name of the system call.
+ *
+ *  @return Whatever the system call returns.
+ **/
+.macro FORK_SYSCALL scname
+
+# Export and label it...
+.extern \scname
+.global asm_\scname
+asm_\scname:
+
+  # Prologue
+  push  %ebp                      # Store old EBP
+  movl  %esp, %ebp                # Set up new EBP
+  push  %ds                       # Store DS data segment
+  push  %es                       # Store ES data segment
+  push  %fs                       # Store FS data segment
+  push  %gs                       # Store GS data segment
+
+  # Save callee-saved registers for the child
+  push  %esi
+  push  %edi
+  push  %ebx
+
+  # Pass ESP and invoke the handler
+  push  %esp
+  call  \scname
+
+  # Parent starts here
+  add  $4, %esp                 # Clean up stack
+  jmp   asm_finish_\scname      # Jump to cleanup
+
+  # Child starts here
+  .global asm_child_finish_\scname
+  asm_child_finish_\scname:
+    xor %eax,%eax                 # Child returns 0
+
+  asm_finish_\scname:
+    # Restore callee-saved registers
+    pop   %ebx
+    pop   %edi
+    pop   %esi
+    
+    # Epilogue
+    pop   %gs                     # Restore GS data segment
+    pop   %fs                     # Restore FS data segment
+    pop   %es                     # Restore ES data segment
+    pop   %ds                     # Restore DS data segment
+    pop   %ebp                    # Restore USER EBP
+    iret                          # Return from the system call
+
+.endm
+
 
 #endif /* ASSEMBLER */
 
