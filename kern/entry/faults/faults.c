@@ -60,8 +60,6 @@ void int_divzero(void)
 
   /* A software exception handler was installed by the user */
   if(curr->swexn.eip){
-    lprintf("In swexn");
-
     /* Retrieve execution state */
     state = (ureg_t *)(get_ebp());
 
