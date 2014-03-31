@@ -29,14 +29,12 @@ int main()
 //  if(!fork()) exec("remove_pages_test2", NULL);
 //  while(wait(NULL));
 
-  /*
   char *sleep_args[] = {"sleep_test1", "20", NULL};
   if(!fork()) exec("sleep_test1", sleep_args);
   while(wait(NULL));
 
   if(!fork()) exec("epileptic", NULL);
   while(wait(NULL));
-  */
 
   if(!fork()) exec("cooperative_terminate", NULL);
   while(wait(NULL));

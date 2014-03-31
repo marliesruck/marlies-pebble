@@ -35,7 +35,9 @@
  *  Internal helper functions
  *************************************************************************/
 
-int finish_fork(void);
+/* For getting new kid threads back to user-space */
+int asm_child_finish_sys_fork(void);
+int asm_child_finish_sys_thread_fork(void);
 
 void *kstack_copy(char *dst, char *src, unsigned int esp)
 {
@@ -91,7 +93,7 @@ int sys_fork(unsigned int esp)
 
   /* Launch the child thread */
   sp = kstack_copy(cthread->kstack, curr->kstack, esp);
-  pc = finish_fork;
+  pc = asm_child_finish_sys_fork;
   thr_launch(cthread, sp, pc);
 
   return cthread->tid;
@@ -111,7 +113,7 @@ int sys_thread_fork(unsigned int esp)
   }
 
   sp = kstack_copy(t->kstack, curr->kstack, esp);
-  pc = finish_fork;
+  pc = asm_child_finish_sys_thread_fork;
   thr_launch(t, sp, pc);
 
   return t->tid;
