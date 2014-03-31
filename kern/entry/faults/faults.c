@@ -26,25 +26,25 @@
  **/
 void install_fault_handlers(void)
 {
-  install_interrupt_gate(IDT_DE, asm_int_divzero, IDT_KERN_DPL);
-  install_interrupt_gate(IDT_DB, asm_int_debug, IDT_KERN_DPL);
-  install_interrupt_gate(IDT_NMI, asm_int_nmi, IDT_KERN_DPL);
-  install_interrupt_gate(IDT_BP, asm_int_breakpoint, IDT_KERN_DPL);
-  install_interrupt_gate(IDT_OF, asm_int_overflow, IDT_KERN_DPL);
-  install_interrupt_gate(IDT_BR, asm_int_bound, IDT_KERN_DPL);
-  install_interrupt_gate(IDT_UD, asm_int_undef_opcode, IDT_KERN_DPL);
-  install_interrupt_gate(IDT_NM, asm_int_device_unavail, IDT_KERN_DPL);
-  install_interrupt_gate(IDT_DF, asm_int_double_fault, IDT_KERN_DPL);
-  install_interrupt_gate(IDT_CSO, asm_int_cso, IDT_KERN_DPL);
-  install_interrupt_gate(IDT_TS, asm_int_tss, IDT_KERN_DPL);
-  install_interrupt_gate(IDT_NP, asm_int_seg_not_present, IDT_KERN_DPL);
-  install_interrupt_gate(IDT_SS, asm_int_stack_seg, IDT_KERN_DPL);
-  install_interrupt_gate(IDT_GP, asm_int_gen_prot, IDT_KERN_DPL);
-  install_interrupt_gate(IDT_PF, asm_int_page_fault, IDT_KERN_DPL);
-  install_interrupt_gate(IDT_MF, asm_int_float, IDT_KERN_DPL);
-  install_interrupt_gate(IDT_AC, asm_int_align, IDT_KERN_DPL);
-  install_interrupt_gate(IDT_MC, asm_int_machine_check, IDT_KERN_DPL);
-  install_interrupt_gate(IDT_XF, asm_int_simd, IDT_KERN_DPL);
+  install_trap_gate(IDT_DE, asm_int_divzero, IDT_KERN_DPL);
+  install_trap_gate(IDT_DB, asm_int_debug, IDT_KERN_DPL);
+  install_trap_gate(IDT_NMI, asm_int_nmi, IDT_KERN_DPL);
+  install_trap_gate(IDT_BP, asm_int_breakpoint, IDT_KERN_DPL);
+  install_trap_gate(IDT_OF, asm_int_overflow, IDT_KERN_DPL);
+  install_trap_gate(IDT_BR, asm_int_bound, IDT_KERN_DPL);
+  install_trap_gate(IDT_UD, asm_int_undef_opcode, IDT_KERN_DPL);
+  install_trap_gate(IDT_NM, asm_int_device_unavail, IDT_KERN_DPL);
+  install_trap_gate(IDT_DF, asm_int_double_fault, IDT_KERN_DPL);
+  install_trap_gate(IDT_CSO, asm_int_cso, IDT_KERN_DPL);
+  install_trap_gate(IDT_TS, asm_int_tss, IDT_KERN_DPL);
+  install_trap_gate(IDT_NP, asm_int_seg_not_present, IDT_KERN_DPL);
+  install_trap_gate(IDT_SS, asm_int_stack_seg, IDT_KERN_DPL);
+  install_trap_gate(IDT_GP, asm_int_gen_prot, IDT_KERN_DPL);
+  install_trap_gate(IDT_PF, asm_int_page_fault, IDT_KERN_DPL);
+  install_trap_gate(IDT_MF, asm_int_float, IDT_KERN_DPL);
+  install_trap_gate(IDT_AC, asm_int_align, IDT_KERN_DPL);
+  install_trap_gate(IDT_MC, asm_int_machine_check, IDT_KERN_DPL);
+  install_trap_gate(IDT_XF, asm_int_simd, IDT_KERN_DPL);
 
   return;
 }
@@ -59,6 +59,7 @@ void int_divzero(void)
 
   /* A software exception handler was installed by the user */
   if(swexn_fun){
+    lprintf("In swexn");
 
     /* Retrieve execution state */
     state = (ureg_t *)(get_ebp());
@@ -70,7 +71,6 @@ void int_divzero(void)
     state->cr2 = 0;
 
     /* Call handler */
-    run_handler(state);
   }
 
   lprintf("Error: Division by zero!");
@@ -231,19 +231,34 @@ void int_gen_prot(void)
 #include <x86/cr.h>
 /* Libc includes */
 #include <string.h>
-void int_page_fault(void *eip, void *error_code)
+void int_page_fault(void)
 {
   void *addr;
+  ureg_t *state;
 
   /* Grab the faulting address and page info */
   addr = (void *)get_cr2();
 
+  /* A software exception handler was installed by the user */
+  if(swexn_fun){
+
+    /* Retrieve execution state */
+    state = (ureg_t *)(get_ebp());
+
+    /* Clobber EBP */
+    state->cause = SWEXN_CAUSE_PAGEFAULT;
+
+    /* Clobber return address */
+    state->cr2 = (unsigned int)(addr);
+
+    /* Craft contents of exception stack and call handler */
+    init_exn_stack(state);
+  }
+
   /* Try to handle the fault */
   if (pg_page_fault_handler(addr))
   {
-    lprintf("Error: Page fault on table-less address %p from instruction %p", 
-            addr, eip);
-    MAGIC_BREAK;
+    lprintf("Error: Page fault on table-less address %p", addr);
     panic("Error: Page fault!");
   }
 

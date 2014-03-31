@@ -39,24 +39,15 @@ VOID_INTERRUPT int_generic
 
 asm_int_page_fault:
 
-  # Prologue
-  push  %ebp                      # Store old EBP
-  movl  %esp, %ebp                # Set up new EBP
-  
+  # We have to prologue because that clobbers the ureg struct 
+
   pusha                           # Store GP registers
   push %ds                        # Store DS data segment
   push %es                        # Store ES data segment
   push %fs                        # Store FS data segment
   push %gs                        # Store GS data segment
 
-  mov 4(%ebp), %eax               # Grab error code
-  push %eax
-  mov 8(%ebp), %eax               # Grab EIP 
-  push %eax
-  
   call int_page_fault             # Call the interrupt handler
-  add  $8, %esp                   # Readjust ESP to account for the error code
-                                  # pushed as an argument
 
   # Epilogue
   pop %gs                         # Restore GS data segment
@@ -65,8 +56,6 @@ asm_int_page_fault:
   pop %ds                         # Restore DS data segment
   popa                            # Restore GP registers
   
-  # Epilogue
-  pop  %ebp                       # Restore old EBP
   add  $4, %esp                   # Readjust ESP to account for the error code 
                                   # that the processor pushed
      

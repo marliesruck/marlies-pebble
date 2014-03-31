@@ -44,6 +44,9 @@ int main()
   if(!fork()) exec("coy_terminate", NULL); 
   while(wait(NULL));
 
+  if(!fork()) exec("intrepid", NULL); 
+  while(wait(NULL));
+
   /*** --- Classic Init Routine --- ***/
 
   int pid, exitstatus;

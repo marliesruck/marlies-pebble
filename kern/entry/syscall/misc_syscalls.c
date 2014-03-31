@@ -5,6 +5,7 @@
  *  @author Enrique Naudon (esn)
  *  @author Marlies Ruck (mruck)
  **/
+#include <simics.h>
 
 #include "swexn.h"
 
@@ -41,7 +42,13 @@ int sys_readfile(char *filename, char *buf, int count, int offset)
   return -1;
 }
 
-void run_handler(ureg_t *state)
+/** @brief Set up exception stack and deregister handler.
+ *
+ *  @param state Execution state to push on exception stack.
+ *
+ *  @return Void.
+ **/
+void init_exn_stack(ureg_t *state)
 {
   /* Store out handler to call */
   swexn_handler_t eip = swexn_fun;
@@ -52,14 +59,14 @@ void run_handler(ureg_t *state)
   swexn_sp = NULL;
   swexn_fun = NULL;
   swexn_arg = NULL;
-
-  /* Prepare user defined handler stack */
-  PUSH(esp3, arg);      /* Opaque void * arg */
+  
+  /* Craft contents of exception stack */
   PUSH(esp3, state);    /* Executation state */
+  PUSH(esp3, arg);      /* Opaque void * arg */
   PUSH(esp3, 0);        /* Dummy return address */
 
   /* Run handler */
-  asm_run_handler(eip, esp3);
+  run_handler(eip, esp3);
 
   return;
 }
@@ -68,12 +75,9 @@ void run_handler(ureg_t *state)
 
 int sys_swexn(void *esp3, swexn_handler_t eip, void *arg, ureg_t *newureg)
 {
-  mutex_lock(&curr->task_info->lock);
-  
   /* Validate register values */
   if(newureg){
     if(sc_validate_argp(newureg, NUM_REGS)){
-      mutex_unlock(&curr->task_info->lock);
       return -1;
     }
   }
@@ -81,7 +85,6 @@ int sys_swexn(void *esp3, swexn_handler_t eip, void *arg, ureg_t *newureg)
   /* Validate and install new handler */
   if((eip) && (esp3)){
     if((sc_validate_argp(eip, 1)) || (sc_validate_argp(esp3, 1))){
-      mutex_unlock(&curr->task_info->lock);
       return -1;
     }
     swexn_sp = esp3;
@@ -98,13 +101,10 @@ int sys_swexn(void *esp3, swexn_handler_t eip, void *arg, ureg_t *newureg)
   /* Install the registers and return to userland */
   if(newureg){
     disable_interrupts();
-    mutex_unlock(&curr->task_info->lock);
-    /* I should be able to PUSH all regs and then popa and trivially ret */
-    asm_swexn(&newureg->edi,newureg->esp, newureg->eip, newureg->eflags);
+    craft_state(*newureg);
   }
 
   /* Or simply return */
-  mutex_unlock(&curr->task_info->lock);
   return 0;
 }
 

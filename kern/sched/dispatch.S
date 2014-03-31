@@ -20,7 +20,6 @@ dispatch:
 
   # Save CPU state
   pusha                       # Store GP
-  push    %ebp                # Store EBP
   pushfl                      # Store EFLAGS
   
   # Set next thread's esp0
@@ -40,7 +39,6 @@ dispatch:
 
   # Restore CPU state
   popfl                       # Restore GP
-  pop     %ebp                # Restore EBP
   popa                        # Restore EFLAGS
 
   # Epilogue

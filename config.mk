@@ -42,7 +42,7 @@ UPDATE_METHOD = web
 # A list of the test programs you want compiled in from the user/progs
 # directory.
 #
-STUDENTTESTS =  introspective schizo introvert garrulous mimic zfod cooperative annoying coquettish coy cooperative_terminate merchant_terminate peon_terminate coolness_terminate coy_terminate regression epileptic rogue
+STUDENTTESTS =  introspective schizo introvert garrulous mimic zfod cooperative annoying coquettish coy cooperative_terminate merchant_terminate peon_terminate coolness_terminate coy_terminate regression epileptic rogue intrepid
 
 ###########################################################################
 # Data files provided by course staff to build into the RAM disk
