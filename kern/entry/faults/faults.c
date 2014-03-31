@@ -244,14 +244,8 @@ void int_page_fault(void)
     /* Retrieve execution state */
     state = (ureg_t *)(get_ebp());
 
-    /* Clobber EBP */
-    state->cause = SWEXN_CAUSE_PAGEFAULT;
-
-    /* Clobber return address */
-    state->cr2 = (unsigned int)(addr);
-
     /* Craft contents of exception stack and call handler */
-    init_exn_stack(state);
+    init_exn_stack(state, SWEXN_CAUSE_PAGEFAULT, addr);
   }
 
   /* Try to handle the fault */

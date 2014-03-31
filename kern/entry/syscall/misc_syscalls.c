@@ -61,8 +61,12 @@ void deregister(swexn_t *swexn)
  *
  *  @return Void.
  **/
-void init_exn_stack(ureg_t *state)
+void init_exn_stack(ureg_t *state, unsigned int cause, void *cr2)
 {
+  /* Save execution state */
+  state->cause = SWEXN_CAUSE_PAGEFAULT;
+  state->cr2 = (unsigned int)(cr2);
+
   /* Store out handler to call */
   swexn_handler_t eip = curr->swexn.eip;
   void *esp3 = curr->swexn.esp3;

@@ -13,7 +13,7 @@
 #include <ureg.h>
 #include <sc_utils.h>
 
-void init_exn_stack(ureg_t *state);
+void init_exn_stack(ureg_t *state, unsigned int cause, void *cr2);
 
 /** @brief Swap ESP to exception stack and jump to handler.
  *  
