@@ -122,7 +122,7 @@ int validate_regs(ureg_t *regs)
 
   /* Validate EIP and ESP */
   if((validate_sp((void *)regs->esp)) ||  (validate_pc((void *)regs->eip)))
-    return -1;
+   return -1;
 
   return 0;
 }

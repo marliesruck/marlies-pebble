@@ -70,7 +70,7 @@ void int_divzero(void)
 
 
   lprintf("Error: Division by zero!");
-  panic("Error: Division by zero!!");
+  sys_vanish();
   return;
 }
 
@@ -93,7 +93,7 @@ void int_debug(void)
   }
 
   lprintf("Alert: Got debug interrupt...");
-  panic("Alert: Got debug interrupt...");
+  sys_vanish();
   return;
 }
 
@@ -104,7 +104,7 @@ void int_debug(void)
 void int_nmi(void)
 {
   lprintf("Error: Non-maskable interrupt!");
-  panic("Error: Non-maskable interrupt!");
+  sys_vanish();
   return;
 }
 
@@ -127,7 +127,7 @@ void int_breakpoint(void)
   }
 
   lprintf("Alert: Encountered breakpoint (INT 3)!");
-  panic("Alert: Encountered breakpoint (INT 3)!");
+  sys_vanish();
   return;
 }
 
@@ -150,7 +150,7 @@ void int_overflow(void)
   }
 
   lprintf("Error: Overflow (INTO)!");
-  panic("Error: Overflow (INTO)!");
+  sys_vanish();
   return;
 }
 
@@ -173,7 +173,7 @@ void int_bound(void)
   }
 
   lprintf("Error: Range exceeded (BOUND)!");
-  panic("Error: Range exceeded (BOUND)!");
+  sys_vanish();
   return;
 }
 
@@ -196,7 +196,7 @@ void int_undef_opcode(void)
   }
 
   lprintf("Error: Invalid instruction!");
-  panic("Error: Invalid instruction!");
+  sys_vanish();
   return;
 }
 
@@ -218,7 +218,7 @@ void int_device_unavail(void)
     init_exn_stack(state, SWEXN_CAUSE_NOFPU, NULL);
   }
   lprintf("Error: Device not available!");
-  panic("Error: Device not available!");
+  sys_vanish();
   return;
 }
 
@@ -229,7 +229,7 @@ void int_device_unavail(void)
 void int_double_fault(void)
 {
   lprintf("Error: Double fault!");
-  panic("Error: Double fault!");
+  sys_vanish();
   return;
 }
 
@@ -240,7 +240,7 @@ void int_double_fault(void)
 void int_cso(void)
 {
   lprintf("Error: Coprocessor segment overrun!");
-  panic("Error: Coprocessor segment overrun!");
+  sys_vanish();
   return;
 }
 
@@ -251,7 +251,7 @@ void int_cso(void)
 void int_tss(void)
 {
   lprintf("Error: Invalid task segment selector!");
-  panic("Error: Invalid task segment selector!");
+  sys_vanish();
   return;
 }
 
@@ -274,7 +274,7 @@ void int_seg_not_present(void)
     init_exn_stack(state, SWEXN_CAUSE_SEGFAULT, NULL);
   }
   lprintf("Error: Segment not present!");
-  panic("Error: Segment not present!");
+  sys_vanish();
   return;
 }
 
@@ -296,7 +296,7 @@ void int_stack_seg(void)
     init_exn_stack(state, SWEXN_CAUSE_STACKFAULT, NULL);
   }
   lprintf("Error: Stack segment fault!");
-  panic("Error: Stack segment fault!");
+  sys_vanish();
   return;
 }
 
@@ -318,7 +318,7 @@ void int_gen_prot(void)
     init_exn_stack(state, SWEXN_CAUSE_PROTFAULT, NULL);
   }
   lprintf("Error: General protection fault!");
-  panic("Error: General protection fault!");
+  sys_vanish();
   return;
 }
 
@@ -355,8 +355,6 @@ void int_page_fault(void)
   {
     lprintf("Error: Page fault on table-less address %p", addr);
     sys_vanish();
-
-    panic("Error: Page fault!");
   }
 
   return;
@@ -380,7 +378,7 @@ void int_float(void)
     init_exn_stack(state, SWEXN_CAUSE_FPUFAULT, NULL);
   }
   lprintf("Error: Floating point exception!");
-  panic("Error: Floating point exception!");
+  sys_vanish();
   return;
 }
 
@@ -402,7 +400,7 @@ void int_align(void)
     init_exn_stack(state, SWEXN_CAUSE_ALIGNFAULT, NULL);
   }
   lprintf("Error: Alignment check!");
-  panic("Error: Alignment check!");
+  sys_vanish();
   return;
 }
 
@@ -413,7 +411,7 @@ void int_align(void)
 void int_machine_check(void)
 {
   lprintf("Error: Machine check!");
-  panic("Error: Machine check!");
+  sys_vanish();
   return;
 }
 
@@ -435,7 +433,7 @@ void int_simd(void)
     init_exn_stack(state, SWEXN_CAUSE_SIMDFAULT, NULL);
   }
   lprintf("Error: SIMD floating point exception!");
-  panic("Error: SIMD floating point exception!");
+  sys_vanish();
   return;
 }
 
@@ -446,7 +444,7 @@ void int_simd(void)
 void int_generic(void)
 {
   lprintf("Error: Got a fault!");
-  panic("Error: Got a fault!");
+  sys_vanish();
   return;
 }
 

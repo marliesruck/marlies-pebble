@@ -24,7 +24,6 @@
 #include <x86/asm.h>
 #include <x86/cr.h>
 
-#define NUM_REGS 20
 /*************************************************************************
  *  Internal helper functions
  *************************************************************************/
@@ -55,7 +54,13 @@ int sys_readfile(char *filename, char *buf, int count, int offset)
   return copied;
 }
 
-/* @bug Argument validation of pointers */
+/* @bug Argument validation of pointers 
+ *
+ * Potential loop: Install handler, crash, handler is called and reinstalls
+ * itself and replaces the registers with the exact same values
+ *
+ * */
+
 
 int sys_swexn(void *esp3, swexn_handler_t eip, void *arg, ureg_t *newureg)
 {
@@ -68,7 +73,7 @@ int sys_swexn(void *esp3, swexn_handler_t eip, void *arg, ureg_t *newureg)
 
   /* Validate and install new handler */
   if((eip) && (esp3)){
-    if((sc_validate_argp(eip, 1)) || (sc_validate_argp(esp3, 1))){
+    if((validate_pc(eip)) || (validate_sp(esp3))){
       return -1;
     }
     curr->swexn.esp3 = esp3;
