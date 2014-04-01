@@ -14,6 +14,7 @@
 
 /* Libc includes */
 #include <malloc.h>
+#include <string.h>
 
 
 /*************************************************************************
@@ -32,7 +33,16 @@ char sys_getchar(void)
 
 int sys_readline(int size, char *buf)
 {
-  return kbd_getline(size, buf);
+  char *buf_k;
+  int len;
+  
+  buf_k = malloc(size * sizeof(char));
+  len = kbd_getline(size, buf_k);
+
+  memcpy(buf, buf_k, len);
+  free(buf_k);
+
+  return len;
 }
 
 int sys_print(int size, char *buf)
