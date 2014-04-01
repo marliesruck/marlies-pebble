@@ -5,6 +5,7 @@
  *  @author Enrique Naudon (esn)
  *  @author Marlies Ruck (mruck)
  **/
+#include <simics.h>
 
 #include "sc_utils.h"
 #include "syscall_wrappers.h"
@@ -12,10 +13,59 @@
 /* Pebble includes */
 #include <idt.h>
 #include <syscall_int.h>
+#include <ureg.h>
 
 /* Libc includes */
 #include <assert.h>
 #include <string.h>
+
+/* x86 specific includes */
+#include <x86/eflags.h>
+#include <x86/seg.h>
+
+/* Upper 10 bits of EFLAGS are reserved */
+#define RESV 0xFFC00000
+
+/* These bits in EFLAGS should be 1 */
+#define EFL_SET (EFL_RESV1 | EFL_IOPL_RING0 | EFL_IF)
+
+/* These bits in EFLAGS should be 0 */
+#define EFL_UNSET (EFL_RESV2 | EFL_RESV3 | EFL_IOPL_RING1  | EFL_IOPL_RING2 \
+                  | EFL_IOPL_RING3 | EFL_RESV3 | EFL_AC | RESV)
+    
+/** @brief Validate register values.
+ *
+ *  @param regs Registers to validate.
+ *
+ *  @return -1 if invalid, else 0.
+ **/
+int validate_regs(ureg_t *regs)
+{
+  /* Validate data and segments */
+  if((regs->ds != SEGSEL_USER_DS) || (regs->es != SEGSEL_USER_DS) ||
+     (regs->fs != SEGSEL_USER_DS) || (regs->gs != SEGSEL_USER_DS) ||
+     (regs->ss != SEGSEL_USER_DS)){
+    return -1;
+  }
+
+  /* Validate code segment */
+  if(regs->cs != SEGSEL_USER_CS)
+    return -1;
+
+  /* Validate EFLAGS */
+  if((regs->eflags & EFL_SET) != EFL_SET)
+    return -1;  
+
+  if((regs->eflags & EFL_UNSET) != 0)
+    return -1;  
+
+  /* Validate EIP */
+
+  /* Validate ESP */
+
+  return 0;
+}
+
 
 /** @brief Safely invoke kernel system call handlers.
  *

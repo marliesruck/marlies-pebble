@@ -86,13 +86,13 @@ void init_exn_stack(ureg_t *state, unsigned int cause, void *cr2)
   return;
 }
 
-/* @bug Argument validation */
+/* @bug Argument validation of pointers */
 
 int sys_swexn(void *esp3, swexn_handler_t eip, void *arg, ureg_t *newureg)
 {
   /* Validate register values */
   if(newureg){
-    if(sc_validate_argp(newureg, NUM_REGS)){
+    if(validate_regs(newureg) < 0){
       return -1;
     }
   }

@@ -28,6 +28,17 @@ int main()
   /* TODO: Uncomment when we kill faulting processes */
 //  if(!fork()) exec("remove_pages_test2", NULL);
 //  while(wait(NULL));
+//  if(!fork()) exec("swexn_stands_for_swextensible", NULL);
+//  while(wait(NULL));
+//  if(!fork()) exec("swexn_uninstall_test", NULL);
+//  while(wait(NULL));
+//
+//  if(!fork()) exec("swexn_cookie_monster", NULL);
+//  while(wait(NULL));
+//  if(!fork()) exec("swexn_regs", NULL);
+//  while(wait(NULL));
+//  if(!fork()) exec("swexn_dispatch", NULL);
+//  while(wait(NULL));
 
   char *sleep_args[] = {"sleep_test1", "20", NULL};
   if(!fork()) exec("sleep_test1", sleep_args);
