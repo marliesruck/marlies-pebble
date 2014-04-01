@@ -19,6 +19,7 @@
 
 /* Libc specific includes */
 #include <stdlib.h>
+#include <string.h>
 
 /* x86 specific includes */
 #include <x86/asm.h>
@@ -59,19 +60,19 @@ void deregister(swexn_t *swexn)
 
 /** @brief Set up exception stack and deregister handler.
  *
+ *  Since we want the handler to run in user mode, we copy the contents of the
+ *  executation state onto the exception stack so that way it can modify it as
+ *  it pleases. 
+ *
  *  @param state Execution state to push on exception stack.
  *
  *  @return Void.
  **/
 void init_exn_stack(ureg_t *state, unsigned int cause, void *cr2)
 {
-  ureg_t *test = malloc(sizeof(ureg_t));
-  lprintf("state: %p", state);
-  *test = *state;
-
   /* Save execution state */
-  test->cause = SWEXN_CAUSE_PAGEFAULT;
-  test->cr2 = (unsigned int)(cr2);
+  state->cause = cause;
+  state->cr2 = (unsigned int)(cr2);
 
   /* Store out handler to call */
   swexn_handler_t eip = curr->swexn.eip;
@@ -81,17 +82,20 @@ void init_exn_stack(ureg_t *state, unsigned int cause, void *cr2)
   /* Deregister old handler */
   deregister(&curr->swexn);
 
+  /* Copy the execution state onto the exception stack */
+  esp3 = (char *)(esp3) - sizeof(ureg_t) - sizeof(unsigned int);
+  memcpy(esp3, state, sizeof(ureg_t));
+  void *addr = esp3;
+
   /* Craft contents of exception stack */
-  PUSH(esp3, test);    /* Executation state */
+  PUSH(esp3, addr);     /* Executation state */
   PUSH(esp3, arg);      /* Opaque void * arg */
   PUSH(esp3, 0);        /* Dummy return address */
 
   set_esp0((uint32_t)(&curr->kstack[KSTACK_SIZE]));
 
-  lprintf("calling handler");
-  /* Run handler */
+  /* Run the handler in user mode */
   half_dispatch(eip, esp3);
-//  run_handler(eip, esp3);
 
   return;
 }
@@ -100,11 +104,9 @@ void init_exn_stack(ureg_t *state, unsigned int cause, void *cr2)
 
 int sys_swexn(void *esp3, swexn_handler_t eip, void *arg, ureg_t *newureg)
 {
-  lprintf("in swexn");
   /* Validate register values */
   if(newureg){
     if(validate_regs(newureg) < 0){
-      lprintf("Invalid register set");
       return -1;
     }
   }
