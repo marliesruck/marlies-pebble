@@ -12,6 +12,8 @@
 int main()
 {
   /*** --- Regression tests --- ***/
+  if(!fork()) exec("swexn_stands_for_swextensible", NULL);
+  while(wait(NULL));
 
   if(!fork()) exec("swexn_regs", NULL);
   while(wait(NULL));
@@ -36,8 +38,6 @@ int main()
 
   /* TODO: Uncomment when we kill faulting processes */
 //  if(!fork()) exec("remove_pages_test2", NULL);
-//  while(wait(NULL));
-//  if(!fork()) exec("swexn_stands_for_swextensible", NULL);
 //  while(wait(NULL));
 //  if(!fork()) exec("swexn_uninstall_test", NULL);
 //  while(wait(NULL));

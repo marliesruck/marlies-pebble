@@ -22,9 +22,13 @@
 #include <ureg.h>
 #include <stdlib.h>
 
+/*---------------------------------------------
+ | Swexn helper routines and data structures  |
+ ---------------------------------------------*/
+
 typedef void (*swexn_handler_t)(void *arg, ureg_t *ureg);
 
-/** @brief Each thread may optionall register with the kernel a software
+/** @brief Each thread may optionally register with the kernel a software
  *         exception handler.
  **/
 typedef struct swexn {
@@ -39,18 +43,28 @@ int validate_regs(ureg_t *regs);
 int validate_sp(void *sp);
 int validate_pc(void *pc);
 
-int copy_from_user(char *dst, const char *src, size_t bytes);
-void install_sys_handlers(void);
-int sc_validate_argp(void *argp, int arity);
-
 /** @brief Get EBP.
  *
  *  @return Value in EBP.
  **/
 void *get_ebp(void);
 
-#else /* ASSEMBLER */
+/*---------------------------------------------
+ | For implementing our thread killing policy |
+ ---------------------------------------------*/
 
+void sys_vanish(void);
+
+/*---------------------------------------------
+ |          Argument validation               |
+ ---------------------------------------------*/
+
+int copy_from_user(char *dst, const char *src, size_t bytes);
+void install_sys_handlers(void);
+int sc_validate_argp(void *argp, int arity);
+
+
+#else /* ASSEMBLER */
 .extern sim_breakpoint
 
 /** @brief Wraps a nullary system call handler.

@@ -354,6 +354,8 @@ void int_page_fault(void)
   if (pg_page_fault_handler(addr))
   {
     lprintf("Error: Page fault on table-less address %p", addr);
+    sys_vanish();
+
     panic("Error: Page fault!");
   }
 
