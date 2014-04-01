@@ -133,6 +133,87 @@ asm_\handler:
 
 .endm
 
+/** @brief Wraps a fault handler with an error code.
+ *
+ *  All the fault handlers with error codes need the same assembly wrapper;
+ *  we leverage that with this generic assembly macros.
+ *
+ *  We take advantage of the order registers are pushed on the stack so that we
+ *  can simply cast the stack to a ureg for the user exception handler.
+ *  Consequently, we do not have a prologue or epilogue.
+ *
+ *  @param handler The name of the handler for this interrupt.
+ *
+ *  @return Void.
+ **/
+.macro VOID_FAULT_ERROR handler
+
+# Export and label it...
+.extern \handler
+.global asm_\handler
+asm_\handler:
+
+  pusha                           # Store GP registers
+  push %ds                        # Store DS data segment
+  push %es                        # Store ES data segment
+  push %fs                        # Store FS data segment
+  push %gs                        # Store GS data segment
+
+  call \handler                   # Call the interrupt handler
+
+  # Epilogue
+  pop %gs                         # Restore GS data segment
+  pop %fs                         # Restore FS data segment
+  pop %es                         # Restore ES data segment
+  pop %ds                         # Restore DS data segment
+  popa                            # Restore GP registers
+
+  add  $4, %esp                   # Readjust ESP to account for the error code 
+  iret                            # Return from the interrupt
+
+.endm
+
+/** @brief Wraps a fault handler that has no error code.
+ *
+ *  All the fault handlers with no error code need the same assembly wrapper;
+ *  we leverage that with this generic assembly macros.
+ *
+ *  We take advantage of the order registers are pushed on the stack so that we
+ *  can simply cast the stack to a ureg for the user exception handler.
+ *  Consequently, we do not have a prologue or epilogue.
+ *
+ *  @param handler The name of the handler for this interrupt.
+ *
+ *  @return Void.
+ **/
+.macro VOID_FAULT handler
+
+# Export and label it...
+.extern \handler
+.global asm_\handler
+asm_\handler:
+
+  pusha                           # Store GP registers
+  push %ds                        # Store DS data segment
+  push %es                        # Store ES data segment
+  push %fs                        # Store FS data segment
+  push %gs                        # Store GS data segment
+
+  call \handler                   # Call the interrupt handler
+
+  # Epilogue
+  pop %gs                         # Restore GS data segment
+  pop %fs                         # Restore FS data segment
+  pop %es                         # Restore ES data segment
+  pop %ds                         # Restore DS data segment
+  popa                            # Restore GP registers
+
+  iret                            # Return from the interrupt
+
+.endm
+
+
+
 #endif /* ASSEMBLER */
 
 
