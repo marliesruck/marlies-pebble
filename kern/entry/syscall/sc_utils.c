@@ -41,6 +41,7 @@
  **/
 int validate_regs(ureg_t *regs)
 {
+  MAGIC_BREAK;
   /* Validate data and segments */
   if((regs->ds != SEGSEL_USER_DS) || (regs->es != SEGSEL_USER_DS) ||
      (regs->fs != SEGSEL_USER_DS) || (regs->gs != SEGSEL_USER_DS) ||
@@ -52,12 +53,12 @@ int validate_regs(ureg_t *regs)
   if(regs->cs != SEGSEL_USER_CS)
     return -1;
 
-  /* Validate EFLAGS */
-  if((regs->eflags & EFL_SET) != EFL_SET)
-    return -1;  
-
-  if((regs->eflags & EFL_UNSET) != 0)
-    return -1;  
+//  /* Validate EFLAGS */
+//  if((regs->eflags & EFL_SET) != EFL_SET)
+//    return -1;  
+//
+//  if((regs->eflags & EFL_UNSET) != 0)
+//    return -1;  
 
   /* Validate EIP */
 

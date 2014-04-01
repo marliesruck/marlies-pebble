@@ -10,6 +10,7 @@
 #include "swexn.h"
 
 /* Pebbles includes*/
+#include <dispatch.h>
 #include <mutex.h>
 #include <sc_utils.h>
 #include <sched.h>
@@ -21,6 +22,7 @@
 
 /* x86 specific includes */
 #include <x86/asm.h>
+#include <x86/cr.h>
 
 #define NUM_REGS 20
 
@@ -63,9 +65,13 @@ void deregister(swexn_t *swexn)
  **/
 void init_exn_stack(ureg_t *state, unsigned int cause, void *cr2)
 {
+  ureg_t *test = malloc(sizeof(ureg_t));
+  lprintf("state: %p", state);
+  *test = *state;
+
   /* Save execution state */
-  state->cause = SWEXN_CAUSE_PAGEFAULT;
-  state->cr2 = (unsigned int)(cr2);
+  test->cause = SWEXN_CAUSE_PAGEFAULT;
+  test->cr2 = (unsigned int)(cr2);
 
   /* Store out handler to call */
   swexn_handler_t eip = curr->swexn.eip;
@@ -76,12 +82,16 @@ void init_exn_stack(ureg_t *state, unsigned int cause, void *cr2)
   deregister(&curr->swexn);
 
   /* Craft contents of exception stack */
-  PUSH(esp3, state);    /* Executation state */
+  PUSH(esp3, test);    /* Executation state */
   PUSH(esp3, arg);      /* Opaque void * arg */
   PUSH(esp3, 0);        /* Dummy return address */
 
+  set_esp0((uint32_t)(&curr->kstack[KSTACK_SIZE]));
+
+  lprintf("calling handler");
   /* Run handler */
-  run_handler(eip, esp3);
+  half_dispatch(eip, esp3);
+//  run_handler(eip, esp3);
 
   return;
 }
@@ -90,9 +100,11 @@ void init_exn_stack(ureg_t *state, unsigned int cause, void *cr2)
 
 int sys_swexn(void *esp3, swexn_handler_t eip, void *arg, ureg_t *newureg)
 {
+  lprintf("in swexn");
   /* Validate register values */
   if(newureg){
     if(validate_regs(newureg) < 0){
+      lprintf("Invalid register set");
       return -1;
     }
   }

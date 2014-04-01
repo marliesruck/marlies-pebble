@@ -13,7 +13,16 @@ int main()
 {
   /*** --- Regression tests --- ***/
 
+  if(!fork()) exec("swexn_regs", NULL);
+  while(wait(NULL));
+
   if(!fork()) exec("swexn_basic_test", NULL);
+  while(wait(NULL));
+
+  if(!fork()) exec("swexn_dispatch", NULL);
+  while(wait(NULL));
+
+  if(!fork()) exec("swexn_cookie_monster", NULL);
   while(wait(NULL));
 
   if(!fork()) exec("minclone_mem", NULL);
@@ -33,12 +42,6 @@ int main()
 //  if(!fork()) exec("swexn_uninstall_test", NULL);
 //  while(wait(NULL));
 //
-//  if(!fork()) exec("swexn_cookie_monster", NULL);
-//  while(wait(NULL));
-//  if(!fork()) exec("swexn_regs", NULL);
-//  while(wait(NULL));
-//  if(!fork()) exec("swexn_dispatch", NULL);
-//  while(wait(NULL));
 
   char *sleep_args[] = {"sleep_test1", "20", NULL};
   if(!fork()) exec("sleep_test1", sleep_args);
