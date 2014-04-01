@@ -12,7 +12,10 @@
 /* Pebble includes */
 #include <interrupt_defines.h>
 #include <x86/asm.h>
-#include <keyhelp.h>
+
+mutex_s kbd_lock = MUTEX_INITIALIZER(kbd_lock);
+cvar_s kbd_wait = CVAR_INITIALIZER(kbd_wait);
+kbd_state_e kbd_state = KBD_AWAITING_NONE;
 
 
 /*************************************************************************/
@@ -31,20 +34,69 @@
  *  @return The next character in the keyboard buffer, or -1 if the
  *          keyboard buffer is currently empty.
  **/
+char getchar_buf;
 int kbd_getchar(void)
 {
-  int res;
-  char scancode;
   kh_type k;
 
-  while ((res = __buffer_read_uninterruptible(&scancode)) != -1)
-  {
-    k = process_scancode(scancode);
-    if (KH_HASDATA(k) && KH_ISMAKE(k))
-      return KH_GETCHAR(k);
-  }
+  mutex_lock(&kbd_lock);
+  kbd_state = KBD_AWAITING_CHAR;
 
-  return -1;
+  while (__buffer_read(&k) == -1)
+    cvar_wait(&kbd_wait, NULL);
+
+  mutex_unlock(&kbd_lock);
+  return KH_GETCHAR(k);
+}
+
+
+#include <console.h>
+char *getline_buf;
+int getline_size;
+int getline_count;
+int update_getline_globals(kh_type k)
+{
+  char ch;
+
+  ch = KH_GETCHAR(k);
+
+  /* Write the character to buf and the console */
+  getline_buf[getline_count] = ch;
+  putbyte(ch);
+
+  /* Inc/Decrement read count */
+  if (ch == '\b')
+    --getline_count;
+  else
+    ++getline_count;
+
+  /* Let the caller know we can do no more */
+  if (getline_count >= getline_size || ch == '\n')
+    return 1;
+
+  return 0;
+}
+
+int kbd_getline(int size, char *buf)
+{
+  int count;
+
+  mutex_lock(&kbd_lock);
+  kbd_state = KBD_AWAITING_LINE;
+
+  /* Set globals for the interrupt handler */
+  getline_buf = buf;
+  getline_size = size;
+  getline_count = 0;
+
+  /* Wait for characters */
+  cvar_wait(&kbd_wait, NULL);
+
+  /* For returning */
+  count = getline_count;
+
+  mutex_unlock(&kbd_lock);
+  return count;
 }
 
 /** @brief Writes a character into the keyboard buffer.
@@ -57,14 +109,9 @@ int kbd_getchar(void)
  *
  *  @return Void.
  **/
-void kbd_putchar(char scancode)
+void kbd_putchar(kh_type k)
 {
-  /* Disable interrupts to ensure the keyboard callback isn't writing into
-   * the buffer at the same time.
-   */
-  disable_interrupts();
-  __buffer_write(scancode);
-  enable_interrupts();
+  __buffer_write(k);
   return;
 }
 
@@ -79,12 +126,43 @@ void kbd_putchar(char scancode)
 void kbd_int_handler(void)
 {
   char scancode;
+  kh_type k;
 
   scancode = inb(KEYBOARD_PORT);
-  __buffer_write(scancode);
 
+  k = process_scancode(scancode);
+  if (KH_HASDATA(k) && KH_ISMAKE(k))
+  {
+    switch (kbd_state)
+    {
+    /* Someone wants a line */
+    case KBD_AWAITING_LINE:
+      if (update_getline_globals(k)) {
+        kbd_state = KBD_AWAITING_NONE;
+        cvar_signal(&kbd_wait);
+      }
+
+      break;
+
+    /* Someone wants a character */
+    case KBD_AWAITING_CHAR:
+      __buffer_write(k);
+      kbd_state = KBD_AWAITING_NONE;
+      cvar_signal(&kbd_wait);
+      break;
+
+    /* No one is waiting */
+    case KBD_AWAITING_NONE:
+    default:
+      __buffer_write(k);
+      break;
+    }
+  }
+
+  /* We don't want nested keyboard interrupts
+   * (keystroke order matters)
+   */
   outb(INT_CTL_PORT, INT_ACK_CURRENT);
-
   return;
 }
 
@@ -93,7 +171,7 @@ void kbd_int_handler(void)
 /* Internal helper functions                                             */
 /*************************************************************************/
 
-/* The keyboard buffer itself */
+/* The keyboard buffer and it's lock */
 kbd_buffer buff = KBD_BUFFER_INITIALIZER();
 
 /** @brief Write a scancode to the keyboard buffer.
@@ -105,10 +183,12 @@ kbd_buffer buff = KBD_BUFFER_INITIALIZER();
  *
  *  @return Void.
  **/
-static void __buffer_write(char scancode)
+static void __buffer_write(kh_type k)
 {
+  disable_interrupts();
+
   // Write into the buffer
-  buff.buffer[buff.w] = scancode;
+  buff.buffer[buff.w] = k;
   buff.w = MODINC(buff.w);
 
   // Increment read as needed
@@ -116,6 +196,7 @@ static void __buffer_write(char scancode)
     buff.r = MODINC(buff.r);
 
   ++buff.count;
+  enable_interrupts();
   return;
 }
 
@@ -133,10 +214,8 @@ static void __buffer_write(char scancode)
  *  @return The number of lost entries since the last read, or -1 if the
  *          keyboard buffer is currently empty.
  **/
-static int __buffer_read(char *scancode)
+static int __buffer_read(kh_type *kp)
 {
-  int lost;
-  
   disable_interrupts();
 
   /* Check for an empty buffer */
@@ -145,37 +224,12 @@ static int __buffer_read(char *scancode)
     return -1;
   }
 
-  /* Save lost and reset count */
-  if (buff.count > KBD_BUFFER_SIZE) {
-    lost = buff.count - KBD_BUFFER_SIZE;
-    buff.count = KBD_BUFFER_SIZE;
-  } else lost = 0;
-
   /* Read from the buffer */
-  *scancode = buff.buffer[buff.r];
+  *kp = buff.buffer[buff.r];
   buff.r = MODINC(buff.r);
 
   --buff.count;
   enable_interrupts();
-  return lost;
-}
-
-/** @brief Read a scancode from the keyboard buffer, with interrupts
- *  disabled.
- *
- *  @param scancode Destination pointer for read scancode
- *
- *  @return The number of lost entries since the last read, or -1 if the
- *          keyboard buffer is currently empty.
- **/
-static int __buffer_read_uninterruptible(char *scancode)
-{
-  int lost;
-  
-  disable_interrupts();
-  lost = __buffer_read(scancode);
-  enable_interrupts();
-
-  return lost;
+  return buff.count;
 }
 
