@@ -60,17 +60,14 @@ void int_divzero(void)
 
   /* A software exception handler was installed by the user */
   if(curr->swexn.eip){
+
     /* Retrieve execution state */
     state = (ureg_t *)(get_ebp());
 
-    /* Clobber EBP */
-    state->cause = SWEXN_CAUSE_DIVIDE;
-
-    /* Clobber return address */
-    state->cr2 = 0;
-
-    /* Call handler */
+    /* Craft contents of exception stack and call handler */
+    init_exn_stack(state, SWEXN_CAUSE_DIVIDE, NULL);
   }
+
 
   lprintf("Error: Division by zero!");
   panic("Error: Division by zero!!");
@@ -83,6 +80,18 @@ void int_divzero(void)
  **/
 void int_debug(void)
 {
+  ureg_t *state;
+
+  /* A software exception handler was installed by the user */
+  if(curr->swexn.eip){
+
+    /* Retrieve execution state */
+    state = (ureg_t *)(get_ebp());
+
+    /* Craft contents of exception stack and call handler */
+    init_exn_stack(state, SWEXN_CAUSE_DEBUG, NULL);
+  }
+
   lprintf("Alert: Got debug interrupt...");
   panic("Alert: Got debug interrupt...");
   return;
@@ -105,6 +114,18 @@ void int_nmi(void)
  **/
 void int_breakpoint(void)
 {
+  ureg_t *state;
+
+  /* A software exception handler was installed by the user */
+  if(curr->swexn.eip){
+
+    /* Retrieve execution state */
+    state = (ureg_t *)(get_ebp());
+
+    /* Craft contents of exception stack and call handler */
+    init_exn_stack(state, SWEXN_CAUSE_BREAKPOINT, NULL);
+  }
+
   lprintf("Alert: Encountered breakpoint (INT 3)!");
   panic("Alert: Encountered breakpoint (INT 3)!");
   return;
@@ -116,6 +137,18 @@ void int_breakpoint(void)
  **/
 void int_overflow(void)
 {
+  ureg_t *state;
+
+  /* A software exception handler was installed by the user */
+  if(curr->swexn.eip){
+
+    /* Retrieve execution state */
+    state = (ureg_t *)(get_ebp());
+
+    /* Craft contents of exception stack and call handler */
+    init_exn_stack(state, SWEXN_CAUSE_OVERFLOW, NULL);
+  }
+
   lprintf("Error: Overflow (INTO)!");
   panic("Error: Overflow (INTO)!");
   return;
@@ -127,6 +160,18 @@ void int_overflow(void)
  **/
 void int_bound(void)
 {
+  ureg_t *state;
+
+  /* A software exception handler was installed by the user */
+  if(curr->swexn.eip){
+
+    /* Retrieve execution state */
+    state = (ureg_t *)(get_ebp());
+
+    /* Craft contents of exception stack and call handler */
+    init_exn_stack(state, SWEXN_CAUSE_BOUNDCHECK, NULL);
+  }
+
   lprintf("Error: Range exceeded (BOUND)!");
   panic("Error: Range exceeded (BOUND)!");
   return;
@@ -138,6 +183,18 @@ void int_bound(void)
  **/
 void int_undef_opcode(void)
 {
+  ureg_t *state;
+
+  /* A software exception handler was installed by the user */
+  if(curr->swexn.eip){
+
+    /* Retrieve execution state */
+    state = (ureg_t *)(get_ebp());
+
+    /* Craft contents of exception stack and call handler */
+    init_exn_stack(state, SWEXN_CAUSE_OPCODE, NULL);
+  }
+
   lprintf("Error: Invalid instruction!");
   panic("Error: Invalid instruction!");
   return;
@@ -149,6 +206,17 @@ void int_undef_opcode(void)
  **/
 void int_device_unavail(void)
 {
+  ureg_t *state;
+
+  /* A software exception handler was installed by the user */
+  if(curr->swexn.eip){
+
+    /* Retrieve execution state */
+    state = (ureg_t *)(get_ebp());
+
+    /* Craft contents of exception stack and call handler */
+    init_exn_stack(state, SWEXN_CAUSE_NOFPU, NULL);
+  }
   lprintf("Error: Device not available!");
   panic("Error: Device not available!");
   return;
@@ -193,6 +261,18 @@ void int_tss(void)
  **/
 void int_seg_not_present(void)
 {
+
+  ureg_t *state;
+
+  /* A software exception handler was installed by the user */
+  if(curr->swexn.eip){
+
+    /* Retrieve execution state */
+    state = (ureg_t *)(get_ebp());
+
+    /* Craft contents of exception stack and call handler */
+    init_exn_stack(state, SWEXN_CAUSE_SEGFAULT, NULL);
+  }
   lprintf("Error: Segment not present!");
   panic("Error: Segment not present!");
   return;
@@ -204,6 +284,17 @@ void int_seg_not_present(void)
  **/
 void int_stack_seg(void)
 {
+  ureg_t *state;
+
+  /* A software exception handler was installed by the user */
+  if(curr->swexn.eip){
+
+    /* Retrieve execution state */
+    state = (ureg_t *)(get_ebp());
+
+    /* Craft contents of exception stack and call handler */
+    init_exn_stack(state, SWEXN_CAUSE_STACKFAULT, NULL);
+  }
   lprintf("Error: Stack segment fault!");
   panic("Error: Stack segment fault!");
   return;
@@ -215,6 +306,17 @@ void int_stack_seg(void)
  **/
 void int_gen_prot(void)
 {
+  ureg_t *state;
+
+  /* A software exception handler was installed by the user */
+  if(curr->swexn.eip){
+
+    /* Retrieve execution state */
+    state = (ureg_t *)(get_ebp());
+
+    /* Craft contents of exception stack and call handler */
+    init_exn_stack(state, SWEXN_CAUSE_PROTFAULT, NULL);
+  }
   lprintf("Error: General protection fault!");
   panic("Error: General protection fault!");
   return;
@@ -264,6 +366,17 @@ void int_page_fault(void)
  **/
 void int_float(void)
 {
+  ureg_t *state;
+
+  /* A software exception handler was installed by the user */
+  if(curr->swexn.eip){
+
+    /* Retrieve execution state */
+    state = (ureg_t *)(get_ebp());
+
+    /* Craft contents of exception stack and call handler */
+    init_exn_stack(state, SWEXN_CAUSE_FPUFAULT, NULL);
+  }
   lprintf("Error: Floating point exception!");
   panic("Error: Floating point exception!");
   return;
@@ -275,6 +388,17 @@ void int_float(void)
  **/
 void int_align(void)
 {
+  ureg_t *state;
+
+  /* A software exception handler was installed by the user */
+  if(curr->swexn.eip){
+
+    /* Retrieve execution state */
+    state = (ureg_t *)(get_ebp());
+
+    /* Craft contents of exception stack and call handler */
+    init_exn_stack(state, SWEXN_CAUSE_ALIGNFAULT, NULL);
+  }
   lprintf("Error: Alignment check!");
   panic("Error: Alignment check!");
   return;
@@ -297,6 +421,17 @@ void int_machine_check(void)
  **/
 void int_simd(void)
 {
+  ureg_t *state;
+
+  /* A software exception handler was installed by the user */
+  if(curr->swexn.eip){
+
+    /* Retrieve execution state */
+    state = (ureg_t *)(get_ebp());
+
+    /* Craft contents of exception stack and call handler */
+    init_exn_stack(state, SWEXN_CAUSE_SIMDFAULT, NULL);
+  }
   lprintf("Error: SIMD floating point exception!");
   panic("Error: SIMD floating point exception!");
   return;
