@@ -214,8 +214,6 @@ int sc_validate_argp(void *argp, int arity)
 
 /** @brief Safely copy data from user-space.
  *
- *  TODO: This isn't actually safe; make it so.
- *
  *  @param dst The destionation pointer.
  *  @param src The (user-space) source pointer.
  *  @param bytes The number of bytes to copy.
@@ -224,7 +222,43 @@ int sc_validate_argp(void *argp, int arity)
  **/
 int copy_from_user(char *dst, const char *src, size_t bytes)
 {
+  mutex_lock(&curr->task_info->lock);
+
+  if (!vm_find(&curr->task_info->vmi, (char *)src)) {
+    mutex_unlock(&curr->task_info->lock);
+    return -1;
+  }
+
   memcpy(dst, src, bytes);
+
+  mutex_unlock(&curr->task_info->lock);
+  return 0;
+}
+
+/** @brief Safely copy data to user-space.
+ *
+ *  @param dst The destionation pointer.
+ *  @param src The (user-space) source pointer.
+ *  @param bytes The number of bytes to copy.
+ *
+ *  @return 0 on success; a negative integer error code on failure.
+ **/
+int copy_to_user(char *dst, const char *src, size_t bytes)
+{
+  unsigned int attrs;
+
+  mutex_lock(&curr->task_info->lock);
+
+  if (vm_get_attrs(&curr->task_info->vmi, dst, &attrs)
+      || !(attrs & VM_ATTR_RDWR))
+  {
+    mutex_unlock(&curr->task_info->lock);
+    return -1;
+  }
+
+  memcpy(dst, src, bytes);
+
+  mutex_unlock(&curr->task_info->lock);
   return 0;
 }
 

@@ -27,10 +27,25 @@ int sys_yield(int pid)
 
 int sys_deschedule(int *reject)
 {
+  unsigned int attrs;
+
   mutex_lock(&curr->lock);
 
-  /*  TODO: check that reject is valid. */
-  if (*reject) return 0;
+  /* Make sure the reject is valid
+   * can't use copy_from_user(...); already have the task lock
+   */
+  if (vm_get_attrs(&curr->task_info->vmi, reject, &attrs)
+      || !(attrs & VM_ATTR_RDWR))
+  {
+    mutex_unlock(&curr->lock);
+    return -1;
+  }
+
+  /* Check reject value */
+  if (*reject) {
+    mutex_unlock(&curr->lock);
+    return 0;
+  }
 
   sched_mutex_unlock_and_block(curr, &curr->lock);
 
@@ -46,8 +61,10 @@ int sys_make_runnable(int tid)
   thr = thrlist_find(tid);
   mutex_lock(&thr->lock);
 
-  if (!thr || thr->state == THR_RUNNING)
+  if (!thr || thr->state == THR_RUNNING) {
+    mutex_unlock(&thr->lock);
     return -1;
+  }
 
   ret = sched_unblock(thr);
   mutex_unlock(&thr->lock);

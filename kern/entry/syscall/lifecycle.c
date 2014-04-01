@@ -126,24 +126,30 @@ int sys_exec(char *execname, char *argvec[])
   simple_elf_t se;
   int i, j;
 
-  /* Copy execname from user-space */
+  /* Allocate kernel mem for user args */
   execname_k = malloc(strlen(execname) + 1);
   if (!execname_k) return -1;
+  for (i = 0; argvec[i] != NULL; ++i) continue;
+  argvec_k = malloc((i + 1) * sizeof(char *));
+  if (!argvec_k) {
+    free(execname_k);
+    return -1;
+  }
 
   /* Invalid memory or filename */
   if ((copy_from_user(execname_k, execname, strlen(execname) + 1))
-      || (validate_file(&se, execname) < 0)){
+      || (validate_file(&se, execname_k) < 0)){
       free(execname_k);
       return -1;
   }
 
   /* Copy argvec from user-space */
-  for (i = 0; argvec[i] != NULL; ++i) continue;
-  argvec_k = malloc((i + 1) * sizeof(char *));
   for (i = 0; argvec[i] != NULL; ++i)
   {
     argvec_k[i] = malloc(strlen(argvec[i]) + 1);
-    if (copy_from_user(argvec_k[i], argvec[i], strlen(argvec[i]) + 1)) {
+    if (argvec_k[i] == NULL ||
+        copy_from_user(argvec_k[i], argvec[i], strlen(argvec[i]) + 1))
+    {
       free(execname_k);
       for (j = 0; j < i; ++j) free(argvec_k[j]);
       free(argvec_k);
@@ -217,9 +223,16 @@ int sys_wait(int *status_ptr)
   /* Store out root task tid to return */
   int tid = child_task->tid;
  
-  /* Scribble to status */
-  if(status_ptr)
-    *status_ptr = child_task->status;
+  /* Scribble to status
+   * TODO: what if this fails?
+   */
+  if(status_ptr) {
+    if ( copy_to_user((char *)status_ptr, (char *)&child_task->status,
+                     sizeof(int)) )
+    {
+      return -1;
+    }
+  }
 
   task_reap(child_task);
 
