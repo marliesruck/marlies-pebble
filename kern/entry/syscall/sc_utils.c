@@ -17,6 +17,7 @@
 #include <syscall_int.h>
 #include <ureg.h>
 #include <util.h>
+#include <vm.h>
 
 /* Libc includes */
 #include <assert.h>
@@ -119,13 +120,79 @@ int validate_regs(ureg_t *regs)
   if((regs->eflags & EFL_UNSET) != 0)
     return -1;  
 
-  /* Validate EIP */
-
-  /* Validate ESP */
+  /* Validate EIP and ESP */
+  if((validate_sp((void *)regs->esp)) ||  (validate_pc((void *)regs->eip)))
+    return -1;
 
   return 0;
 }
 
+/** @brief Validate stack pointer.
+ *
+ *  @Bug there's nothing to prevent us from validating the stack and then
+ *  another thread freeing it
+ *
+ *  @param sp Stack pointer to validate.
+ *
+ *  @return -1 if invalid, else 0.
+ **/
+int validate_sp(void *sp)
+{
+  unsigned int attrs;
+  void *start;
+
+  mutex_lock(&curr->task_info->lock);
+
+  /* Make sure the address is mapped */
+  start = vm_find(&curr->task_info->vmi, sp);
+  if(!start){
+    mutex_unlock(&curr->task_info->lock);
+    return -1;
+  }
+
+  /* Acquire the region's attributes */
+  assert(!vm_get_attrs(&curr->task_info->vmi, start, &attrs));
+
+  mutex_unlock(&curr->task_info->lock);
+
+  /* Stack must be writable and accessible in user mode */
+  if((attrs & VM_ATTR_RDWR) && (attrs & VM_ATTR_USER))
+    return 0;
+  else
+    return -1;
+}
+
+/** @brief Validate program counter.
+ *
+ *  @param pc Program counter to validate.
+ *
+ *  @return -1 if invalid, else 0.
+ **/
+int validate_pc(void *pc)
+{
+  unsigned int attrs;
+  void *start;
+
+  mutex_lock(&curr->task_info->lock);
+
+  /* Make sure the address is mapped */
+  start = vm_find(&curr->task_info->vmi, pc);
+  if(!start){
+    mutex_unlock(&curr->task_info->lock);
+    return -1;
+  }
+
+  /* Acquire the region's attributes */
+  assert(!vm_get_attrs(&curr->task_info->vmi, start, &attrs));
+
+  mutex_unlock(&curr->task_info->lock);
+
+  /* Code must be accessible in user mode and not writeable */
+  if((!(attrs & VM_ATTR_RDWR)) && (attrs & VM_ATTR_USER))
+    return 0;
+  else
+    return -1;
+}
 
 /** @brief Safely invoke kernel system call handlers.
  *

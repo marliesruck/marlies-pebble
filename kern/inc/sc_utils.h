@@ -36,6 +36,8 @@ typedef struct swexn {
 void deregister(swexn_t *swexn);
 void init_exn_stack(ureg_t *state, unsigned int cause, void *cr2);
 int validate_regs(ureg_t *regs);
+int validate_sp(void *sp);
+int validate_pc(void *pc);
 
 int copy_from_user(char *dst, const char *src, size_t bytes);
 void install_sys_handlers(void);

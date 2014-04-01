@@ -58,6 +58,7 @@ ord_e mreg_compare(mem_region_s *lhs, mem_region_s *rhs)
   return ORD_EQ;
 }
 
+
 /** @brief Identify a memory region WITHOUT extracting it.
  *
  *  @param map Memory map to search.
@@ -589,4 +590,23 @@ void vm_final(vm_info_s *vmi)
   return;
 }
 
+/** @brief Determine whether or not an address is mapped in a task's virtual
+ * memory
+ *
+ *  @param vmi The virtual memory information.
+ *  @param add The address to look up.
+ *
+ *  @return NULL if not found, else the starting address of the region.
+ **/
+void *vm_find(vm_info_s *vmi, void *addr)
+{
+  cll_node *n;
+  mem_region_s *mreg;
 
+  cll_foreach(&vmi->mmap, n) {
+    mreg = cll_entry(mem_region_s *, n);
+    if((addr >= mreg->start) && (addr < mreg->limit))
+      return mreg->start;
+  }
+  return NULL;
+}

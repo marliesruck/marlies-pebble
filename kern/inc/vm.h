@@ -46,6 +46,7 @@ int vm_set_attrs(vm_info_s *vmi, void *va_start, unsigned int attrs);
 int vm_get_attrs(vm_info_s *vmi, void *va_start, unsigned int *dst);
 int vm_copy(vm_info_s *dst, vm_info_s *src);
 void vm_final(vm_info_s *vmi);
+void *vm_find(vm_info_s *vmi, void *addr);
 
 
 #endif /* __VM_H__ */
