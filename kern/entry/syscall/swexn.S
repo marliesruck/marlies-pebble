@@ -30,23 +30,6 @@ craft_state:
   # To user land! 
   iret
 
-.global run_handler
-
-run_handler:
-
-  # Prologue
-  push  %ebp
-  mov   %esp, %ebp
-
-  push EFL_USER_MODE
-  call set_eflags
-
-  # Retrieve arguments
-  mov   0x8(%ebp), %eax           # Retrieve address of the handler
-  mov   0xc(%ebp), %esp           # Set up user defined ESP
-
-  jmp   *%eax                     # Jump to the handler 
-
 .global get_ebp
 
 get_ebp:

@@ -7,8 +7,6 @@
  **/
 #include <simics.h>
 
-#include "swexn.h"
-
 /* Pebbles includes*/
 #include <dispatch.h>
 #include <mutex.h>
@@ -26,6 +24,17 @@
 #include <x86/cr.h>
 
 #define NUM_REGS 20
+/*************************************************************************
+ *  Internal helper functions
+ *************************************************************************/
+
+/** @brief Adopt register values requested by user.
+ *
+ *  @param state Execution state to be adopted.
+ *
+ *  @return Void.
+ **/
+void craft_state(ureg_t state);
 
 /*************************************************************************
  *  Miscellaneous system calls
@@ -39,65 +48,6 @@ void sys_halt()
 int sys_readfile(char *filename, char *buf, int count, int offset)
 {
   return -1;
-}
-
-/** @brief Deregister a software exception handler.
- *
- *  We use NULL to denote a deregistered handler.
- *
- *  @param swexn Address of handler to deregister.
- *
- *  @return Void.
- */
-void deregister(swexn_t *swexn)
-{
-  swexn->esp3 = NULL;
-  swexn->eip = NULL;
-  swexn->arg = NULL;
-
-  return;
-}
-
-/** @brief Set up exception stack and deregister handler.
- *
- *  Since we want the handler to run in user mode, we copy the contents of the
- *  executation state onto the exception stack so that way it can modify it as
- *  it pleases. 
- *
- *  @param state Execution state to push on exception stack.
- *
- *  @return Void.
- **/
-void init_exn_stack(ureg_t *state, unsigned int cause, void *cr2)
-{
-  /* Save execution state */
-  state->cause = cause;
-  state->cr2 = (unsigned int)(cr2);
-
-  /* Store out handler to call */
-  swexn_handler_t eip = curr->swexn.eip;
-  void *esp3 = curr->swexn.esp3;
-  void *arg = curr->swexn.arg;
-
-  /* Deregister old handler */
-  deregister(&curr->swexn);
-
-  /* Copy the execution state onto the exception stack */
-  esp3 = (char *)(esp3) - sizeof(ureg_t) - sizeof(unsigned int);
-  memcpy(esp3, state, sizeof(ureg_t));
-  void *addr = esp3;
-
-  /* Craft contents of exception stack */
-  PUSH(esp3, addr);     /* Executation state */
-  PUSH(esp3, arg);      /* Opaque void * arg */
-  PUSH(esp3, 0);        /* Dummy return address */
-
-  set_esp0((uint32_t)(&curr->kstack[KSTACK_SIZE]));
-
-  /* Run the handler in user mode */
-  half_dispatch(eip, esp3);
-
-  return;
 }
 
 /* @bug Argument validation of pointers */

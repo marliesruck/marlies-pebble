@@ -13,7 +13,6 @@
 #ifndef __SC_UTILS_H__
 #define __SC_UTILS_H__
 
-
 #ifndef ASSEMBLER
 
 /* Pebbles specific includes */
@@ -35,11 +34,18 @@ typedef struct swexn {
 } swexn_t;
 
 void deregister(swexn_t *swexn);
+void init_exn_stack(ureg_t *state, unsigned int cause, void *cr2);
 int validate_regs(ureg_t *regs);
 
 int copy_from_user(char *dst, const char *src, size_t bytes);
 void install_sys_handlers(void);
 int sc_validate_argp(void *argp, int arity);
+
+/** @brief Get EBP.
+ *
+ *  @return Value in EBP.
+ **/
+void *get_ebp(void);
 
 #else /* ASSEMBLER */
 

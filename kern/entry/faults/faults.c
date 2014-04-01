@@ -8,11 +8,11 @@
 #include <simics.h>
 
 #include "fault_wrappers.h"
-#include "../syscall/swexn.h"
 
 /* Pebbles specific includes */
 #include <idt.h>
 #include <sched.h>
+#include <sc_utils.h>
 #include <ureg.h>
 
 /* Libc specific includes */
