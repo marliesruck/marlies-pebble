@@ -11,14 +11,31 @@
 #ifndef __KEYBOARD_INTERNAL_H__
 #define __KEYBOARD_INTERNAL_H__
 
+#include <cvar.h>
+#include <mutex.h>
+
+#include <x86/keyhelp.h>
+
+
 #define KBD_BUFFER_SIZE 64
+
+/** @enum mutex_state
+ *  @brief Flag values for mutex state.
+ **/
+enum kbd_state {
+  KBD_AWAITING_NONE,    /**< No one controls the input stream **/
+  KBD_AWAITING_CHAR,    /**< The owner of the stream wants a char **/
+  KBD_AWAITING_LINE,    /**< The owner of the stream wants a line **/
+};
+typedef enum kbd_state kbd_state_e;
+
 
 /** @brief The keyboard buffer.
  **/
 struct keyboard_buffer {
   int r, w;                       /* Read/write indicies */
   int count;                      /* Num elements in buffer */
-  char buffer[KBD_BUFFER_SIZE];   /* The buffer itself */
+  kh_type buffer[KBD_BUFFER_SIZE];   /* The buffer itself */
 };
 typedef struct keyboard_buffer kbd_buffer;
 
@@ -29,7 +46,7 @@ typedef struct keyboard_buffer kbd_buffer;
 #define KBD_BUFFER_INITIALIZER() {  \
   (int) 0, (int) 0,                 \
   (int) 0,                          \
-  (char [KBD_BUFFER_SIZE]) {0}      \
+  (kh_type [KBD_BUFFER_SIZE]) {0}   \
 }
 
 /** @brief Performs a wrapping increment.
@@ -43,8 +60,9 @@ typedef struct keyboard_buffer kbd_buffer;
 #define MODINC(i) (((i) + 1) % KBD_BUFFER_SIZE)
 
 /* Read and write from the scancode buffer */
-static void __buffer_write(char scancode);
-static int __buffer_read(char *scancode);
-static int __buffer_read_uninterruptible(char *scancode);
+static void __buffer_write(kh_type k);
+static int __buffer_read(kh_type *kp);
+
 
 #endif
+

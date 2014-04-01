@@ -23,32 +23,16 @@
 char sys_getchar(void)
 {
   char ch;
-  while ((ch = kbd_getchar()) == -1) continue;
+
+  ch = kbd_getchar();
+  if (ch == -1) return -1;
+
   return ch;
 }
 
 int sys_readline(int size, char *buf)
 {
-  int count = 0;
-  char ch = '\0';
-
-  while (count < size && ch != '\n')
-  {
-    /* Read characters from the keyboard */
-    while ((ch = kbd_getchar()) == -1) continue;
-
-    /* Write to user buffer and console*/
-    buf[count] = ch;
-    putbyte(ch);
-
-    /* Inc/Decrement read count */
-    if (ch == '\b')
-      --count;
-    else
-      ++count;
-  }
-
-  return count;
+  return kbd_getline(size, buf);
 }
 
 int sys_print(int size, char *buf)
