@@ -14,50 +14,50 @@ int main()
   /*** --- Regression tests --- ***/
 
   if(!fork()) exec("swexn_basic_test", NULL);
-  while(wait(NULL));
+  while(wait(NULL) >= 0);
 
   if(!fork()) exec("swexn_stands_for_swextensible", NULL);
-  while(wait(NULL));
+  while(wait(NULL) >= 0);
 
   if(!fork()) exec("swexn_uninstall_test", NULL);
-  while(wait(NULL));
+  while(wait(NULL) >= 0);
 
   if(!fork()) exec("remove_pages_test2", NULL);
-  while(wait(NULL));
+  while(wait(NULL) >= 0);
 
   if(!fork()) exec("swexn_regs", NULL);
-  while(wait(NULL));
+  while(wait(NULL) >= 0);
 
   if(!fork()) exec("swexn_dispatch", NULL);
-  while(wait(NULL));
+  while(wait(NULL) >= 0);
 
   if(!fork()) exec("swexn_cookie_monster", NULL);
-  while(wait(NULL));
+  while(wait(NULL) >= 0);
 
   if(!fork()) exec("minclone_mem", NULL);
-  while(wait(NULL));
+  while(wait(NULL) >= 0);
 
   if(!fork()) exec("new_pages", NULL);
-  while(wait(NULL));
+  while(wait(NULL) >= 0);
 
   if(!fork()) exec("remove_pages_test1", NULL);
-  while(wait(NULL));
+  while(wait(NULL) >= 0);
 
   char *sleep_args[] = {"sleep_test1", "20", NULL};
   if(!fork()) exec("sleep_test1", sleep_args);
-  while(wait(NULL));
+  while(wait(NULL) >= 0);
 
   if(!fork()) exec("epileptic", NULL);
-  while(wait(NULL));
+  while(wait(NULL) >= 0);
 
   if(!fork()) exec("cooperative_terminate", NULL);
-  while(wait(NULL));
+  while(wait(NULL) >= 0);
 
   if(!fork()) exec("coolness_terminate", NULL);
-  while(wait(NULL));
+  while(wait(NULL) >= 0);
 
   if(!fork()) exec("coy_terminate", NULL); 
-  while(wait(NULL));
+  while(wait(NULL) >= 0);
 
   /*** --- Classic Init Routine --- ***/
 
