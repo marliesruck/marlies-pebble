@@ -45,10 +45,10 @@ void load_segment(const char* filename, int offset, size_t len,
 int getbytes(const char* filename, int offset, int size, char *buf )
 {
   void *src;
-  int i;
+  int i, amt;
 
   /* Search table of contents for file */
-  for(i = 0; i < exec2obj_userapp_count; i++){
+  for(i = 0; i < exec2obj_userapp_count; i++) {
     if (0 == strcmp(filename,exec2obj_userapp_TOC[i].execname))
       break;
   }
@@ -57,14 +57,15 @@ int getbytes(const char* filename, int offset, int size, char *buf )
   if (i >= exec2obj_userapp_count)
     return -1;
 
-  /* Copy size bytes from file starting at offset */
+  /* Calculate source address and amount to copy */
+  amt = exec2obj_userapp_TOC[i].execlen - offset;
+  amt = ( amt < size ) ? amt : size;
   src = (void *)&exec2obj_userapp_TOC[i].execbytes[offset];
-  /* This print is here so you can compare the bytes in src with the bytes
-   * written to the 'read only' page...They match up exactly
-   */
-  memcpy(buf, src, size);
 
-  return size;
+  /* Copy size bytes from file starting at offset */
+  memcpy(buf, src, amt);
+
+  return amt;
 }
 /** @brief Validate a file
  *

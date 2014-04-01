@@ -51,9 +51,11 @@ int kbd_getchar(void)
 
 
 #include <console.h>
+#include <simics.h>
 char *getline_buf;
 int getline_size;
 int getline_count;
+
 int update_getline_globals(kh_type k)
 {
   char ch;
@@ -141,7 +143,6 @@ void kbd_int_handler(void)
         kbd_state = KBD_AWAITING_NONE;
         cvar_signal(&kbd_wait);
       }
-
       break;
 
     /* Someone wants a character */

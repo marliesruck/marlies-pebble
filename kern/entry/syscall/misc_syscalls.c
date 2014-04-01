@@ -9,6 +9,7 @@
 
 /* Pebbles includes*/
 #include <dispatch.h>
+#include <loader.h>
 #include <mutex.h>
 #include <sc_utils.h>
 #include <sched.h>
@@ -47,7 +48,11 @@ void sys_halt()
 
 int sys_readfile(char *filename, char *buf, int count, int offset)
 {
-  return -1;
+  int copied;
+
+  copied = getbytes(filename, offset, count, buf);
+
+  return copied;
 }
 
 /* @bug Argument validation of pointers */
