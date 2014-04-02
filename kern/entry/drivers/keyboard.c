@@ -68,7 +68,9 @@ int update_getline_globals(kh_type k)
 
   /* Inc/Decrement read count */
   if (ch == '\b')
-    --getline_count;
+    getline_count = (getline_count > 0)
+                    ? getline_count - 1
+                    : getline_count;
   else
     ++getline_count;
 

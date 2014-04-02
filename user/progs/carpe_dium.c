@@ -12,127 +12,165 @@
 
 int main()
 {
+  char *args[5] = { NULL };
+
   /*** BASIC TESTS ***/
 
-  if(!fork()) exec("remove_pages_test1", NULL);
+  args[0] = "remove_pages_test1";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
   char *sleep_args[] = {"sleep_test1", "20", NULL};
   if(!fork()) exec("sleep_test1", sleep_args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("epileptic", NULL);
+  args[0] = "epileptic";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("cooperative_terminate", NULL);
+  args[0] = "cooperative_terminate";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("coolness_terminate", NULL);
+  args[0] = "coolness_terminate";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("coy_terminate", NULL); 
+  args[0] = "coy_terminate";
+  if(!fork()) exec(args[0], args); 
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("exec_basic", NULL); 
+  args[0] = "exec_basic";
+  if(!fork()) exec(args[0], args); 
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("fork_test1", NULL); 
+  args[0] = "fork_test1";
+  if(!fork()) exec(args[0], args); 
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("fork_wait", NULL); 
+  args[0] = "fork_wait";
+  if(!fork()) exec(args[0], args); 
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("getpid_test1", NULL); 
+  args[0] = "getpid_test1";
+  if(!fork()) exec(args[0], args); 
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("loader_test1", NULL); 
+  args[0] = "loader_test1";
+  if(!fork()) exec(args[0], args); 
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("mem_eat_test", NULL); 
+  args[0] = "mem_eat_test";
+  if(!fork()) exec(args[0], args); 
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("print_basic", NULL); 
+  args[0] = "print_basic";
+  if(!fork()) exec(args[0], args); 
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("readline_basic", NULL); 
+  args[0] = "readline_basic";
+  if(!fork()) exec(args[0], args); 
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("stack_test1", NULL);
+  args[0] = "stack_test1";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("wait_getpid", NULL);
+  args[0] = "wait_getpid";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("wild_test1", NULL);
+  args[0] = "wild_test1";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
   /*** SOLIDITY TESTS ***/
 
   /* Uncomment this after implementing yield:
-  if(!fork()) exec("yield_desc_mkrun", NULL);
+  args[0] = "yield_desc_mkrun";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
   */
    
   /* This tests runs forever...but we fail an assertion in vm copy
-  if(!fork()) exec("fork_bomb", NULL);
+  args[0] = "fork_bomb";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
   */
 
-  if(!fork()) exec("exec_nonexist", NULL);
+  args[0] = "exec_nonexist";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("fork_exit_bomb", NULL);
+  args[0] = "fork_exit_bomb";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("fork_wait_bomb", NULL);
+  args[0] = "fork_wait_bomb";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("loader_test2", NULL);
+  args[0] = "loader_test2";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("make_crash", NULL);
+  args[0] = "make_crash";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("swexn_basic_test", NULL);
+  args[0] = "swexn_basic_test";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("swexn_stands_for_swextensible", NULL);
+  args[0] = "swexn_stands_for_swextensible";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("swexn_uninstall_test", NULL);
+  args[0] = "swexn_uninstall_test";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("remove_pages_test2", NULL);
+  args[0] = "remove_pages_test2";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("swexn_regs", NULL);
+  args[0] = "swexn_regs";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("swexn_dispatch", NULL);
+  args[0] = "swexn_dispatch";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("swexn_cookie_monster", NULL);
+  args[0] = "swexn_cookie_monster";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("minclone_mem", NULL);
+  args[0] = "minclone_mem";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("new_pages", NULL);
+  args[0] = "new_pages";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("mem_permissions", NULL);
+  args[0] = "mem_permissions";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
   /*** STABILITY TESTS ***/
 
-  if(!fork()) exec("cho", NULL);
+  args[0] = "cho";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
   
   /*
-  if(!fork()) exec("cho2", NULL);
+  args[0] = "cho2";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("cho_variant", NULL);
+  args[0] = "cho_variant";
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
   */
@@ -142,7 +180,8 @@ int main()
 
   int pid, exitstatus;
   char shell[] = "shell";
-  char * args[] = {shell, 0};
+  args[0] = shell;
+  args[1] = NULL;
 
   while(1) {
     pid = fork();

@@ -31,6 +31,7 @@ char sys_getchar(void)
   return ch;
 }
 
+#include <simics.h>
 int sys_readline(int size, char *buf)
 {
   char *buf_k;
@@ -38,6 +39,8 @@ int sys_readline(int size, char *buf)
   
   /* Get a line from the console */
   buf_k = malloc(size * sizeof(char));
+  if (!buf_k) return -1;
+
   len = kbd_getline(size, buf_k);
 
   /* Give it to the user */
@@ -56,9 +59,7 @@ int sys_print(int size, char *buf)
   char *buf_k;
 
   /* Copy buf_k from user-space */
-  buf_k = malloc(size * sizeof(char));
-  if (!buf_k) return -1;
-  if (copy_from_user(buf_k, buf, size)) {
+  if (copy_from_user(&buf_k, buf, size)) {
     free(buf_k);
     return -1;
   }

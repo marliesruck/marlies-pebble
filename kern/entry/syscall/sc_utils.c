@@ -220,16 +220,19 @@ int sc_validate_argp(void *argp, int arity)
  *
  *  @return 0 on success; a negative integer error code on failure.
  **/
-int copy_from_user(char *dst, const char *src, size_t bytes)
+int copy_from_user(char **dst, const char *src, size_t bytes)
 {
   mutex_lock(&curr->task_info->lock);
 
-  if (!vm_find(&curr->task_info->vmi, (char *)src)) {
+  if (!vm_find(&curr->task_info->vmi, (void *)src)) {
     mutex_unlock(&curr->task_info->lock);
     return -1;
   }
 
-  memcpy(dst, src, bytes);
+  *dst = malloc(bytes);
+  if (!*dst) return -1;
+
+  memcpy(*dst, src, bytes);
 
   mutex_unlock(&curr->task_info->lock);
   return 0;
@@ -257,6 +260,35 @@ int copy_to_user(char *dst, const char *src, size_t bytes)
   }
 
   memcpy(dst, src, bytes);
+
+  mutex_unlock(&curr->task_info->lock);
+  return 0;
+}
+
+/** @brief Safely copy a string from user-space.
+ *
+ *  @param dst The destionation pointer.
+ *  @param src The (user-space) string pointer.
+ *  @param bytes The number of bytes to copy.
+ *
+ *  @return 0 on success; a negative integer error code on failure.
+ **/
+int copy_str_from_user(char **dst, const char *src)
+{
+  size_t len;
+
+  mutex_lock(&curr->task_info->lock);
+
+  if (!vm_find(&curr->task_info->vmi, (void *)src)) {
+    mutex_unlock(&curr->task_info->lock);
+    return -1;
+  }
+
+  len = strlen(src) + 1;
+  *dst = malloc(len);
+  if (!*dst) return -1;
+
+  memcpy(*dst, src, len);
 
   mutex_unlock(&curr->task_info->lock);
   return 0;

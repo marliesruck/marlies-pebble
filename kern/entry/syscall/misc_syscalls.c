@@ -51,15 +51,13 @@ int sys_readfile(char *filename, char *buf, int count, int offset)
   int copied;
 
   /* Allocate kernel memory for user arguments */
-  filename_k = malloc(strlen(filename) + 1);
-  if (!filename_k) return -1;
   buf_k = malloc(count * sizeof(char));
   if (!buf_k) return -1;
 
   /* Copy user arguments
    * TODO: validate file?
    */
-  if ((copy_from_user(filename_k, filename, strlen(filename) + 1))
+  if ((copy_from_user(&filename_k, filename, strlen(filename) + 1))
       /*|| (validate_file(&se, filename_k) < 0) */)
   {
     free(buf_k);
