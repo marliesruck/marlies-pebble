@@ -11,6 +11,7 @@
 #define __THREAD_H__
 
 /* Pebble includes */
+#include <cllist.h>
 #include <mutex.h>
 #include <process.h>
 #include <queue.h>
@@ -36,6 +37,7 @@ typedef enum thread_state thr_state_e;
 
 struct thread {
   struct task *task_info;
+  cll_node node; /* Embedded list traversal struct for the runnable queue */
   thr_state_e state;
   mutex_s lock;
   int tid;

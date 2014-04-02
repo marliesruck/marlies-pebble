@@ -75,7 +75,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   init_stack(idle);
 
   /* Hand load init */
-  hand_load_task("regression");
+  hand_load_task("fork_bomb");
 
   /* Keep track of init's task */
   init = curr->task_info;
@@ -137,9 +137,7 @@ thread_t *hand_load_task(const char *fname)
   thread->sp = usr_stack_init(&task->vmi, NULL);
 
   /* Add the task to the runnable queue */
-  cll_node *n = malloc(sizeof(cll_node));
-  queue_init_node(n, thread);
-  raw_unblock(thread, n);
+  raw_unblock(thread, &thread->node);
 
   sim_reg_process((void *)task->cr3, fname);
   return thread;

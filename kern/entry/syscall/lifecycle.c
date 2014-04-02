@@ -218,7 +218,7 @@ int sys_wait(int *status_ptr)
   task_t *child_task = task_find_zombie(curr->task_info);
 
   /* You have no children to reap */
-  if(!child_task) return 0;
+  if(!child_task) return -1;
 
   /* Store out root task tid to return */
   int tid = child_task->tid;
