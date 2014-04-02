@@ -57,6 +57,33 @@ int raw_block(thread_t *thr)
 
   return 0;
 }
+/** @brief Defer execution of the invoking thread in favor of another thread
+ * specified by tid.
+ *
+ *  @param tid Thread to defer to.
+ *
+ *  @return -1 If thread specificed by tid is ineligible for CPU time, else 0.
+ **/
+int sched_find(int tid)
+{
+  cll_node *n;
+  thread_t *thr;
+
+  /* Ensure the favored thread is eligible for CPU time */
+  disable_interrupts();
+  cll_foreach(&runnable, n) {
+    thr = queue_entry(thread_t *, n);
+    if (thr->tid == tid){
+      schedule();
+      enable_interrupts();
+      return 0;
+    }
+  }
+
+  /* Favored thread is currently ineligible for CPU times */
+  enable_interrupts();
+  return -1;
+}
 
 /** @brief Make a thread ineligible for CPU time.
  *

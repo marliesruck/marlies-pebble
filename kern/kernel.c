@@ -75,7 +75,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   init_stack(idle);
 
   /* Hand load init */
-  hand_load_task("fork_bomb");
+  hand_load_task("regression");
 
   /* Keep track of init's task */
   init = curr->task_info;

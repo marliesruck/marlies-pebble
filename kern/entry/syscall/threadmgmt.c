@@ -22,7 +22,14 @@ int sys_gettid(void)
 
 int sys_yield(int pid)
 {
-  return -1;
+  /* Yield to anyone */
+  if(pid == -1){
+    schedule();
+    return 0;
+  }
+
+  /* Ensure the favored thread is runnable */
+  return sched_find(pid);
 }
 
 int sys_deschedule(int *reject)
