@@ -11,62 +11,99 @@
 
 int main()
 {
+  char *args[5];
+
   /*** --- Regression tests --- ***/
 
-  if(!fork()) exec("fork_exit_bomb", NULL);
+  /*
+  args[0] = "fork_exit_bomb";
+  args[1] = NULL;
+  if(!fork()) exec(args[0], args);
+  while(wait(NULL) >= 0);
+  */
+
+  args[0] = "swexn_basic_test";
+  args[1] = NULL;
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("swexn_basic_test", NULL);
+  args[0] = "swexn_stands_for_swextensible";
+  args[1] = NULL;
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("swexn_stands_for_swextensible", NULL);
+  args[0] = "swexn_uninstall_test";
+  args[1] = NULL;
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("swexn_uninstall_test", NULL);
+  args[0] = "remove_pages_test2";
+  args[1] = NULL;
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("remove_pages_test2", NULL);
+  args[0] = "swexn_regs";
+  args[1] = NULL;
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("swexn_regs", NULL);
+  args[0] = "swexn_dispatch";
+  args[1] = NULL;
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("swexn_dispatch", NULL);
+  args[0] = "swexn_cookie_monster";
+  args[1] = NULL;
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("swexn_cookie_monster", NULL);
+  args[0] = "minclone_mem";
+  args[1] = NULL;
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("minclone_mem", NULL);
+  args[0] = "new_pages";
+  args[1] = NULL;
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("new_pages", NULL);
+  args[0] = "remove_pages_test1";
+  args[1] = NULL;
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("remove_pages_test1", NULL);
+  args[0] = "sleep_test1";
+  args[1] = "20";
+  args[2] = NULL;
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  char *sleep_args[] = {"sleep_test1", "20", NULL};
-  if(!fork()) exec("sleep_test1", sleep_args);
+  args[0] = "epileptic";
+  args[1] = NULL;
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("epileptic", NULL);
+  args[0] = "cooperative_terminate";
+  args[1] = NULL;
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("cooperative_terminate", NULL);
+  args[0] = "coolness_terminate";
+  args[1] = NULL;
+  if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  if(!fork()) exec("coolness_terminate", NULL);
-  while(wait(NULL) >= 0);
-
-  if(!fork()) exec("coy_terminate", NULL); 
+  args[0] = "coy_terminate";
+  args[1] = NULL;
+  if(!fork()) exec(args[0], args); 
   while(wait(NULL) >= 0);
 
   /*** --- Classic Init Routine --- ***/
 
   int pid, exitstatus;
   char shell[] = "shell";
-  char * args[] = {shell, 0};
+  args[0] = shell;
+  args[1] = NULL;
 
   while(1) {
     pid = fork();

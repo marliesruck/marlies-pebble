@@ -126,27 +126,38 @@ int sys_exec(char *execname, char *argvec[])
   simple_elf_t se;
   int i, j;
 
-  /* Copy execname from user-space */
-  execname_k = malloc(strlen(execname) + 1);
-  if (!execname_k) return -1;
+  /* Copy the execname from the user */
+  if (copy_str_from_user(&execname_k, execname))
+    return -1;
 
-  /* Invalid memory or filename */
-  if ((copy_from_user(execname_k, execname, strlen(execname) + 1))
-      || (validate_file(&se, execname) < 0)){
-      free(execname_k);
-      return -1;
+  /* Make sure it exists */
+  if (validate_file(&se, execname_k) < 0) {
+    free(execname_k);
+    return -1;
   }
 
-  /* Copy argvec from user-space */
+  /* Allocate kernel mem for argvec */
+  mutex_lock(&curr->task_info->lock);
+  if (!vm_find(&curr->task_info->vmi, (void *)argvec)) {
+    mutex_unlock(&curr->task_info->lock);
+    return -1;
+  }
   for (i = 0; argvec[i] != NULL; ++i) continue;
+  mutex_unlock(&curr->task_info->lock);
   argvec_k = malloc((i + 1) * sizeof(char *));
+  if (!argvec_k) {
+    free(execname_k);
+    return -1;
+  }
+
+  /* Copy each arg from user-space */
   for (i = 0; argvec[i] != NULL; ++i)
   {
-    argvec_k[i] = malloc(strlen(argvec[i]) + 1);
-    if (copy_from_user(argvec_k[i], argvec[i], strlen(argvec[i]) + 1)) {
-      free(execname_k);
+    if (copy_str_from_user(&argvec_k[i], argvec[i]))
+    {
       for (j = 0; j < i; ++j) free(argvec_k[j]);
       free(argvec_k);
+      free(execname_k);
       return -1;
     }
   }
@@ -179,7 +190,7 @@ void sys_set_status(int status)
 
 void sys_vanish(void)
 {
-  assert(thrlist_del(curr) == 0);
+  assert( thrlist_del(curr) == 0 );
 
   task_t *task = curr->task_info;
 
@@ -217,9 +228,16 @@ int sys_wait(int *status_ptr)
   /* Store out root task tid to return */
   int tid = child_task->tid;
  
-  /* Scribble to status */
-  if(status_ptr)
-    *status_ptr = child_task->status;
+  /* Scribble to status
+   * TODO: what if this fails?
+   */
+  if(status_ptr) {
+    if ( copy_to_user((char *)status_ptr, (char *)&child_task->status,
+                     sizeof(int)) )
+    {
+      return -1;
+    }
+  }
 
   task_reap(child_task);
 

@@ -47,10 +47,35 @@ void sys_halt()
 
 int sys_readfile(char *filename, char *buf, int count, int offset)
 {
+  char *filename_k, *buf_k;
   int copied;
 
-  copied = getbytes(filename, offset, count, buf);
+  /* Allocate kernel memory for user arguments */
+  buf_k = malloc(count * sizeof(char));
+  if (!buf_k) return -1;
 
+  /* Copy user arguments
+   * TODO: validate file?
+   */
+  if ((copy_from_user(&filename_k, filename, strlen(filename) + 1))
+      /*|| (validate_file(&se, filename_k) < 0) */)
+  {
+    free(buf_k);
+    free(filename_k);
+    return -1;
+  }
+
+  copied = getbytes(filename_k, offset, count, buf_k);
+
+  /* Give it to the user */
+  if (copy_to_user(buf, buf_k, copied)) {
+    free(buf_k);
+    free(filename_k);
+    return -1;
+  }
+
+  free(buf_k);
+  free(filename_k);
   return copied;
 }
 

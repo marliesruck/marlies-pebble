@@ -59,7 +59,9 @@ void sys_vanish(void);
  |          Argument validation               |
  ---------------------------------------------*/
 
-int copy_from_user(char *dst, const char *src, size_t bytes);
+int copy_from_user(char **dst, const char *src, size_t bytes);
+int copy_to_user(char *dst, const char *src, size_t bytes);
+int copy_str_from_user(char **dst, const char *src);
 void install_sys_handlers(void);
 int sc_validate_argp(void *argp, int arity);
 

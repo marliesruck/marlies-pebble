@@ -31,17 +31,26 @@ char sys_getchar(void)
   return ch;
 }
 
+#include <simics.h>
 int sys_readline(int size, char *buf)
 {
   char *buf_k;
   int len;
   
+  /* Get a line from the console */
   buf_k = malloc(size * sizeof(char));
+  if (!buf_k) return -1;
+
   len = kbd_getline(size, buf_k);
 
-  memcpy(buf, buf_k, len);
-  free(buf_k);
+  /* Give it to the user */
+  if (copy_to_user(buf, buf_k, len)) {
+    free(buf_k);
+    return -1;
+  }
 
+  /* Free and return */
+  free(buf_k);
   return len;
 }
 
@@ -50,9 +59,7 @@ int sys_print(int size, char *buf)
   char *buf_k;
 
   /* Copy buf_k from user-space */
-  buf_k = malloc(size);
-  if (!buf_k) return -1;
-  if (copy_from_user(buf_k, buf, size)) {
+  if (copy_from_user(&buf_k, buf, size)) {
     free(buf_k);
     return -1;
   }
@@ -82,8 +89,11 @@ int sys_get_cursor_pos(int *row, int *col)
   get_cursor(&krow, &kcol);
 
   /* Copy coords to user */
-  *row = krow;
-  *col = kcol;
+  if ( copy_to_user((char *)&krow, (char *)row, sizeof(int))
+       || copy_to_user((char *)&kcol, (char *)col, sizeof(int)) )
+  {
+    return -1;
+  }
 
   return 0;
 }
