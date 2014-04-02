@@ -65,6 +65,9 @@ thread_t *thread_init(task_t *task)
   thread->sp = NULL;
   thread->pc = NULL;
 
+  /* Embedded list traversal */
+  cll_init_node(&thread->node, thread);
+
   /* No software exception handlers should be registered */
   deregister(&thread->swexn); 
     

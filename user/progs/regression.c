@@ -13,8 +13,10 @@ int main()
 {
   /*** --- Regression tests --- ***/
 
-  if(!fork()) exec("fork_bomb", NULL);
+  /*
+  if(!fork()) exec("fork_exit_bomb", NULL);
   while(wait(NULL) >= 0);
+  */
 
   if(!fork()) exec("swexn_basic_test", NULL);
   while(wait(NULL) >= 0);

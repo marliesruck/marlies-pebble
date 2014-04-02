@@ -114,7 +114,7 @@ void cvar_signal(cvar_s *cv)
 
     /* Unlock and wake */
     spin_unlock(&cv->lock);
-    sched_unblock(thr);
+    assert(!sched_unblock(thr));
   }
 
   /* Otherwise, just unlock */
@@ -145,7 +145,7 @@ void cvar_broadcast(cvar_s *cv)
     thr = queue_entry(thread_t *, n);
 
     spin_unlock(&cv->lock);
-    sched_unblock(thr);
+    assert(!sched_unblock(thr));
   }
 
   spin_unlock(&cv->lock);

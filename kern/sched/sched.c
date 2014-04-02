@@ -48,7 +48,9 @@ int raw_block(thread_t *thr)
 
   /* Remove the blockee node from the runnable queue */
   assert(cll_extract(&runnable, n) == n);
-  free(n);
+
+  /* The node is embedded in the thread struct so don't free */
+
   thr->state = THR_BLOCKED;
   
   schedule();
@@ -160,45 +162,17 @@ void raw_unblock(thread_t *thr, queue_node_s *n)
  **/
 int sched_unblock(thread_t *thr)
 {
-  queue_node_s *n;
-
-  /* Allocate and init a queue node */
-  n = malloc(sizeof(cll_node));
-  if (!n) return -1;
-  queue_init_node(n, thr);
+  /* Don't malloc a node, instead use the embedded list traversal structure */
 
   /* Lock, enqueue, unlock */
   disable_interrupts();
-  raw_unblock(thr,n);
+  raw_unblock(thr,&thr->node);
   schedule();
   enable_interrupts();
 
   return 0;
 }
-/* @brief Remove yourself from runnable queue.
- * 
- * Assumes scheduler is locked.
- *
- * @param thr Thread to remove.
- * @return -1 on error, 0 otherwise.
- */
-int remove_from_runnable(thread_t *thr)
-{
-  cll_node *n;
 
-  /* Ensure thread is runnable */
-  cll_foreach(&runnable, n) {
-    if (thr == queue_entry(thread_t *, n)) break;
-  }
-  if (thr != queue_entry(thread_t *, n)) return -1;
-
-  /* Remove the thread node from the runnable queue */
-  assert(cll_extract(&runnable, n) == n);
-  free(n);
-
-  return 0;
-
-}
 /** @brief Maybe run someone new for a while.
  *
  *  This is our main scheduling function.  It selects a thread from the
