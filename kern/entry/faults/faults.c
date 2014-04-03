@@ -378,23 +378,24 @@ void int_page_fault(void)
   /* Grab the faulting address and page info */
   addr = (void *)get_cr2();
 
-  /* A software exception handler was installed by the user */
-  if(curr->swexn.eip){
-
-    /* Retrieve execution state */
-    state = (ureg_t *)(get_ebp());
-
-    /* Craft contents of exception stack and call handler */
-    init_exn_stack(state, SWEXN_CAUSE_PAGEFAULT, addr);
-  }
-
   /* Try to handle the fault */
   if (pg_page_fault_handler(addr))
   {
-    lprintf("Error: Page fault on table-less address %p", addr);
+    /* A software exception handler was installed by the user */
+    if(curr->swexn.eip){
 
-    /* You were killed by the kernel */
-    slaughter();
+      /* Retrieve execution state */
+      state = (ureg_t *)(get_ebp());
+
+      /* Craft contents of exception stack and call handler */
+      init_exn_stack(state, SWEXN_CAUSE_PAGEFAULT, addr);
+    }
+    else{
+      lprintf("Error: Page fault on table-less address %p", addr);
+
+      /* You were killed by the kernel */
+      slaughter();
+    }
   }
 
   return;

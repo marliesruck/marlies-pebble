@@ -128,16 +128,22 @@ int main( int argc, char *argv[] )
 	int i;
   thrgrp_group_t maniac_grp;
 
-  lprintf("In main");
-
+  lprintf("initing stack");
 	thr_init(STACK_SIZE);
-  lprintf("Stack initalized");
 	
+  lprintf("initing global mutex");
 	mutex_init(&big_global_mutex);
+
+  lprintf("initing cvar a");
 	cond_init(&a);
+  lprintf("initing cvar b");
 	cond_init(&b);
+  lprintf("initing cvar c");
 	cond_init(&c);
+  lprintf("initing group");
   thrgrp_init_group(&maniac_grp);
+
+  lprintf("initialization complete");
 	
 	
 	if ((sleeper_tid=thr_create(sleeper_thread, NULL)) < 0) {
