@@ -68,9 +68,11 @@ void int_divzero(void)
     init_exn_stack(state, SWEXN_CAUSE_DIVIDE, NULL);
   }
 
-
   lprintf("Error: Division by zero!");
-  sys_vanish();
+
+  /* You were killed by the kernel */
+  slaughter();
+
   return;
 }
 
@@ -93,7 +95,10 @@ void int_debug(void)
   }
 
   lprintf("Alert: Got debug interrupt...");
-  sys_vanish();
+
+  /* You were killed by the kernel */
+  slaughter();
+
   return;
 }
 
@@ -104,7 +109,10 @@ void int_debug(void)
 void int_nmi(void)
 {
   lprintf("Error: Non-maskable interrupt!");
-  sys_vanish();
+
+  /* You were killed by the kernel */
+  slaughter();
+
   return;
 }
 
@@ -127,7 +135,10 @@ void int_breakpoint(void)
   }
 
   lprintf("Alert: Encountered breakpoint (INT 3)!");
-  sys_vanish();
+
+  /* You were killed by the kernel */
+  slaughter();
+
   return;
 }
 
@@ -150,7 +161,10 @@ void int_overflow(void)
   }
 
   lprintf("Error: Overflow (INTO)!");
-  sys_vanish();
+
+  /* You were killed by the kernel */
+  slaughter();
+
   return;
 }
 
@@ -173,7 +187,10 @@ void int_bound(void)
   }
 
   lprintf("Error: Range exceeded (BOUND)!");
-  sys_vanish();
+
+  /* You were killed by the kernel */
+  slaughter();
+
   return;
 }
 
@@ -196,7 +213,10 @@ void int_undef_opcode(void)
   }
 
   lprintf("Error: Invalid instruction!");
-  sys_vanish();
+
+  /* You were killed by the kernel */
+  slaughter();
+
   return;
 }
 
@@ -218,7 +238,10 @@ void int_device_unavail(void)
     init_exn_stack(state, SWEXN_CAUSE_NOFPU, NULL);
   }
   lprintf("Error: Device not available!");
-  sys_vanish();
+
+  /* You were killed by the kernel */
+  slaughter();
+
   return;
 }
 
@@ -229,7 +252,10 @@ void int_device_unavail(void)
 void int_double_fault(void)
 {
   lprintf("Error: Double fault!");
-  sys_vanish();
+
+  /* You were killed by the kernel */
+  slaughter();
+
   return;
 }
 
@@ -240,7 +266,10 @@ void int_double_fault(void)
 void int_cso(void)
 {
   lprintf("Error: Coprocessor segment overrun!");
-  sys_vanish();
+
+  /* You were killed by the kernel */
+  slaughter();
+
   return;
 }
 
@@ -251,7 +280,10 @@ void int_cso(void)
 void int_tss(void)
 {
   lprintf("Error: Invalid task segment selector!");
-  sys_vanish();
+
+  /* You were killed by the kernel */
+  slaughter();
+
   return;
 }
 
@@ -273,8 +305,10 @@ void int_seg_not_present(void)
     /* Craft contents of exception stack and call handler */
     init_exn_stack(state, SWEXN_CAUSE_SEGFAULT, NULL);
   }
-  lprintf("Error: Segment not present!");
-  sys_vanish();
+
+  /* You were killed by the kernel */
+  slaughter();
+
   return;
 }
 
@@ -295,8 +329,10 @@ void int_stack_seg(void)
     /* Craft contents of exception stack and call handler */
     init_exn_stack(state, SWEXN_CAUSE_STACKFAULT, NULL);
   }
-  lprintf("Error: Stack segment fault!");
-  sys_vanish();
+
+  /* You were killed by the kernel */
+  slaughter();
+
   return;
 }
 
@@ -317,8 +353,10 @@ void int_gen_prot(void)
     /* Craft contents of exception stack and call handler */
     init_exn_stack(state, SWEXN_CAUSE_PROTFAULT, NULL);
   }
-  lprintf("Error: General protection fault!");
-  sys_vanish();
+
+  /* You were killed by the kernel */
+  slaughter();
+
   return;
 }
 
@@ -354,9 +392,9 @@ void int_page_fault(void)
   if (pg_page_fault_handler(addr))
   {
     lprintf("Error: Page fault on table-less address %p", addr);
+
     /* You were killed by the kernel */
-    curr->killed = 1;
-    sys_vanish();
+    slaughter();
   }
 
   return;
@@ -380,7 +418,10 @@ void int_float(void)
     init_exn_stack(state, SWEXN_CAUSE_FPUFAULT, NULL);
   }
   lprintf("Error: Floating point exception!");
-  sys_vanish();
+
+  /* You were killed by the kernel */
+  slaughter();
+
   return;
 }
 
@@ -402,7 +443,10 @@ void int_align(void)
     init_exn_stack(state, SWEXN_CAUSE_ALIGNFAULT, NULL);
   }
   lprintf("Error: Alignment check!");
-  sys_vanish();
+
+  /* You were killed by the kernel */
+  slaughter();
+
   return;
 }
 
@@ -413,7 +457,10 @@ void int_align(void)
 void int_machine_check(void)
 {
   lprintf("Error: Machine check!");
-  sys_vanish();
+
+  /* You were killed by the kernel */
+  slaughter();
+
   return;
 }
 
@@ -435,7 +482,10 @@ void int_simd(void)
     init_exn_stack(state, SWEXN_CAUSE_SIMDFAULT, NULL);
   }
   lprintf("Error: SIMD floating point exception!");
-  sys_vanish();
+
+  /* You were killed by the kernel */
+  slaughter();
+
   return;
 }
 
@@ -446,7 +496,10 @@ void int_simd(void)
 void int_generic(void)
 {
   lprintf("Error: Got a fault!");
-  sys_vanish();
+
+  /* You were killed by the kernel */
+  slaughter();
+
   return;
 }
 

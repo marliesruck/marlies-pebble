@@ -82,13 +82,11 @@ int main()
 
   /*** SOLIDITY TESTS ***/
 
-  /* Uncomment this after implementing yield:
   args[0] = "yield_desc_mkrun";
   if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
-  */
    
-  /* This tests runs forever...but we fail an assertion in vm copy
+  /* This tests runs forever, uncomment as you see fit...
   args[0] = "fork_bomb";
   if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
@@ -160,7 +158,6 @@ int main()
   if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
   
-  /*
   args[0] = "cho2";
   if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
@@ -168,9 +165,6 @@ int main()
   args[0] = "cho_variant";
   if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
-
-  */
-
 
   /*** --- Classic Init Routine --- ***/
 

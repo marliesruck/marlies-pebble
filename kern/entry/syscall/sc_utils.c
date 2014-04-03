@@ -37,6 +37,21 @@
 #define EFL_UNSET (EFL_RESV2 | EFL_RESV3 | EFL_IOPL_RING1  | EFL_IOPL_RING2 \
                   | EFL_IOPL_RING3 | EFL_RESV3 | EFL_AC | RESV)
 
+/** @brief Implement the kernel thread killing policy.
+ *
+ *  @return Void.
+ **/
+void slaughter(void)
+{
+  /* You were killed by the kernel */
+  curr->killed = 1;
+
+  /* Free your kernel resources */
+  sys_vanish();
+
+  return;
+}
+
 /** @brief Set up exception stack and deregister handler.
  *
  *  Since we want the handler to run in user mode, we copy the contents of the

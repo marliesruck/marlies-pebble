@@ -53,8 +53,8 @@ void *get_ebp(void);
  | For implementing our thread killing policy |
  ---------------------------------------------*/
 
+void slaughter(void);
 void sys_vanish(void);
-void sys_set_status(int);
 
 /*---------------------------------------------
  |          Argument validation               |

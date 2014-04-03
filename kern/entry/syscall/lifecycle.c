@@ -206,7 +206,6 @@ void sys_vanish(void)
   if(curr->killed)
     sys_set_status(-2);
 
-
   /* You are the last thread */ 
   task_free(task);
 
