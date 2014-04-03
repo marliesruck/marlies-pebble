@@ -50,6 +50,7 @@ void stackgrowth_handler(void *stack_low, ureg_t *ureg)
   /* swexn(...) won't return */
 }
 
+#include <simics.h>
 void install_autostack(void *stack_high, void *stack_low)
 {
   return;
@@ -57,6 +58,8 @@ void install_autostack(void *stack_high, void *stack_low)
   /* Save the high/low stack addresses */
 	sp_high = stack_high;
 	sp_low = stack_low;
+  lprintf("stack_low = %p", stack_low);
+  MAGIC_BREAK;
 
   /* Install the exception handler */
   swexn(exn_stack+EXN_STACK_SIZE, stackgrowth_handler, stack_low, NULL);

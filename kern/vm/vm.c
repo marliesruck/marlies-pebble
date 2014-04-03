@@ -402,6 +402,9 @@ void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
   void *addr, *addr2;
   mem_region_s *mreg;
 
+   assert(va_start >= (void *)USER_MEM_START
+          && va_start < (void *)PG_TBL_ADDR);
+
   /* Allocate a region */
   mreg = vm_region(vmi, va_start, len, attrs);
   if(!mreg) return NULL;
