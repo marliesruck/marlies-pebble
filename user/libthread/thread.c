@@ -46,12 +46,10 @@ int thr_init(unsigned int size)
   if(size == 0) return -1;
   thread_stack_size = PAGE_CEILING(size);
 
-  lprintf("installing swexn");
   /* Install thread exception handler */
   swexn(exn_stack + EXN_STACK_SIZE, thread_exn_handler, NULL, NULL);
 
 
-  lprintf("thrlist init");
   /* Init thread list and the caller's TCB */
   thrlist_init(&main_tcb);
 

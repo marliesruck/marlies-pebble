@@ -208,6 +208,7 @@ asm_\scname:
 .macro FORK_SYSCALL scname
 
 # Export and label it...
+.extern sim_breakpoint
 .extern \scname
 .global asm_\scname
 asm_\scname:
@@ -220,10 +221,10 @@ asm_\scname:
   push  %fs                       # Store FS data segment
   push  %gs                       # Store GS data segment
 
-  # Save callee-saved registers for the child
-  push  %esi
-  push  %edi
-  push  %ebx
+  # Save general purpose registers
+  push %esi
+  push %edi
+  push %ebx
 
   # Pass ESP and invoke the handler
   push  %esp
@@ -239,10 +240,10 @@ asm_\scname:
     xor %eax,%eax                 # Child returns 0
 
   asm_finish_\scname:
-    # Restore callee-saved registers
-    pop   %ebx
-    pop   %edi
-    pop   %esi
+    # Restore general purpose registers
+    pop %ebx
+    pop %edi
+    pop %esi
     
     # Epilogue
     pop   %gs                     # Restore GS data segment

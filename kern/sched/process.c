@@ -85,8 +85,11 @@ int task_add_thread(task_t *tsk, thread_t *thr)
 
   /* Add the thread to the task */
   cll_init_node(n, thr);
+
+  mutex_lock(&tsk->lock);
   cll_insert(&tsk->peer_threads, n);
   tsk->num_threads += 1;
+  mutex_unlock(&tsk->lock);
 
   return 0;
 }

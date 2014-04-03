@@ -27,25 +27,25 @@
  **/
 void install_fault_handlers(void)
 {
-  install_trap_gate(IDT_DE, asm_int_divzero, IDT_KERN_DPL);
-  install_trap_gate(IDT_DB, asm_int_debug, IDT_KERN_DPL);
-  install_trap_gate(IDT_NMI, asm_int_nmi, IDT_KERN_DPL);
-  install_trap_gate(IDT_BP, asm_int_breakpoint, IDT_KERN_DPL);
-  install_trap_gate(IDT_OF, asm_int_overflow, IDT_KERN_DPL);
-  install_trap_gate(IDT_BR, asm_int_bound, IDT_KERN_DPL);
-  install_trap_gate(IDT_UD, asm_int_undef_opcode, IDT_KERN_DPL);
-  install_trap_gate(IDT_NM, asm_int_device_unavail, IDT_KERN_DPL);
-  install_trap_gate(IDT_DF, asm_int_double_fault, IDT_KERN_DPL);
-  install_trap_gate(IDT_CSO, asm_int_cso, IDT_KERN_DPL);
-  install_trap_gate(IDT_TS, asm_int_tss, IDT_KERN_DPL);
-  install_trap_gate(IDT_NP, asm_int_seg_not_present, IDT_KERN_DPL);
-  install_trap_gate(IDT_SS, asm_int_stack_seg, IDT_KERN_DPL);
-  install_trap_gate(IDT_GP, asm_int_gen_prot, IDT_KERN_DPL);
-  install_trap_gate(IDT_PF, asm_int_page_fault, IDT_KERN_DPL);
-  install_trap_gate(IDT_MF, asm_int_float, IDT_KERN_DPL);
-  install_trap_gate(IDT_AC, asm_int_align, IDT_KERN_DPL);
-  install_trap_gate(IDT_MC, asm_int_machine_check, IDT_KERN_DPL);
-  install_trap_gate(IDT_XF, asm_int_simd, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_DE, asm_int_divzero, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_DB, asm_int_debug, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_NMI, asm_int_nmi, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_BP, asm_int_breakpoint, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_OF, asm_int_overflow, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_BR, asm_int_bound, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_UD, asm_int_undef_opcode, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_NM, asm_int_device_unavail, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_DF, asm_int_double_fault, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_CSO, asm_int_cso, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_TS, asm_int_tss, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_NP, asm_int_seg_not_present, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_SS, asm_int_stack_seg, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_GP, asm_int_gen_prot, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_PF, asm_int_page_fault, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_MF, asm_int_float, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_AC, asm_int_align, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_MC, asm_int_machine_check, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_XF, asm_int_simd, IDT_KERN_DPL);
 
   return;
 }
@@ -323,6 +323,7 @@ void int_stack_seg(void)
   /* A software exception handler was installed by the user */
   if(curr->swexn.eip){
 
+
     /* Retrieve execution state */
     state = (ureg_t *)(get_ebp());
 
@@ -391,7 +392,8 @@ void int_page_fault(void)
       init_exn_stack(state, SWEXN_CAUSE_PAGEFAULT, addr);
     }
     else{
-      lprintf("Error: Page fault on table-less address %p", addr);
+      lprintf("Error: Page fault on table-less address %p by thread: %d", 
+              addr, curr->tid);
 
       /* You were killed by the kernel */
       slaughter();
