@@ -45,7 +45,7 @@ int go_to_sleep(thread_t *t, unsigned int wake_time)
 
   ent.thread = t;
   ent.wake_time = wake_time;
-  ent.node = malloc(sizeof(cll_node));
+  ent.node = &curr->zzz_node; 
   queue_init_node(ent.node, ent.thread);
   cll_init_node(&n, &ent);
 
@@ -75,7 +75,7 @@ void wake_up(unsigned int time)
     if (sleeper->wake_time > time) break;
     assert(cll_extract(&sleep_list, sleep_list.next));
 
-    raw_unblock(sleeper->thread, sleeper->node);
+    raw_unblock(sleeper->thread, &sleeper->thread->node);
   }
 
   return;

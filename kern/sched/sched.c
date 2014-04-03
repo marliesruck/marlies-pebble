@@ -50,7 +50,6 @@ int raw_block(thread_t *thr)
   assert(cll_extract(&runnable, n) == n);
 
   /* The node is embedded in the thread struct so don't free */
-
   thr->state = THR_BLOCKED;
   
   schedule();
@@ -221,8 +220,8 @@ void schedule(void)
 
   /* Move the lucky thread to the back of the queue */
   q = queue_dequeue(&runnable);
+
   next = queue_entry(thread_t *, q);
-  assert((next->state == THR_RUNNING) || (next->state == THR_EXITING));
   queue_enqueue(&runnable, q);
 
   /* Only switch if the next thread is different */

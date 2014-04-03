@@ -38,6 +38,7 @@ typedef enum thread_state thr_state_e;
 struct thread {
   struct task *task_info;
   cll_node node; /* Embedded list traversal struct for the runnable queue */
+  cll_node zzz_node; /* Embedded list traversal struct for sleeping */
   int killed;    /* Flag to indicate if thread was killed by kernel */
   thr_state_e state;
   mutex_s lock;
