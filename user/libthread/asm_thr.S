@@ -81,7 +81,7 @@ remove_and_vanish:
   int   $REMOVE_PAGES_INT         # Remove memory page(s)
   test  %eax, %eax                # We hope remove_pages succeeds
   jnz   .vanish                   # Don't reuse the stack if remove fails
-  mov   %esi, (%edx)              # Store stack address in the free list
+  mov   %esi, (%ebx)              # Store stack address in the free list
 
   # Vanish
   .vanish:

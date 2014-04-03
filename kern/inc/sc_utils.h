@@ -237,6 +237,7 @@ asm_\scname:
   # Child starts here
   .global asm_child_finish_\scname
   asm_child_finish_\scname:
+    call sim_breakpoint
     xor %eax,%eax                 # Child returns 0
 
   asm_finish_\scname:
