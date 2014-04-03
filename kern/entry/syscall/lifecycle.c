@@ -198,10 +198,14 @@ void sys_vanish(void)
 
   /* There are still live threads */
   if(0 < --task->num_threads){
-    mutex_unlock(&task->lock);
     sched_mutex_unlock_and_block(curr, &task->lock);
   }
   mutex_unlock(&task->lock);
+
+  /* You were killed by the kernel */
+  if(curr->killed)
+    sys_set_status(-2);
+
 
   /* You are the last thread */ 
   task_free(task);

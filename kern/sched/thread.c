@@ -62,6 +62,7 @@ thread_t *thread_init(task_t *task)
   mutex_init(&thread->lock);
   thread->state = THR_NASCENT;
   thread->task_info = task;
+  thread->killed = 0;
   thread->sp = NULL;
   thread->pc = NULL;
 

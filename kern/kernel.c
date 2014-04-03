@@ -75,7 +75,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   init_stack(idle);
 
   /* Hand load init */
-  hand_load_task("carpe_diem");
+  hand_load_task("cho_variant");
 
 
   /* Keep track of init's task */

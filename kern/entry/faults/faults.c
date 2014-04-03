@@ -354,8 +354,8 @@ void int_page_fault(void)
   if (pg_page_fault_handler(addr))
   {
     lprintf("Error: Page fault on table-less address %p", addr);
-    if(curr->task_info->num_threads == 1)
-      sys_set_status(-2);
+    /* You were killed by the kernel */
+    curr->killed = 1;
     sys_vanish();
   }
 
