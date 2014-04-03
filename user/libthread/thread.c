@@ -7,6 +7,7 @@
  *
  *  @bug No known bugs
  */
+#include <simics.h>
 
 #include <thr_internals.h>
 
@@ -47,6 +48,7 @@ int thr_init(unsigned int size)
 
   /* Install thread exception handler */
   swexn(exn_stack + EXN_STACK_SIZE, thread_exn_handler, NULL, NULL);
+
 
   /* Init thread list and the caller's TCB */
   thrlist_init(&main_tcb);

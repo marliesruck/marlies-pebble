@@ -75,10 +75,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   init_stack(idle);
 
   /* Hand load init */
-
-  /* I kept carpe diem here as my way of suggesting you should run the full set
-   * of hurdle tests */
-  hand_load_task("carpe_diem");
+  hand_load_task("regression");
 
 
   /* Keep track of init's task */

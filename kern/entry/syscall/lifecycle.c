@@ -204,7 +204,7 @@ void sys_vanish(void)
 
   /* You were killed by the kernel */
   if(curr->killed)
-    sys_set_status(-2);
+    task->status = -2;
 
   /* You are the last thread */ 
   task_free(task);
