@@ -15,12 +15,10 @@ int main()
 
   /*** --- Regression tests --- ***/
 
-  /*
-  args[0] = "fork_exit_bomb";
+  args[0] = "cho_variant";
   args[1] = NULL;
   if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
-  */
 
   args[0] = "swexn_basic_test";
   args[1] = NULL;

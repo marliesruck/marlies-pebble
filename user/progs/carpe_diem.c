@@ -68,10 +68,6 @@ int main()
   if(!fork()) exec(args[0], args); 
   while(wait(NULL) >= 0);
 
-  args[0] = "readline_basic";
-  if(!fork()) exec(args[0], args); 
-  while(wait(NULL) >= 0);
-
   args[0] = "stack_test1";
   if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);

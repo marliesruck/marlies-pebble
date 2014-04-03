@@ -54,6 +54,7 @@ void *get_ebp(void);
  ---------------------------------------------*/
 
 void sys_vanish(void);
+void sys_set_status(int);
 
 /*---------------------------------------------
  |          Argument validation               |

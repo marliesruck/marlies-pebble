@@ -190,31 +190,25 @@ void sys_set_status(int status)
 
 void sys_vanish(void)
 {
-  assert( thrlist_del(curr) == 0 );
-
   task_t *task = curr->task_info;
 
-  /* Decrement the number of living threads */
+  assert( thrlist_del(curr) == 0 );
+
   mutex_lock(&task->lock);
-  int live_threads = (--task->num_threads);
+
+  /* There are still live threads */
+  if(0 < --task->num_threads){
+    mutex_unlock(&task->lock);
+    sched_mutex_unlock_and_block(curr, &task->lock);
+  }
   mutex_unlock(&task->lock);
 
-  /* You are the last thread. Tell your parent to reap you */
-  if(live_threads == 0){
+  /* You are the last thread */ 
+  task_free(task);
 
-    /* Free your resources */
-    task_free(task);
+  /*Tell your parent to reap you */
+  task_signal_parent(task);
 
-    /* Wake your parent if he/she is waiting on you and
-     * remove yourself from the runnable queue */
-    task_signal_parent(task);
-  }
-  /* Remove yourself from the runnable queue */
-  else{
-    sched_block(curr);
-  }
-
-  assert(0); /* Should never reach here */
   return;
 }
 

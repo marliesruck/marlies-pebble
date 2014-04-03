@@ -82,10 +82,10 @@ int thr_launch(thread_t *t, void *sp, void *pc)
   t->pc = pc;
 
   /* Add the thread to the thread list */
-  if (thrlist_add(t)) return -1;
+  assert(!thrlist_add(t));
 
   /* Unblock (also sets state to THR_RUNNABLE */
-  if (sched_unblock(t)) return -1;
+  assert(!sched_unblock(t));
 
   return 0;
 }
@@ -134,8 +134,9 @@ int thrlist_del(thread_t *t)
   /* Find our thread in the thread list */
   cll_foreach(&thread_list, n)
     if (cll_entry(thread_t *,n) == t) break;
-  if (cll_entry(thread_t *,n) != t)
-    return -1;
+
+  if(cll_entry(thread_t *,n) != t)
+    MAGIC_BREAK;
 
   /* Extract and free it */
   assert(cll_extract(&thread_list, n));

@@ -89,6 +89,8 @@ int sys_readfile(char *filename, char *buf, int count, int offset)
 
 int sys_swexn(void *esp3, swexn_handler_t eip, void *arg, ureg_t *newureg)
 {
+  /* TODO: copy ureg from user...why can't copy_from_user take void **dest? */
+
   /* Validate register values */
   if(newureg){
     if(validate_regs(newureg) < 0){
