@@ -40,6 +40,7 @@ struct task{
                              wait should block */
   mutex_s  lock;          /* Hold this lock when modifying the task struct */
   int status;             /* My exit status */
+  cll_node tasklist_entry;  /* Node for the task list */
 };
 typedef struct task task_t;
 

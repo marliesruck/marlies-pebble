@@ -85,9 +85,9 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   set_esp0((uint32_t)(&curr->kstack[KSTACK_SIZE]));
 
   /* Use some memory */
-//  lprintf("ALLOCATING MEMORY UNECESSARILY!");
-//  if (!malloc(3 * PAGE_SIZE * PG_TBL_ENTRIES + PAGE_SIZE * PG_TBL_ENTRIES/3))
-//    lprintf("unecessary allocation failed!");
+  lprintf("ALLOCATING MEMORY UNECESSARILY!");
+  if (!malloc(3 * PAGE_SIZE * PG_TBL_ENTRIES))
+    lprintf("unecessary allocation failed!");
 
   /* Launch init and enter user space...The iret enables interrupts */
   half_dispatch(curr->pc, curr->sp);

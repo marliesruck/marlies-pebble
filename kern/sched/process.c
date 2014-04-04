@@ -72,6 +72,7 @@ thread_t *task_init(void)
   task->tid = thread->tid;
 
   /* Add to task list */
+  cll_init_node(&task->tasklist_entry, task);
   if(tasklist_add(task) < 0) return NULL;  
 
   return thread;
@@ -79,15 +80,8 @@ thread_t *task_init(void)
 
 int task_add_thread(task_t *tsk, thread_t *thr)
 {
-  /* Allocate a node */
-  cll_node *n = malloc(sizeof(cll_node));
-  if(!n) return -1;
-
-  /* Add the thread to the task */
-  cll_init_node(n, thr);
-
   mutex_lock(&tsk->lock);
-  cll_insert(&tsk->peer_threads, n);
+  cll_insert(&tsk->peer_threads, &thr->task_node);
   tsk->num_threads += 1;
   mutex_unlock(&tsk->lock);
 
@@ -104,16 +98,9 @@ int tasklist_add(task_t *t)
 {
   assert(t);
 
-  cll_node *n;
-
-  /* Allocate a node for the new task */
-	n = malloc(sizeof(cll_node));
-  if (!n) return -1;
-  cll_init_node(n, t);
-
   /* Lock, insert, unlock */
   mutex_lock(&task_list_lock);
-  cll_insert(task_list.next, n);
+  cll_insert(task_list.next, &t->tasklist_entry);
   mutex_unlock(&task_list_lock);
 
   return 0;
@@ -129,31 +116,10 @@ int tasklist_del(task_t *t)
 {
   assert(t);
 
-  cll_node *n;
-  task_t *task;
-
-  /* Lock the task list */
+  /* Lock, delete, unlock */
   mutex_lock(&task_list_lock);
-
-  /* Find our task in the task list */
-  cll_foreach(&task_list, n)
-    if (cll_entry(task_t *,n) == t) break;
-
-  if (cll_entry(task_t *,n) != t){
-    mutex_unlock(&task_list_lock);
-    return -1;
-  }
-
-  /* Extract the task */
-  assert(cll_extract(&task_list, n));
-  task = cll_entry(task_t *, n);
-
-  /* Unlock  */
+  assert(cll_extract(&task_list, &t->tasklist_entry));
   mutex_unlock(&task_list_lock);
-
-  /* Free the node but NOT the task */
-  free(n);
-
   return 0;
 }
 
@@ -319,7 +285,6 @@ void task_reap(task_t *victim)
   while(!cll_empty(&victim->peer_threads)){
     n = cll_extract(&victim->peer_threads, victim->peer_threads.next);
     free(n->data);
-    free(n);
   }
 
   /* Free task struct */

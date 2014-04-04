@@ -29,10 +29,11 @@
 /*************************************************************************
  *  Memory map and region manipulation
  *************************************************************************/
+
 typedef struct bounds{
   int hi;
   int lo;
-}bounds_t;
+} bounds_t;
 
 
 void mreg_init(mem_region_s *mreg, void *start, void *limit, unsigned int attrs)
