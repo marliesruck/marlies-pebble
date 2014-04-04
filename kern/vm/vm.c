@@ -381,7 +381,7 @@ void *vm_region(vm_info_s *vmi, void *va_start, size_t len,
   }
   return mreg;
 }
- 
+
 /** @brief Allocate a contiguous region in memory.
  *
  *  The new region will starting at va_start, extending for len bytes, and have
@@ -396,7 +396,8 @@ void *vm_region(vm_info_s *vmi, void *va_start, size_t len,
  *  @param len The length (in bytes) of the allocation.
  *  @param attrs Attributes the allocated region will have.
  *
- *  @return The actual starting address of the allocation.
+ *  @return The actual starting address of the allocation or NULL if the address
+ *  has already been allocated for user or kernel memory.
  **/
 void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
                unsigned int attrs)
@@ -404,8 +405,10 @@ void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
   void *addr, *addr2;
   mem_region_s *mreg;
 
-   assert(va_start >= (void *)USER_MEM_START
-          && va_start < (void *)PG_TBL_ADDR);
+  /* Ensure the address is not in reserved kernel memory */
+  if((va_start < (void *)USER_MEM_START) ||
+     (va_start > (void *) PG_TBL_ADDR))
+    return NULL;
 
   /* Allocate a region */
   mreg = vm_region(vmi, va_start, len, attrs);
