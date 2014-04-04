@@ -115,30 +115,6 @@ int mreg_insert(cll_list *map, mem_region_s *new)
   return 0;
 }
 
-/** @brief Identify extract a specific memory region
- *
- *  @param map Memory map to search.
- *  @param targ Memory region to extract.
- *
- *  @return NULL if not found, else the memory region.
- **/
-mem_region_s *mreg_extract(cll_list *map, mem_region_s *targ)
-{
-  cll_node *n;
-  mem_region_s *mreg;
-
-  cll_foreach(map, n) {
-    mreg = cll_entry(mem_region_s *, n);
-    if (mreg_compare(mreg, targ) == ORD_EQ) {
-      cll_extract(map, n);
-      free(n);
-      return mreg;
-    }
-  }
-
-  return NULL;
-}
-
 /** @brief Extract the memory region lowest in memory.
  *
  *  This assumes memory regions were inserted in order by calling mreg_insert().
@@ -149,7 +125,7 @@ mem_region_s *mreg_extract(cll_list *map, mem_region_s *targ)
  *  @return NULL if the memory map is empty, else the first memory region in the
  *  list.
  **/
-mem_region_s *mreg_extract_mem_lo(cll_list *map)
+mem_region_s *mreg_extract(cll_list *map)
 {
   cll_node *n;
   mem_region_s *mreg;
@@ -275,7 +251,7 @@ void mreg_final(vm_info_s *vmi)
   int prev_pdi = -1;
   int pdi;
 
-  while ( (mreg = mreg_extract_mem_lo(&vmi->mmap)) )
+  while ( (mreg = mreg_extract(&vmi->mmap)) )
   {
     pdi = PG_DIR_INDEX(mreg->start);
 
