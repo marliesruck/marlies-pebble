@@ -32,20 +32,23 @@ thread_fork:
   push  %ebp                      # Store old EBP
   movl  %esp, %ebp                # Set up new EBP
 
+  push %esi
+
   # Perform thread forking
-  mov   8(%ebp),%edx              # Move child's ESP in a callee save reg
+  mov   8(%ebp),%esi              # Move child's ESP in a callee save reg
   int   $THREAD_FORK_INT          # Fork (CHILD CAN'T USE STACK AFTER THIS)
   test 	%eax, %eax                # Parent get's child TID; child gets 0
   jne   .parent                   # Split parent and child execution
 
   # Child does stack setup
   .child:
-    mov   %edx, %esp              # Point ESP at the child's stack
+    mov   %esi, %esp              # Point ESP at the child's stack
     mov   %esp, %ebp              # Point EBP at the same place
     call  child_init             # Set up the child
 
   # Parent just returns
   .parent:
+    pop   %esi
     pop   %ebp                    # Restore old EBP
     ret                           # Return
 
@@ -78,7 +81,7 @@ remove_and_vanish:
   int   $REMOVE_PAGES_INT         # Remove memory page(s)
   test  %eax, %eax                # We hope remove_pages succeeds
   jnz   .vanish                   # Don't reuse the stack if remove fails
-  mov   %esi, (%edx)              # Store stack address in the free list
+  mov   %esi, (%ebx)              # Store stack address in the free list
 
   # Vanish
   .vanish:

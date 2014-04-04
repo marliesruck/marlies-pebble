@@ -75,11 +75,13 @@ int sys_fork(unsigned int esp)
   task_t *parent, *ctask;
   thread_t *cthread;
   void *sp, *pc;
+  int tid;
 
   parent = curr->task_info;
 
   cthread = task_init();
   if(!cthread) return -1;
+  tid = cthread->tid; 
   ctask = cthread->task_info;
 
   /* Copy address space */
@@ -96,16 +98,18 @@ int sys_fork(unsigned int esp)
   pc = asm_child_finish_sys_fork;
   thr_launch(cthread, sp, pc);
 
-  return cthread->tid;
+  return tid;
 }
 
 int sys_thread_fork(unsigned int esp)
 {
   thread_t *t;
   void *sp, *pc;
+  int tid;
 
   t = thread_init(curr->task_info);
   if (!t) return -1;
+  tid = t->tid;
 
   if (task_add_thread(curr->task_info, t)) {
     free(t);
@@ -116,7 +120,7 @@ int sys_thread_fork(unsigned int esp)
   pc = asm_child_finish_sys_thread_fork;
   thr_launch(t, sp, pc);
 
-  return t->tid;
+  return tid;
 }
 
 int sys_exec(char *execname, char *argvec[])

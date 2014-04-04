@@ -23,7 +23,7 @@ void *print_fn(void *args)
 {
   int id;
   id = (int) args;
-  lprintf("Thread %d alive!", id);
+  lprintf("Thread %d alive!", gettid());
   return (void *)id;
 }
 
@@ -47,15 +47,14 @@ int main(int argc, char *argv[])
     return -10;
 	}
 
-  lprintf("main spawning");
   for (i = 0; i < NUM_HEADS; ++i) {
+    lprintf("spawning thread: %d", i);
     tids[i] = thr_create(print_fn, (void *)i);
   }
 
-  lprintf("main reaping");
   for (i = 0; i < NUM_HEADS; ++i) {
     thr_join(tids[i], (void **)&status);
-    lprintf("%d: main joined %d with %d", i, tids[i], status);
+  //  lprintf("%d: main joined %d with %d", i, tids[i], status);
   }
 
   REPORT_END_SUCCESS; 

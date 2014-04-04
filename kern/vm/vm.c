@@ -231,12 +231,14 @@ void mreg_neighbors(vm_info_s *vmi, mem_region_s *targ)
   targ_hi = PG_DIR_INDEX(targ->limit);
 
   /* Free your lower boundary */
-  if(targ_lo != bounds.lo)
+  if((targ_lo != bounds.lo) && (targ_hi != bounds.hi)){
     pg_tbl_free(&vmi->pg_info, targ->start);
+  }
 
   /* Free your upper boundary if span more than one tome */
-  if((targ_hi != bounds.hi) && (targ_hi != targ_lo))
+  if((targ_hi != bounds.hi) && (targ_hi != targ_lo)){
     pg_tbl_free(&vmi->pg_info, targ->limit);
+  }
 
   /* Free anywhere in between */
   for(i = ++targ_lo; i < targ_hi - 1; i++){

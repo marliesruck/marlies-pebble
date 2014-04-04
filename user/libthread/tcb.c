@@ -100,10 +100,8 @@ void thrlist_init(tcb_s *tcb)
   cll_init_list(&thread_list.list); 
 
 
-  lprintf("tcb init");
   /* Give the caller a TCB */
   tcb_init(tcb, gettid(), NULL);
-  lprintf("thrlist add");
   thrlist_add(tcb);
 
   return;

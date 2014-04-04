@@ -323,6 +323,7 @@ void int_stack_seg(void)
   /* A software exception handler was installed by the user */
   if(curr->swexn.eip){
 
+
     /* Retrieve execution state */
     state = (ureg_t *)(get_ebp());
 
@@ -381,6 +382,7 @@ void int_page_fault(void)
   /* Try to handle the fault */
   if (pg_page_fault_handler(addr))
   {
+    state = (ureg_t *)(get_ebp());
     /* A software exception handler was installed by the user */
     if(curr->swexn.eip){
 
@@ -391,7 +393,8 @@ void int_page_fault(void)
       init_exn_stack(state, SWEXN_CAUSE_PAGEFAULT, addr);
     }
     else{
-      lprintf("Error: Page fault on table-less address %p", addr);
+      lprintf("Error: Page fault on table-less address %p by thread: %d"
+              " and eip: %x", addr, curr->tid, state->eip);
 
       /* You were killed by the kernel */
       slaughter();
