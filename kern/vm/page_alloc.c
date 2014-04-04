@@ -482,8 +482,6 @@ void validate_pt(pg_info_s *pgi, void *vaddr)
 
   tome = tomes[PG_DIR_INDEX(vaddr)];
 
-  lprintf("vaddr %p is part of tome %p", vaddr, tome);
-
   for(i = 0; i < PG_TBL_ENTRIES; i++){
     /* Ensure no PTE is valid */
     assert(get_pte(pgi->pg_dir, pgi->pg_tbls, &tome[i], &pte));

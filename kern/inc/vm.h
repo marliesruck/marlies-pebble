@@ -25,6 +25,7 @@ struct mem_region {
   void *start;          /**< The first byte in the region **/
   void *limit;          /**< The last byte in the region **/
   unsigned int attrs;   /**< Attributes for the region **/
+  cll_node node;
 };
 typedef struct mem_region mem_region_s;
 

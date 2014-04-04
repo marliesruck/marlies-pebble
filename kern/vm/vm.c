@@ -93,24 +93,20 @@ mem_region_s *mreg_lookup(cll_list *map, mem_region_s *targ)
  **/
 int mreg_insert(cll_list *map, mem_region_s *new)
 {
-  cll_node *n, *p;
+  cll_node *n;
   mem_region_s *mreg;
   ord_e ord;
 
-  /* Try to allocate a cll node */
-  n = malloc(sizeof(cll_node));
-  if (!n) return -1;
-
   /* Ordered insertion by address into the mem map*/
-  cll_foreach(map, p){
-    mreg = cll_entry(mem_region_s *, p);
+  cll_foreach(map, n){
+    mreg = cll_entry(mem_region_s *, n);
     ord = mreg_compare(new, mreg);
     if((ord == ORD_LT) || (ord == ORD_EQ))
       break;
   }
 
-  cll_init_node(n, new);
-  cll_insert(p, n);
+  cll_init_node(&new->node, new);
+  cll_insert(n, &new->node);
 
   return 0;
 }
@@ -131,7 +127,6 @@ mem_region_s *mreg_extract(cll_list *map, mem_region_s *targ)
     mreg = cll_entry(mem_region_s *, n);
     if (mreg_compare(mreg, targ) == ORD_EQ) {
       cll_extract(map, n);
-      free(n);
       return mreg;
     }
   }
@@ -161,7 +156,6 @@ mem_region_s *mreg_extract_mem_lo(cll_list *map)
   mreg = cll_entry(mem_region_s *, n);
 
   /* Free the node and return */
-  free(n);
   return mreg;
 }
 
@@ -203,7 +197,6 @@ void mreg_bounds(vm_info_s *vmi, mem_region_s *targ, bounds_t *bounds)
 
   /* Now that we've got all the info we need, free your cll node */
   cll_extract(&vmi->mmap, n);
-  free(n);
 
   return;
 }
