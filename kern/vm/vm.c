@@ -230,13 +230,24 @@ void mreg_neighbors(vm_info_s *vmi, mem_region_s *targ)
   targ_lo = PG_DIR_INDEX(targ->start);
   targ_hi = PG_DIR_INDEX(targ->limit);
 
+  /* --- The region is confined to a single tome --- */
+
+  if(targ_lo == targ_hi){
+    /* Your tome is not shared by another memory region */
+    if((bounds.hi != targ_lo) && (bounds.lo != targ_lo))
+      pg_tbl_free(&vmi->pg_info, targ->start);
+    return;
+  }
+
+  /* --- The region spans at least one other tome --- */
+
   /* Free your lower boundary */
-  if((targ_lo != bounds.lo) && (targ_hi != bounds.hi)){
+  if(targ_lo != bounds.lo){
     pg_tbl_free(&vmi->pg_info, targ->start);
   }
 
-  /* Free your upper boundary if span more than one tome */
-  if((targ_hi != bounds.hi) && (targ_hi != targ_lo)){
+  /* Free your upper boundary */
+  if(targ_hi != bounds.hi){
     pg_tbl_free(&vmi->pg_info, targ->limit);
   }
 
