@@ -20,6 +20,15 @@ int main()
   if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
+  args[0] = "remove_pages_test2";
+  if(!fork()) exec(args[0], args);
+  while(wait(NULL) >= 0);
+
+  args[0] = "new_pages";
+  if(!fork()) exec(args[0], args);
+  while(wait(NULL) >= 0);
+
+
   char *sleep_args[] = {"sleep_test1", "20", NULL};
   if(!fork()) exec("sleep_test1", sleep_args);
   while(wait(NULL) >= 0);
@@ -124,9 +133,6 @@ int main()
   if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  args[0] = "remove_pages_test2";
-  if(!fork()) exec(args[0], args);
-  while(wait(NULL) >= 0);
 
   args[0] = "swexn_regs";
   if(!fork()) exec(args[0], args);
@@ -141,10 +147,6 @@ int main()
   while(wait(NULL) >= 0);
 
   args[0] = "minclone_mem";
-  if(!fork()) exec(args[0], args);
-  while(wait(NULL) >= 0);
-
-  args[0] = "new_pages";
   if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 

@@ -50,6 +50,9 @@ void free_frame(void *frame, void *vaddr)
   /* The implicit pointer should be stored in the lowest addressable word */
   uint32_t *floor = (uint32_t *)(FLOOR(vaddr, PAGE_SIZE));
 
+  /* Zero the frame */
+  memset(floor,0,PAGE_SIZE);
+
   /* Serialize access to the free list */
   mutex_lock(&frame_allocator_lock);
 
@@ -68,7 +71,6 @@ void *alloc_page_table(pg_info_s *pgi, void *vaddr)
 {
   pte_t pde, pte;
   page_t *tome;
-  int i;
 
   /* Serialize access to the free list */
   mutex_lock(&frame_allocator_lock);
@@ -92,12 +94,10 @@ void *alloc_page_table(pg_info_s *pgi, void *vaddr)
 
   mutex_unlock(&frame_allocator_lock);
 
-  /* Zero all PTEs */
+  /* Zero the head of the free list */
   tome = tomes[PG_DIR_INDEX(vaddr)];
   init_pte(&pte, NULL);
-  for(i = 0; i < PG_TBL_ENTRIES; i++){
-    assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, &tome[i], &pte) );
-  }
+  assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, &tome[0], &pte) );
 
   return frame;
 }
@@ -147,6 +147,10 @@ void *alloc_page_really(pg_info_s *pgi, void *vaddr, unsigned int attrs)
   update_head(new_head);
 
   mutex_unlock(&frame_allocator_lock);
+
+  /* Zero the pointer to the free list head */
+  *(void **)FLOOR(vaddr, PAGE_SIZE) = NULL;
+
   return frame;
 }
 
@@ -397,7 +401,6 @@ int pg_page_fault_handler(void *vaddr)
 
   /* Make the page writable and zero it */
   page_set_attrs(pgi, vaddr, GET_ATTRS(pte) | PG_TBL_WRITABLE);
-  memset((void *)(FLOOR(vaddr, PAGE_SIZE)), 0, PAGE_SIZE);
 
   return 0;
 }
