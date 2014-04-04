@@ -154,19 +154,11 @@ int validate_regs(ureg_t *regs)
 int validate_sp(void *sp)
 {
   unsigned int attrs;
-  void *start;
 
   mutex_lock(&curr->task_info->lock);
 
-  /* Make sure the address is mapped */
-  start = vm_find(&curr->task_info->vmi, sp);
-  if(!start){
-    mutex_unlock(&curr->task_info->lock);
-    return -1;
-  }
-
   /* Acquire the region's attributes */
-  assert(!vm_get_attrs(&curr->task_info->vmi, start, &attrs));
+  assert(!vm_get_attrs(&curr->task_info->vmi, sp, &attrs));
 
   mutex_unlock(&curr->task_info->lock);
 
@@ -186,19 +178,11 @@ int validate_sp(void *sp)
 int validate_pc(void *pc)
 {
   unsigned int attrs;
-  void *start;
 
   mutex_lock(&curr->task_info->lock);
 
-  /* Make sure the address is mapped */
-  start = vm_find(&curr->task_info->vmi, pc);
-  if(!start){
-    mutex_unlock(&curr->task_info->lock);
-    return -1;
-  }
-
   /* Acquire the region's attributes */
-  assert(!vm_get_attrs(&curr->task_info->vmi, start, &attrs));
+  assert(!vm_get_attrs(&curr->task_info->vmi, pc, &attrs));
 
   mutex_unlock(&curr->task_info->lock);
 
