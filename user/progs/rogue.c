@@ -1,34 +1,26 @@
-/** @file 410user/progs/remove_pages_test2.c
- *  @author mpa
- *  @brief Tests remove_pages()
- *  @public yes
+/** @file user/prog/rogue.c
+ *  @file Tests init reaping children.
  *  @for p3
- *  @covers new_pages remove_pages
+ *  @covers fork set_status vanish
  *  @status done
  */
+#include <simics.h>
 
 #include <syscall.h>
+#include <stdlib.h>
 #include <stdio.h>
-#include <report.h>
-#include "../../410user/inc/410_tests.h"
 
-#define ADDR 0x40000000
-#ifndef PAGE_SIZE
-#define PAGE_SIZE 4096
-#endif
+int main(int argc, char *argv[]) {
+    int pid = 0;
+    int count = 0;
 
-DEF_TEST_NAME("rogue:");
+	while(count < 1000) {
+    if((pid = fork())){
+      lprintf("parent: %d exiting", gettid());
+      exit(0);
+    }
+    count++;
+	}
 
-int main() {
-  report_start(START_ABORT);
-
-  char *args[5];
-
-  args[0] = "remove_pages_test2";
-  args[1] = NULL;
-
-  while(1){
-    if(!fork()) exec(args[0], args);
-    while(wait(NULL) >= 0);
-  }
+	exit(42);
 }
