@@ -103,17 +103,14 @@ int sys_fork(unsigned int esp)
 
 int sys_thread_fork(unsigned int esp)
 {
-  lprintf("in thread fork with parent: %d", curr->tid);
   thread_t *t;
   void *sp, *pc;
   int tid;
 
-  lprintf("initing thread");
   t = thread_init(curr->task_info);
   if (!t) return -1;
   tid = t->tid;
 
-  lprintf("adding thread");
   if (task_add_thread(curr->task_info, t)) {
     free(t);
     return -1;
@@ -121,9 +118,7 @@ int sys_thread_fork(unsigned int esp)
 
   sp = kstack_copy(t->kstack, curr->kstack, esp);
   pc = asm_child_finish_sys_thread_fork;
-  lprintf("launching thread");
   thr_launch(t, sp, pc);
-  lprintf("returning");
 
   return tid;
 }
