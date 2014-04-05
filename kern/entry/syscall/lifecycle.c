@@ -87,6 +87,10 @@ int sys_fork(unsigned int esp)
   /* Copy address space */
   assert(vm_copy(&ctask->vmi, &parent->vmi) == 0);
 
+  /* Register the process with simics for debugging */
+  ctask->execname = parent->execname;
+  sim_reg_process((void *)ctask->cr3, ctask->execname);
+
   /* Atomically increment live children in case you are vying with another
    * thread who is forking */
   mutex_lock(&parent->lock);
@@ -176,7 +180,9 @@ int sys_exec(char *execname, char *argvec[])
   /* Free copied parameters*/
   for (j = 0; j < i; ++j) free(argvec_k[j]);
   free(argvec_k);
-  free(execname_k);
+
+  /* Keep the new execname for debugging */
+  curr_tsk->execname = execname_k;
 
   /* Execute the new program */
   half_dispatch(entry, stack);

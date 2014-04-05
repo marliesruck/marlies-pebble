@@ -41,6 +41,8 @@ struct task{
   mutex_s  lock;          /* Hold this lock when modifying the task struct */
   int status;             /* My exit status */
   cll_node tasklist_entry;  /* Node for the task list */
+  char *execname;          /* For simics and debugging in general...currently
+                              a memory leak, get rid of this before submitting */
 };
 typedef struct task task_t;
 
