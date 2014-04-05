@@ -30,6 +30,29 @@
 /* x86 includes */
 #include <x86/asm.h>
 
+/** @brief Program table */
+struct prog {
+  char *name;
+  int expected;
+  int pid;
+  int count;
+} progs[]
+  = {
+  {"exec_basic", 1, -1, 5},
+  {"fork_wait", 0, -1, 5},
+  {"loader_test1", 0, -1, 5},
+  {"loader_test2", 42, -1, 5},
+  {"make_crash",10000,-1, 1},
+  {"print_basic",0,-1,5},
+  {"remove_pages_test1", 0, -1, 2},
+  {"sleep_test1", 42, -1, 5},  /* indistinguishible outcomes */
+  {"stack_test1", 42, -1, 5},
+  {"yield_desc_mkrun", 0, -1, 5},
+  {"remove_pages_test2", -2, -1, 5}, /* Should die: wild pointer */
+  {"wild_test1", -2, -1, 5},   /* Should die: wild pointer */
+};
+
+#include <string.h>
 
 /*************************************************************************
  *  Internal helper functions
@@ -90,6 +113,9 @@ int sys_fork(unsigned int esp)
   /* Register the process with simics for debugging */
   ctask->execname = parent->execname;
   sim_reg_process((void *)ctask->cr3, ctask->execname);
+
+  /* Zero the status */
+  ctask->status = 0;
 
   /* Atomically increment live children in case you are vying with another
    * thread who is forking */
@@ -177,6 +203,9 @@ int sys_exec(char *execname, char *argvec[])
   sim_reg_process(&curr_tsk->cr3, execname_k);
   stack = usr_stack_init(&curr_tsk->vmi, argvec_k);
 
+  /* Zero the status */
+  curr_tsk->status = 0;
+
   /* Free copied parameters*/
   for (j = 0; j < i; ++j) free(argvec_k[j]);
   free(argvec_k);
@@ -192,6 +221,18 @@ int sys_exec(char *execname, char *argvec[])
 
 void sys_set_status(int status)
 {
+  int i;
+  int num_tests = 10;
+
+  for(i = 0; i < num_tests; i++){
+    if(!strcmp(curr_tsk->execname,progs[i].name)){
+      if(status == -2){
+        lprintf("set_status(): %s setting status -2!", progs[i].name);
+        MAGIC_BREAK;
+      }
+    }
+  }
+
   mutex_lock(&curr_tsk->lock);
   curr_tsk->status = status;
   mutex_unlock(&curr_tsk->lock);
@@ -214,8 +255,16 @@ void sys_vanish(void)
 
   /* You were killed by the kernel */
   if(curr_thr->killed){
-    lprintf("curr_thr->killed: %d", curr_thr->killed);
-    task->status = -2;
+    int i;
+    int num_tests = 10;
+
+    for(i = 0; i < num_tests; i++){
+      if(!strcmp(curr_tsk->execname,progs[i].name)){
+          lprintf("vanish(): %s status -2!", progs[i].name);
+          MAGIC_BREAK;
+      }
+    }
+      task->status = -2;
   }
 
   /* You are the last thread */ 
@@ -245,6 +294,16 @@ int sys_wait(int *status_ptr)
                      sizeof(int)) )
     {
       return -1;
+    }
+    if(*status_ptr == -2){
+      int i;
+      int num_tests = 10;
+      for(i = 0; i < num_tests; i++){
+        if(!strcmp(child_task->execname,progs[i].name)){
+            lprintf("sys wait(): %s died status -2!", progs[i].name);
+            MAGIC_BREAK;
+        }
+      }
     }
   }
 

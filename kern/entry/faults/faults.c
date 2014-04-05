@@ -269,7 +269,7 @@ int int_page_fault(ureg_t *ureg)
   if (pg_page_fault_handler(cr2))
   {
     lprintf("Error: Page fault on table-less address %p by thread: %d"
-            " and eip: %x", cr2, curr_thr->tid, ureg->eip);
+            " and eip: 0x%x", cr2, curr_thr->tid, ureg->eip);
 
     ureg->cause = SWEXN_CAUSE_PAGEFAULT;
     ureg->cr2 = (unsigned int)cr2;
