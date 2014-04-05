@@ -29,11 +29,6 @@
 /*************************************************************************
  *  Memory map and region manipulation
  *************************************************************************/
-typedef struct bounds{
-  int hi;
-  int lo;
-}bounds_t;
-
 
 void mreg_init(mem_region_s *mreg, void *start, void *limit, unsigned int attrs)
 {
@@ -93,95 +88,83 @@ mem_region_s *mreg_lookup(cll_list *map, mem_region_s *targ)
  **/
 int mreg_insert(cll_list *map, mem_region_s *new)
 {
-  cll_node *n, *p;
+  cll_node *n;
   mem_region_s *mreg;
   ord_e ord;
 
-  /* Try to allocate a cll node */
-  n = malloc(sizeof(cll_node));
-  if (!n) return -1;
-
   /* Ordered insertion by address into the mem map*/
-  cll_foreach(map, p){
-    mreg = cll_entry(mem_region_s *, p);
+  cll_foreach(map, n){
+    mreg = cll_entry(mem_region_s *, n);
     ord = mreg_compare(new, mreg);
     if((ord == ORD_LT) || (ord == ORD_EQ))
       break;
   }
 
-  cll_init_node(n, new);
-  cll_insert(p, n);
+  cll_init_node(&new->node, new);
+  cll_insert(n, &new->node);
 
   return 0;
 }
 
-/** @brief Extract the memory region lowest in memory.
+/** @brief Identify the memory region above you in memory.
  *
- *  This assumes memory regions were inserted in order by calling mreg_insert().
+ *  @param map Memory map to search.
+ *  @param targ Memory region to search for.
+ *
+ *  @return NULL if targ is the highest region in memory, else the 
+ *   memory region.
+ **/
+mem_region_s *mreg_next(cll_list *map, mem_region_s *targ)
+{
+  cll_node *n;
+
+  n = targ->node.next;
+  if(n == map)
+    return NULL;
+  else
+    return cll_entry(mem_region_s *, n);
+}
+
+/** @brief Identify the memory region below you in memory.
+ *
+ *  @param map Memory map to search.
+ *  @param targ Memory region to search for.
+ *
+ *  @return NULL if targ is the lowest region in memory, else the 
+ *   memory region.
+ **/
+mem_region_s *mreg_prev(cll_list *map, mem_region_s *targ)
+{
+  cll_node *n;
+
+  n = targ->node.prev;
+  if(n == map)
+    return NULL;
+  else
+    return cll_entry(mem_region_s *, n);
+}
+
+/** @brief Identify extract a specific memory region
  *
  *  @param map Memory map to search.
  *  @param targ Memory region to extract.
  *
- *  @return NULL if the memory map is empty, else the first memory region in the
- *  list.
+ *  @return NULL if not found, else the memory region.
  **/
-mem_region_s *mreg_extract(cll_list *map)
+mem_region_s *mreg_extract(cll_list *map, mem_region_s *targ)
 {
   cll_node *n;
   mem_region_s *mreg;
 
-  if (cll_empty(map)) return NULL;
-
-  /* Extract the list node and grab it's data */
-  n = cll_extract(map, map->next);
-  mreg = cll_entry(mem_region_s *, n);
-
-  /* Free the node and return */
-  free(n);
-  return mreg;
-}
-
-/** @brief Compute a memory region's boundaries 
- *
- *  Compute the page directory indices of your neighbors.
- * 
- *  @param map Memory map to search.
- *  @param targ Region to check.
- *  @param bounds Bounds struct to populate.
- *
- *  @return Void.
- **/
-void mreg_bounds(vm_info_s *vmi, mem_region_s *targ, bounds_t *bounds)
-{
-  cll_node *n;
-  mem_region_s *curr, *prev, *next;
-
-  /* Find your neighbors */
-  cll_foreach(&vmi->mmap, n){
-    curr = cll_entry(mem_region_s *, n);
-    if (mreg_compare(curr, targ) == ORD_EQ) {
-      break;
+  cll_foreach(map, n) {
+    mreg = cll_entry(mem_region_s *, n);
+    if (mreg_compare(mreg, targ) == ORD_EQ) {
+      cll_extract(map, n);
+      return mreg;
     }
   }
-  assert(cll_entry(mem_region_s *, n) == targ);
 
-  /* There's a neighbor below you in memory */
-  if(n->prev != &vmi->mmap){
-    prev = cll_entry(mem_region_s *, n->prev);
-    bounds->lo = PG_DIR_INDEX(prev->limit);
-  }
-
-  /* There's a neighbor above you in memory */
-  if(n->next != &vmi->mmap){
-    next = cll_entry(mem_region_s *, n->next);
-    bounds->hi = PG_DIR_INDEX(next->start);
-  }
-
-  /* Now that we've got all the info we need, free your cll node */
-  cll_extract(&vmi->mmap, n);
-  free(n);
-
-  return;
+  return NULL;
 }
 
 /** @brief Frees a region's page tables if they are not shared by neighbor
@@ -195,12 +178,11 @@ void mreg_bounds(vm_info_s *vmi, mem_region_s *targ, bounds_t *bounds)
 void mreg_neighbors(vm_info_s *vmi, mem_region_s *targ)
 {
   int targ_lo, targ_hi, i;
+  mem_region_s *prev, *next;
 
-  /* Make these impossible values for the case when you have no neighbors */
-  bounds_t bounds = {-1, -1};
-
-  /* Compute your neighbors bounds */
-  mreg_bounds(vmi, targ, &bounds);
+  /* Retrieve your neighors in memory */
+  prev = mreg_prev(&vmi->mmap, targ);
+  next = mreg_next(&vmi->mmap, targ);
 
   /* Compute your bounds */
   targ_lo = PG_DIR_INDEX(targ->start);
@@ -209,29 +191,43 @@ void mreg_neighbors(vm_info_s *vmi, mem_region_s *targ)
   /* --- The region is confined to a single tome --- */
 
   if(targ_lo == targ_hi){
-    /* Your tome is not shared by another memory region */
-    if((bounds.hi != targ_lo) && (bounds.lo != targ_lo))
+    /* Your have neighbors above and below you */
+    if(prev && next){
+      if((PG_DIR_INDEX(prev->limit) != targ_lo) &&
+         (PG_DIR_INDEX(next->start) != targ_lo))
+          pg_tbl_free(&vmi->pg_info, targ->start);
+    }
+    /* You have no neighbors */
+    else if(!prev && !next)
       pg_tbl_free(&vmi->pg_info, targ->start);
-    return;
+    /* You have a neighbor above or below you */
+    else{
+      if((prev && (PG_DIR_INDEX(prev->limit) != targ_lo)) ||
+        (next && (PG_DIR_INDEX(next->start) != targ_lo)))
+          pg_tbl_free(&vmi->pg_info, targ->start);
+    }
   }
 
   /* --- The region spans at least one other tome --- */
 
-  /* Free your lower boundary */
-  if(targ_lo != bounds.lo){
-    pg_tbl_free(&vmi->pg_info, targ->start);
+  else{
+    /* Free your lower boundary */
+    if(prev && (targ_lo != PG_DIR_INDEX(prev->limit))){
+      pg_tbl_free(&vmi->pg_info, targ->start);
+    }
+    /* Free your upper boundary */
+    if(next && (targ_hi != PG_DIR_INDEX(next->start))){
+      pg_tbl_free(&vmi->pg_info, targ->limit);
+    }
+    /* Free anywhere in between */
+    for(i = ++targ_lo; i < targ_hi - 1; i++){
+      pg_tbl_free(&vmi->pg_info, &tomes[i]);
+    }
   }
 
-  /* Free your upper boundary */
-  if(targ_hi != bounds.hi){
-    pg_tbl_free(&vmi->pg_info, targ->limit);
-  }
-
-  /* Free anywhere in between */
-  for(i = ++targ_lo; i < targ_hi - 1; i++){
-    pg_tbl_free(&vmi->pg_info, &tomes[i]);
-  }
-
+  /* Now that we have all the information about the neighbors, 
+   * extract the node */
+  mreg_extract(&vmi->mmap, targ);
   return;
 }
 
@@ -251,8 +247,10 @@ void mreg_final(vm_info_s *vmi)
   int prev_pdi = -1;
   int pdi;
 
-  while ( (mreg = mreg_extract(&vmi->mmap)) )
+  while (!cll_empty(&vmi->mmap))
   {
+    mreg = mreg_extract(&vmi->mmap, cll_entry(mem_region_s *,vmi->mmap.next));
+
     pdi = PG_DIR_INDEX(mreg->start);
 
     /* Avoid freeing a page table twice */
