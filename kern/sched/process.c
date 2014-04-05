@@ -51,7 +51,7 @@ thread_t *task_init(void)
   queue_init(&task->dead_children);
   cvar_init((&task->cv));
 
-  task->parent_tid = curr_thr->task_info->tid;
+  task->parent_tid = curr_tsk->tid;
 
   /* Initialize the task struct lock */
   mutex_init(&task->lock);

@@ -79,7 +79,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 
 
   /* Keep track of init's task */
-  init = curr_thr->task_info;
+  init = curr_tsk;
 
   /* Give up the kernel stack that was given to us by the bootloader */
   set_esp0((uint32_t)(&curr_thr->kstack[KSTACK_SIZE]));
@@ -132,20 +132,20 @@ thread_t *hand_load_task(const char *fname)
 {
   thread_t *thread = task_init();
   curr_thr = thread;
-  task_t *task = thread->task_info;
+  curr_tsk = thread->task_info;
 
   /* Enable paging */
-  set_cr3(task->cr3);
+  set_cr3(curr_tsk->cr3);
   enable_paging();
 
   /* Prepare to drop into user mode */
-  thread->pc = load_file(&task->vmi, fname);
-  thread->sp = usr_stack_init(&task->vmi, NULL);
+  thread->pc = load_file(&curr_tsk->vmi, fname);
+  thread->sp = usr_stack_init(&curr_tsk->vmi, NULL);
 
   /* Add the task to the runnable queue */
   raw_unblock(thread, &thread->node);
 
-  sim_reg_process((void *)task->cr3, fname);
+  sim_reg_process((void *)curr_tsk->cr3, fname);
   return thread;
 }
 

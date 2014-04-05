@@ -23,8 +23,8 @@ extern queue_s runnable;
 /* The currently running thread */
 thread_t *curr_thr;
 
-/* The currently running process */
-task_t *curr_pro;
+/* The currently running task */
+task_t *curr_tsk;
 
 
 /* Scheduling API */

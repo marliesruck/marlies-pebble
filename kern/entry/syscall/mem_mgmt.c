@@ -22,16 +22,16 @@ int sys_new_pages(void *addr, int len)
   if ((unsigned int) addr % PAGE_SIZE) return -1;
   if (len < 0 || len % PAGE_SIZE) return -1;
 
-  mutex_lock(&curr_thr->task_info->lock);
+  mutex_lock(&curr_tsk->lock);
 
-  if (!vm_alloc(&curr_thr->task_info->vmi, addr, len,
+  if (!vm_alloc(&curr_tsk->vmi, addr, len,
                 VM_ATTR_RDWR|VM_ATTR_USER|VM_ATTR_NEWPG))
   {
-    mutex_unlock(&curr_thr->task_info->lock);
+    mutex_unlock(&curr_tsk->lock);
     return -1;
   }
 
-  mutex_unlock(&curr_thr->task_info->lock);
+  mutex_unlock(&curr_tsk->lock);
   return 0;
 }
 
@@ -41,18 +41,18 @@ int sys_remove_pages(void *addr)
 
   if ((unsigned int) addr % PAGE_SIZE) return -1;
 
-  mutex_lock(&curr_thr->task_info->lock);
+  mutex_lock(&curr_tsk->lock);
 
-  if (vm_get_attrs(&curr_thr->task_info->vmi, addr, &attrs)
+  if (vm_get_attrs(&curr_tsk->vmi, addr, &attrs)
       || !(attrs & VM_ATTR_NEWPG))
   {
-    mutex_unlock(&curr_thr->task_info->lock);
+    mutex_unlock(&curr_tsk->lock);
     return -1;
   }
 
-  vm_free(&curr_thr->task_info->vmi, addr);
+  vm_free(&curr_tsk->vmi, addr);
 
-  mutex_unlock(&curr_thr->task_info->lock);
+  mutex_unlock(&curr_tsk->lock);
   return 0;
 }
 

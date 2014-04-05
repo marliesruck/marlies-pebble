@@ -77,7 +77,7 @@ int sys_fork(unsigned int esp)
   void *sp, *pc;
   int tid;
 
-  parent = curr_thr->task_info;
+  parent = curr_tsk;
 
   cthread = task_init();
   if(!cthread) return -1;
@@ -107,11 +107,11 @@ int sys_thread_fork(unsigned int esp)
   void *sp, *pc;
   int tid;
 
-  t = thread_init(curr_thr->task_info);
+  t = thread_init(curr_tsk);
   if (!t) return -1;
   tid = t->tid;
 
-  if (task_add_thread(curr_thr->task_info, t)) {
+  if (task_add_thread(curr_tsk, t)) {
     free(t);
     return -1;
   }
@@ -141,13 +141,13 @@ int sys_exec(char *execname, char *argvec[])
   }
 
   /* Allocate kernel mem for argvec */
-  mutex_lock(&curr_thr->task_info->lock);
-  if (!vm_find(&curr_thr->task_info->vmi, (void *)argvec)) {
-    mutex_unlock(&curr_thr->task_info->lock);
+  mutex_lock(&curr_tsk->lock);
+  if (!vm_find(&curr_tsk->vmi, (void *)argvec)) {
+    mutex_unlock(&curr_tsk->lock);
     return -1;
   }
   for (i = 0; argvec[i] != NULL; ++i) continue;
-  mutex_unlock(&curr_thr->task_info->lock);
+  mutex_unlock(&curr_tsk->lock);
   argvec_k = malloc((i + 1) * sizeof(char *));
   if (!argvec_k) {
     free(execname_k);
@@ -168,10 +168,10 @@ int sys_exec(char *execname, char *argvec[])
   argvec_k[i] = NULL;
 
   /* Destroy the old address space; setup the new */
-  vm_final(&curr_thr->task_info->vmi);
-  entry = load_file(&curr_thr->task_info->vmi, execname_k);
-  sim_reg_process(&curr_thr->task_info->cr3, execname_k);
-  stack = usr_stack_init(&curr_thr->task_info->vmi, argvec_k);
+  vm_final(&curr_tsk->vmi);
+  entry = load_file(&curr_tsk->vmi, execname_k);
+  sim_reg_process(&curr_tsk->cr3, execname_k);
+  stack = usr_stack_init(&curr_tsk->vmi, argvec_k);
 
   /* Free copied parameters*/
   for (j = 0; j < i; ++j) free(argvec_k[j]);
@@ -186,15 +186,15 @@ int sys_exec(char *execname, char *argvec[])
 
 void sys_set_status(int status)
 {
-  mutex_lock(&curr_thr->task_info->lock);
-  curr_thr->task_info->status = status;
-  mutex_unlock(&curr_thr->task_info->lock);
+  mutex_lock(&curr_tsk->lock);
+  curr_tsk->status = status;
+  mutex_unlock(&curr_tsk->lock);
   return;
 }
 
 void sys_vanish(void)
 {
-  task_t *task = curr_thr->task_info;
+  task_t *task = curr_tsk;
 
   assert( thrlist_del(curr_thr) == 0 );
 
@@ -221,7 +221,7 @@ void sys_vanish(void)
 
 int sys_wait(int *status_ptr)
 {
-  task_t *child_task = task_find_zombie(curr_thr->task_info);
+  task_t *child_task = task_find_zombie(curr_tsk);
 
   /* You have no children to reap */
   if(!child_task) return -1;

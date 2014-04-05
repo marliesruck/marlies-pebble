@@ -23,6 +23,11 @@ void dispatch_wrapper(thread_t *next)
 {
   thread_t *prev;
 
+  /* Update the current task */
+  if(curr_tsk != next->task_info)
+    curr_tsk = next->task_info;
+
+  /* Update the current thread */
   prev = curr_thr;
   curr_thr = next;
 

@@ -41,7 +41,7 @@ int sys_deschedule(int *reject)
   /* Make sure the reject is valid
    * can't use copy_from_user(...); already have the task lock
    */
-  if (vm_get_attrs(&curr_thr->task_info->vmi, reject, &attrs)
+  if (vm_get_attrs(&curr_tsk->vmi, reject, &attrs)
       || !(attrs & VM_ATTR_RDWR))
   {
     mutex_unlock(&curr_thr->lock);
