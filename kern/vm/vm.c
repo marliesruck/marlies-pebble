@@ -35,6 +35,7 @@ void mreg_init(mem_region_s *mreg, void *start, void *limit, unsigned int attrs)
   mreg->start = start;
   mreg->limit = limit;
   mreg->attrs = attrs;
+  cll_init_node(&mreg->node, mreg);
 
   return;
 }
@@ -99,7 +100,6 @@ int mreg_insert(cll_list *map, mem_region_s *new)
       break;
   }
 
-  cll_init_node(&new->node, new);
   cll_insert(n, &new->node);
 
   return 0;
@@ -460,6 +460,68 @@ int vm_get_attrs(vm_info_s *vmi, void *va_start, unsigned int *dst)
   return 0;
 }
 
+/** @brief Copies an address space.
+ *
+ *  @param dst The destination vm_info struct.
+ *  @param src The source vm_info struct.
+ *
+ *  @return 0 on success; a negative integer error code on failure.
+ **/
+#include <tlb.h>
+#define CHILD_PDE ( (void *)tomes[PG_TBL_ENTRIES - 2] )
+int vm_copy(vm_info_s *dst, vm_info_s *src)
+{
+  mem_region_s *dreg;
+  const mem_region_s *sreg;
+  cll_node *n;
+  void *addr, *buf;
+
+  /* Don't copy unless the dest is empty */
+  if (!cll_empty(&dst->mmap)) {
+    lprintf("vm_copy: destination address space isn't empty!");
+    return -1;
+  }
+
+  /* Allocate a buffer for copying frames */
+  buf = smemalign(PAGE_SIZE, PAGE_SIZE);
+  if (!buf) {
+    lprintf("vm_copy: buffer allocation failed!");
+    return -1;
+  }
+
+  /* Map in the dst tables */
+  dst->pg_info.pg_tbls = CHILD_PDE;
+  pte_t pde = PACK_PTE(dst->pg_info.pg_dir, PG_SELFREF_ATTRS);
+  set_pde(src->pg_info.pg_dir, CHILD_PDE, &pde);
+
+  cll_foreach(&src->mmap, n)
+  {
+    sreg = cll_entry(mem_region_s *, n);
+
+    /* Allocate a dst region struct */
+    dreg = vm_region(dst, sreg->start, sreg->limit-sreg->start, sreg->attrs);
+    if (!dreg) {
+    lprintf("vm_copy: region allocation failed!");
+      sfree(buf, PAGE_SIZE);
+      return -1;
+    }
+
+    /* Allocate pages for the region */
+    for (addr = sreg->start; addr < sreg->limit; addr += PAGE_SIZE)
+      assert( !copy_page(&dst->pg_info, &src->pg_info, addr, buf) );
+  }
+
+  /* Unmap dest tables */
+  pde = PACK_PTE(NULL, 0);
+  set_pde(src->pg_info.pg_dir, CHILD_PDE, &pde);
+  tlb_inval_tome(CHILD_PDE);
+  tlb_inval_page(src->pg_info.pg_tbls[PG_DIR_INDEX(dst->pg_info.pg_tbls)]);
+  dst->pg_info.pg_tbls = PG_TBL_ADDR;
+
+  sfree(buf, PAGE_SIZE);
+  return 0;
+}
+
 /** @brief Frees a region previously allocated by vm_alloc(...).
  *
  *  @param vmi The vm_info struct for this allocation.
@@ -492,61 +554,6 @@ void vm_free(vm_info_s *vmi, void *va_start)
   validate_pd(&vmi->pg_info);
 
   return;
-}
-
-/** @brief Copies an address space.
- *
- *  @param dst The destination vm_info struct.
- *  @param src The source vm_info struct.
- *
- *  @return 0 on success; a negative integer error code on failure.
- **/
-#include <tlb.h>
-#define CHILD_PDE ( (void *)tomes[PG_TBL_ENTRIES - 2] )
-int vm_copy(vm_info_s *dst, vm_info_s *src)
-{
-  mem_region_s *dreg;
-  const mem_region_s *sreg;
-  cll_node *n;
-  void *addr, *buf;
-
-  /* Don't copy unless the dest is empty */
-  if (!cll_empty(&dst->mmap)) return -1;
-
-  /* Allocate a buffer for copying frames */
-  buf = smemalign(PAGE_SIZE, PAGE_SIZE);
-  if (!buf) return -1;
-
-  /* Map in the dst tables */
-  dst->pg_info.pg_tbls = CHILD_PDE;
-  pte_t pde = PACK_PTE(dst->pg_info.pg_dir, PG_SELFREF_ATTRS);
-  set_pde(src->pg_info.pg_dir, CHILD_PDE, &pde);
-
-  cll_foreach(&src->mmap, n)
-  {
-    sreg = cll_entry(mem_region_s *, n);
-
-    /* Allocate a dst region struct */
-    dreg = vm_region(dst, sreg->start, sreg->limit-sreg->start, sreg->attrs);
-    if (!dreg) {
-      sfree(buf, PAGE_SIZE);
-      return -1;
-    }
-
-    /* Allocate pages for the region */
-    for (addr = sreg->start; addr < sreg->limit; addr += PAGE_SIZE)
-      assert( !copy_page(&dst->pg_info, &src->pg_info, addr, buf) );
-  }
-
-  /* Unmap dest tables */
-  pde = PACK_PTE(NULL, 0);
-  set_pde(src->pg_info.pg_dir, CHILD_PDE, &pde);
-  tlb_inval_tome(CHILD_PDE);
-  tlb_inval_page(src->pg_info.pg_tbls[PG_DIR_INDEX(dst->pg_info.pg_tbls)]);
-  dst->pg_info.pg_tbls = PG_TBL_ADDR;
-
-  sfree(buf, PAGE_SIZE);
-  return 0;
 }
 
 /** @brief Frees a process' entire address space.

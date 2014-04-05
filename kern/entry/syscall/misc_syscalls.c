@@ -91,7 +91,7 @@ int sys_swexn(void *esp3, swexn_handler_t eip, void *arg, ureg_t *newureg)
 {
   ureg_t *ureg;
 
-  if(copy_from_user((char **)&ureg,(char *) newureg, sizeof(ureg_t)))
+  if(copy_from_user((char **)&ureg, (char *)newureg, sizeof(ureg_t)))
     return -1;
 
   /* Validate register values */
@@ -119,11 +119,12 @@ int sys_swexn(void *esp3, swexn_handler_t eip, void *arg, ureg_t *newureg)
 
   /* Install the registers and return to userland */
   if(ureg){
+    /* TODO: FIX MEMORY LEAK, ureg should be on stack */
     craft_state(*ureg);
-    /* MEMORY LEAK, ureg should be on stack */
   }
 
   /* Or simply return */
+  free(ureg);
   return 0;
 }
 
