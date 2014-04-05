@@ -39,6 +39,8 @@ struct thread {
   struct task *task_info;
   cll_node node; /* Embedded list traversal struct for the runnable queue */
   cll_node zzz_node; /* Embedded list traversal struct for sleeping */
+  cll_node task_node; /* Embedded list traversal struct for task */
+  cll_node thrlist_entry; /* Threadlist node */
   int killed;    /* Flag to indicate if thread was killed by kernel */
   thr_state_e state;
   mutex_s lock;

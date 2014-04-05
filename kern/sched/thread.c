@@ -69,6 +69,8 @@ thread_t *thread_init(task_t *task)
   /* Embedded list traversal */
   cll_init_node(&thread->node, thread);
   cll_init_node(&thread->zzz_node, thread);
+  cll_init_node(&thread->task_node, thread);
+  cll_init_node(&thread->thrlist_entry, thread);
 
   /* No software exception handlers should be registered */
   deregister(&thread->swexn); 
@@ -105,16 +107,9 @@ int thr_launch(thread_t *t, void *sp, void *pc)
  **/
 int thrlist_add(thread_t *t)
 {
-  cll_node *n;
-
-  /* Allocate a node for the new thread */
-	n = malloc(sizeof(cll_node));
-  if (!n) return -1;
-  cll_init_node(n, t);
-
   /* Lock, insert, unlock */
   mutex_lock(&thrlist_lock);
-  cll_insert(thread_list.next, n);
+  cll_insert(thread_list.next, &t->thrlist_entry);
   mutex_unlock(&thrlist_lock);
 
   return 0;
@@ -128,24 +123,10 @@ int thrlist_add(thread_t *t)
  **/
 int thrlist_del(thread_t *t)
 {
-  cll_node *n;
-
-  /* Lock the thread list */
+  /* Lock, extract, unlock */
   mutex_lock(&thrlist_lock);
-
-  /* Find our thread in the thread list */
-  cll_foreach(&thread_list, n)
-    if (cll_entry(thread_t *,n) == t) break;
-
-  if(cll_entry(thread_t *,n) != t)
-    MAGIC_BREAK;
-
-  /* Extract and free it */
-  assert(cll_extract(&thread_list, n));
-
-  /* Unlock, free and return */
+  assert(cll_extract(&thread_list, &t->thrlist_entry));
   mutex_unlock(&thrlist_lock);
-  free(n);
   return 0;
 }
 

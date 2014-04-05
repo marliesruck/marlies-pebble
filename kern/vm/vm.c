@@ -29,7 +29,6 @@
 /*************************************************************************
  *  Memory map and region manipulation
  *************************************************************************/
-
 void mreg_init(mem_region_s *mreg, void *start, void *limit, unsigned int attrs)
 {
   /* Intialize the mem region struct */
