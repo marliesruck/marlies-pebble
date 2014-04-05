@@ -247,6 +247,7 @@ int copy_from_user_static(void *dst, void *src, size_t bytes)
 
   if (!vm_find(&curr_tsk->vmi, src)) {
     mutex_unlock(&curr_tsk->lock);
+    MAGIC_BREAK;
     return -1;
   }
 

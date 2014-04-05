@@ -89,13 +89,12 @@ int sys_readfile(char *filename, char *buf, int count, int offset)
 
 int sys_swexn(void *esp3, swexn_handler_t eip, void *arg, ureg_t *newureg)
 {
-  ureg_t ureg;
+  ureg_t ureg; 
 
-  if(copy_from_user_static(&ureg, newureg, sizeof(ureg_t)))
-    return -1;
-
-  /* Validate register values */
+  /* Validate and copy register values */
   if(newureg){
+    if(copy_from_user_static(&ureg, newureg, sizeof(ureg_t)))
+      return -1;
     if(validate_regs(&ureg) < 0){
       return -1;
     }

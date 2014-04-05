@@ -16,6 +16,7 @@ int main()
 
   /*** BASIC TESTS ***/
 
+  /*
   args[0] = "remove_pages_test1";
   if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
@@ -88,19 +89,15 @@ int main()
   args[0] = "wild_test1";
   if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
+  */
 
   /*** SOLIDITY TESTS ***/
 
+    /*
   args[0] = "yield_desc_mkrun";
   if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
    
-  /* This tests runs forever, uncomment as you see fit...
-  args[0] = "fork_bomb";
-  if(!fork()) exec(args[0], args);
-  while(wait(NULL) >= 0);
-  */
-
   args[0] = "exec_nonexist";
   if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
@@ -120,6 +117,7 @@ int main()
   args[0] = "make_crash";
   if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
+  */
 
   args[0] = "swexn_basic_test";
   if(!fork()) exec(args[0], args);
