@@ -208,6 +208,7 @@ void sys_vanish(void)
 
   /* You were killed by the kernel */
   if(curr_thr->killed){
+    lprintf("curr_thr->killed: %d", curr_thr->killed);
     task->status = -2;
   }
 
