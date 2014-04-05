@@ -22,16 +22,19 @@
 void dispatch_wrapper(thread_t *next)
 {
   thread_t *prev;
+  unsigned int cr3 = 0;
 
-  /* Update the current task */
-  if(curr_tsk != next->task_info)
+  /* Update the current task and cr3 */
+  if(curr_tsk != next->task_info){
+    cr3 = next->task_info->cr3;
     curr_tsk = next->task_info;
+  }
 
   /* Update the current thread */
   prev = curr_thr;
   curr_thr = next;
 
-  dispatch(&prev->sp, &prev->pc, next->sp, next->pc,
-               next->task_info->cr3, &next->kstack[KSTACK_SIZE]);
+  dispatch(&prev->sp, &prev->pc, next->sp, next->pc, cr3, 
+           &next->kstack[KSTACK_SIZE]);
   return;
 }

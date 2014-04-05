@@ -58,7 +58,11 @@ store_and_switch:
 
   # Load new thread's context
   mov     %edx, %esp           # Load ESP
+  test    %edi, %edi           # Only dump cr3 if we are switching address space
+  je      run
   mov     %edi, %cr3           # Load correct PTBR
+
+run: 
   jmp     *%esi                # Jump to new thread's EIP
 
 .global half_dispatch
