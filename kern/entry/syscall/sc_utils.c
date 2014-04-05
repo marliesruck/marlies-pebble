@@ -62,12 +62,8 @@ void slaughter(void)
  *
  *  @return Void.
  **/
-void init_exn_stack(ureg_t *state, unsigned int cause, void *cr2)
+void init_exn_stack(ureg_t *state)
 {
-  /* Save execution state */
-  state->cause = cause;
-  state->cr2 = (unsigned int)(cr2);
-
   /* Store out handler to call */
   swexn_handler_t eip = curr_thr->swexn.eip;
   void *esp3 = curr_thr->swexn.esp3;

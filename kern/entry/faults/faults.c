@@ -21,6 +21,9 @@
 /* x86 specific includes */
 #include <x86/idt.h>
 
+/* A function pointer to be passed to the fault wrapper for a swexn */
+typedef int (*func_p)(ureg_t *ureg);
+
 /** @brief Installs our fault handlers.
  *
  *  @return Void.
@@ -54,24 +57,12 @@ void install_fault_handlers(void)
  *
  *  @return Void.
  **/
-void int_divzero(void)
+void int_divzero(ureg_t *ureg)
 {
-  ureg_t *state;
-
-  /* A software exception handler was installed by the user */
-  if(curr_thr->swexn.eip){
-
-    /* Retrieve execution state */
-    state = (ureg_t *)(get_ebp());
-
-    /* Craft contents of exception stack and call handler */
-    init_exn_stack(state, SWEXN_CAUSE_DIVIDE, NULL);
-  }
-
   lprintf("Error: Division by zero!");
 
-  /* You were killed by the kernel */
-  slaughter();
+  ureg->cause = SWEXN_CAUSE_DIVIDE;
+  ureg->cr2 = 0;
 
   return;
 }
@@ -80,24 +71,12 @@ void int_divzero(void)
  *
  *  @return Void.
  **/
-void int_debug(void)
+void int_debug(ureg_t *ureg)
 {
-  ureg_t *state;
-
-  /* A software exception handler was installed by the user */
-  if(curr_thr->swexn.eip){
-
-    /* Retrieve execution state */
-    state = (ureg_t *)(get_ebp());
-
-    /* Craft contents of exception stack and call handler */
-    init_exn_stack(state, SWEXN_CAUSE_DEBUG, NULL);
-  }
-
   lprintf("Alert: Got debug interrupt...");
 
-  /* You were killed by the kernel */
-  slaughter();
+  ureg->cause = SWEXN_CAUSE_DEBUG;
+  ureg->cr2 = 0;
 
   return;
 }
@@ -110,7 +89,6 @@ void int_nmi(void)
 {
   lprintf("Error: Non-maskable interrupt!");
 
-  /* You were killed by the kernel */
   slaughter();
 
   return;
@@ -120,24 +98,12 @@ void int_nmi(void)
  *
  *  @return Void.
  **/
-void int_breakpoint(void)
+void int_breakpoint(ureg_t *ureg)
 {
-  ureg_t *state;
-
-  /* A software exception handler was installed by the user */
-  if(curr_thr->swexn.eip){
-
-    /* Retrieve execution state */
-    state = (ureg_t *)(get_ebp());
-
-    /* Craft contents of exception stack and call handler */
-    init_exn_stack(state, SWEXN_CAUSE_BREAKPOINT, NULL);
-  }
-
   lprintf("Alert: Encountered breakpoint (INT 3)!");
 
-  /* You were killed by the kernel */
-  slaughter();
+  ureg->cause = SWEXN_CAUSE_BREAKPOINT;
+  ureg->cr2 = 0;
 
   return;
 }
@@ -146,24 +112,12 @@ void int_breakpoint(void)
  *
  *  @return Void.
  **/
-void int_overflow(void)
+void int_overflow(ureg_t *ureg)
 {
-  ureg_t *state;
-
-  /* A software exception handler was installed by the user */
-  if(curr_thr->swexn.eip){
-
-    /* Retrieve execution state */
-    state = (ureg_t *)(get_ebp());
-
-    /* Craft contents of exception stack and call handler */
-    init_exn_stack(state, SWEXN_CAUSE_OVERFLOW, NULL);
-  }
-
   lprintf("Error: Overflow (INTO)!");
 
-  /* You were killed by the kernel */
-  slaughter();
+  ureg->cause = SWEXN_CAUSE_OVERFLOW;
+  ureg->cr2 = 0;
 
   return;
 }
@@ -172,24 +126,12 @@ void int_overflow(void)
  *
  *  @return Void.
  **/
-void int_bound(void)
+void int_bound(ureg_t *ureg)
 {
-  ureg_t *state;
-
-  /* A software exception handler was installed by the user */
-  if(curr_thr->swexn.eip){
-
-    /* Retrieve execution state */
-    state = (ureg_t *)(get_ebp());
-
-    /* Craft contents of exception stack and call handler */
-    init_exn_stack(state, SWEXN_CAUSE_BOUNDCHECK, NULL);
-  }
-
   lprintf("Error: Range exceeded (BOUND)!");
 
-  /* You were killed by the kernel */
-  slaughter();
+  ureg->cause = SWEXN_CAUSE_BOUNDCHECK;
+  ureg->cr2 = 0;
 
   return;
 }
@@ -198,24 +140,12 @@ void int_bound(void)
  *
  *  @return Void.
  **/
-void int_undef_opcode(void)
+void int_undef_opcode(ureg_t *ureg)
 {
-  ureg_t *state;
-
-  /* A software exception handler was installed by the user */
-  if(curr_thr->swexn.eip){
-
-    /* Retrieve execution state */
-    state = (ureg_t *)(get_ebp());
-
-    /* Craft contents of exception stack and call handler */
-    init_exn_stack(state, SWEXN_CAUSE_OPCODE, NULL);
-  }
-
   lprintf("Error: Invalid instruction!");
 
-  /* You were killed by the kernel */
-  slaughter();
+  ureg->cause = SWEXN_CAUSE_OPCODE;
+  ureg->cr2 = 0;
 
   return;
 }
@@ -224,23 +154,12 @@ void int_undef_opcode(void)
  *
  *  @return Void.
  **/
-void int_device_unavail(void)
+void int_device_unavail(ureg_t *ureg)
 {
-  ureg_t *state;
-
-  /* A software exception handler was installed by the user */
-  if(curr_thr->swexn.eip){
-
-    /* Retrieve execution state */
-    state = (ureg_t *)(get_ebp());
-
-    /* Craft contents of exception stack and call handler */
-    init_exn_stack(state, SWEXN_CAUSE_NOFPU, NULL);
-  }
   lprintf("Error: Device not available!");
 
-  /* You were killed by the kernel */
-  slaughter();
+  ureg->cause = SWEXN_CAUSE_NOFPU;
+  ureg->cr2 = 0;
 
   return;
 }
@@ -291,23 +210,12 @@ void int_tss(void)
  *
  *  @return Void.
  **/
-void int_seg_not_present(void)
+void int_seg_not_present(ureg_t *ureg)
 {
+  lprintf("Error: segment not present!");
 
-  ureg_t *state;
-
-  /* A software exception handler was installed by the user */
-  if(curr_thr->swexn.eip){
-
-    /* Retrieve execution state */
-    state = (ureg_t *)(get_ebp());
-
-    /* Craft contents of exception stack and call handler */
-    init_exn_stack(state, SWEXN_CAUSE_SEGFAULT, NULL);
-  }
-
-  /* You were killed by the kernel */
-  slaughter();
+  ureg->cause = SWEXN_CAUSE_SEGFAULT;
+  ureg->cr2 = 0;
 
   return;
 }
@@ -316,23 +224,12 @@ void int_seg_not_present(void)
  *
  *  @return Void.
  **/
-void int_stack_seg(void)
+void int_stack_seg(ureg_t *ureg)
 {
-  ureg_t *state;
+  lprintf("Error: stack segmentation fault!");
 
-  /* A software exception handler was installed by the user */
-  if(curr_thr->swexn.eip){
-
-
-    /* Retrieve execution state */
-    state = (ureg_t *)(get_ebp());
-
-    /* Craft contents of exception stack and call handler */
-    init_exn_stack(state, SWEXN_CAUSE_STACKFAULT, NULL);
-  }
-
-  /* You were killed by the kernel */
-  slaughter();
+  ureg->cause = SWEXN_CAUSE_STACKFAULT;
+  ureg->cr2 = 0;
 
   return;
 }
@@ -341,22 +238,12 @@ void int_stack_seg(void)
  *
  *  @return Void.
  **/
-void int_gen_prot(void)
+void int_gen_prot(ureg_t *ureg)
 {
-  ureg_t *state;
+  lprintf("Error: general protection fault!");
 
-  /* A software exception handler was installed by the user */
-  if(curr_thr->swexn.eip){
-
-    /* Retrieve execution state */
-    state = (ureg_t *)(get_ebp());
-
-    /* Craft contents of exception stack and call handler */
-    init_exn_stack(state, SWEXN_CAUSE_PROTFAULT, NULL);
-  }
-
-  /* You were killed by the kernel */
-  slaughter();
+  ureg->cause = SWEXN_CAUSE_PROTFAULT;
+  ureg->cr2 = 0;
 
   return;
 }
@@ -371,60 +258,38 @@ void int_gen_prot(void)
 #include <x86/cr.h>
 /* Libc includes */
 #include <string.h>
-void int_page_fault(void)
+int int_page_fault(ureg_t *ureg)
 {
-  void *addr;
-  ureg_t *state;
+  void *cr2;
 
-  /* Grab the faulting address and page info */
-  addr = (void *)get_cr2();
+  /* Grab the faulting cr2ess and page info */
+  cr2 = (void *)get_cr2();
 
   /* Try to handle the fault */
-  if (pg_page_fault_handler(addr))
+  if (pg_page_fault_handler(cr2))
   {
-    state = (ureg_t *)(get_ebp());
-    /* A software exception handler was installed by the user */
-    if(curr_thr->swexn.eip){
+    lprintf("Error: Page fault on table-less address %p by thread: %d"
+            " and eip: %x", cr2, curr_thr->tid, ureg->eip);
 
-      /* Retrieve execution state */
-      state = (ureg_t *)(get_ebp());
+    ureg->cause = SWEXN_CAUSE_PAGEFAULT;
+    ureg->cr2 = (unsigned int)cr2;
 
-      /* Craft contents of exception stack and call handler */
-      init_exn_stack(state, SWEXN_CAUSE_PAGEFAULT, addr);
-    }
-    else{
-      lprintf("Error: Page fault on table-less address %p by thread: %d"
-              " and eip: %x", addr, curr_thr->tid, state->eip);
-
-      /* You were killed by the kernel */
-      slaughter();
-    }
+    return -1;
   }
 
-  return;
+  return 0;
 }
 
 /** @brief Handles floating point exceptions.
  *
  *  @return Void.
  **/
-void int_float(void)
+void int_float(ureg_t *ureg)
 {
-  ureg_t *state;
-
-  /* A software exception handler was installed by the user */
-  if(curr_thr->swexn.eip){
-
-    /* Retrieve execution state */
-    state = (ureg_t *)(get_ebp());
-
-    /* Craft contents of exception stack and call handler */
-    init_exn_stack(state, SWEXN_CAUSE_FPUFAULT, NULL);
-  }
   lprintf("Error: Floating point exception!");
 
-  /* You were killed by the kernel */
-  slaughter();
+  ureg->cause = SWEXN_CAUSE_FPUFAULT;
+  ureg->cr2 = 0;
 
   return;
 }
@@ -433,23 +298,12 @@ void int_float(void)
  *
  *  @return Void.
  **/
-void int_align(void)
+void int_align(ureg_t *ureg)
 {
-  ureg_t *state;
-
-  /* A software exception handler was installed by the user */
-  if(curr_thr->swexn.eip){
-
-    /* Retrieve execution state */
-    state = (ureg_t *)(get_ebp());
-
-    /* Craft contents of exception stack and call handler */
-    init_exn_stack(state, SWEXN_CAUSE_ALIGNFAULT, NULL);
-  }
   lprintf("Error: Alignment check!");
 
-  /* You were killed by the kernel */
-  slaughter();
+  ureg->cause = SWEXN_CAUSE_ALIGNFAULT;
+  ureg->cr2 = 0;
 
   return;
 }
@@ -472,23 +326,12 @@ void int_machine_check(void)
  *
  *  @return Void.
  **/
-void int_simd(void)
+void int_simd(ureg_t *ureg)
 {
-  ureg_t *state;
-
-  /* A software exception handler was installed by the user */
-  if(curr_thr->swexn.eip){
-
-    /* Retrieve execution state */
-    state = (ureg_t *)(get_ebp());
-
-    /* Craft contents of exception stack and call handler */
-    init_exn_stack(state, SWEXN_CAUSE_SIMDFAULT, NULL);
-  }
   lprintf("Error: SIMD floating point exception!");
 
-  /* You were killed by the kernel */
-  slaughter();
+  ureg->cause = SWEXN_CAUSE_SIMDFAULT;
+  ureg->cr2 = 0;
 
   return;
 }
@@ -507,3 +350,25 @@ void int_generic(void)
   return;
 }
 
+
+void fault_wrapper(func_p f)
+{
+  ureg_t *ureg;
+
+  /* Retrieve execution state */
+  ureg = (ureg_t *)((char *)(get_ebp()) + sizeof(unsigned));
+
+  /* Let the kernel try to silently handle */
+  //f(ureg);
+  if(int_page_fault(ureg) < 0){
+    /* Call the user defined exception handler */
+    if(curr_thr->swexn.eip){
+      /* Craft contents of exception stack and call handler */
+      init_exn_stack(ureg);
+    }
+    /* You were killed by the thread */
+    slaughter();
+  }
+
+  return;
+}

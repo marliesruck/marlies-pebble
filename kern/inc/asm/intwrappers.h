@@ -213,6 +213,88 @@ asm_\handler:
 .endm
 
 
+/** @brief Wraps a fault handler with an error code that may also have user
+ *  defined handler.
+ *
+ *  This routine passes the address of the kernel handler to a generic wrapper
+ *  function, which first allow the kernel to attempt to silently handle the
+ *  fault, then calls the user defined software exception handler (if
+ *  installed), and if all else fails, then proceeds to slaughter the faulting thread.
+ *
+ *  @param handler The address of the kernel handler.
+ *
+ *  @return Void.
+ **/
+.macro VOID_FAULT_ERROR_SWEXN handler
+
+# Export and label it...
+.extern fault_wrapper
+.extern \handler
+.global asm_\handler
+asm_\handler:
+
+  pusha                           # Store GP registers
+  push %ds                        # Store DS data segment
+  push %es                        # Store ES data segment
+  push %fs                        # Store FS data segment
+  push %gs                        # Store GS data segment
+
+  push \handler                   # Push the interrupt handler
+  call fault_wrapper
+  add  $4, %esp                   # Clean up the stack
+
+  # Epilogue
+  pop %gs                         # Restore GS data segment
+  pop %fs                         # Restore FS data segment
+  pop %es                         # Restore ES data segment
+  pop %ds                         # Restore DS data segment
+  popa                            # Restore GP registers
+
+  add  $4, %esp                   # Readjust ESP to account for the error code 
+  iret                            # Return from the interrupt
+
+.endm
+
+/** @brief Wraps a fault handler with an error code that may also have user
+ *  defined handler.
+ *
+ *  This routine passes the address of the kernel handler to a generic wrapper
+ *  function, which first allow the kernel to attempt to silently handle the
+ *  fault, then calls the user defined software exception handler (if
+ *  installed), and if all else fails, then proceeds to slaughter the faulting thread.
+ *
+ *  @param handler The address of the kernel handler.
+ *
+ *  @return Void.
+ **/
+.macro VOID_FAULT_SWEXN handler
+
+# Export and label it...
+.extern fault_wrapper
+.extern \handler
+.global asm_\handler
+asm_\handler:
+
+  pusha                           # Store GP registers
+  push %ds                        # Store DS data segment
+  push %es                        # Store ES data segment
+  push %fs                        # Store FS data segment
+  push %gs                        # Store GS data segment
+
+  push \handler                   # Push the kernel interrupt handler
+  call fault_wrapper
+  add  $4, %esp                   # Clean up the stack
+
+  # Epilogue
+  pop %gs                         # Restore GS data segment
+  pop %fs                         # Restore FS data segment
+  pop %es                         # Restore ES data segment
+  pop %ds                         # Restore DS data segment
+  popa                            # Restore GP registers
+
+  iret                            # Return from the interrupt
+
+.endm
 
 #endif /* ASSEMBLER */
 
