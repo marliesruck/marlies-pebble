@@ -56,6 +56,9 @@ thread_t *task_init(void)
   /* Initialize the task struct lock */
   mutex_init(&task->lock);
 
+  /* Zero the status */
+  task->status = 0;
+
   /* Initialize root thread */
   thread_t *thread = thread_init(task);
   if(!thread) {

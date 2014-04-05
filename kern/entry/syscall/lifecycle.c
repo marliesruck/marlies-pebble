@@ -207,8 +207,9 @@ void sys_vanish(void)
   mutex_unlock(&task->lock);
 
   /* You were killed by the kernel */
-  if(curr_thr->killed)
+  if(curr_thr->killed){
     task->status = -2;
+  }
 
   /* You are the last thread */ 
   task_free(task);
