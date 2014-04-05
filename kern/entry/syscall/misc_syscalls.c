@@ -90,13 +90,14 @@ int sys_readfile(char *filename, char *buf, int count, int offset)
 int sys_swexn(void *esp3, swexn_handler_t eip, void *arg, ureg_t *newureg)
 {
   ureg_t *ureg;
-  /* TODO: copy ureg from user...why can't copy_from_user take void **dest? */
 
   if(copy_from_user((char **)&ureg,(char *) newureg, sizeof(ureg_t)))
     return -1;
+
   /* Validate register values */
-  if(newureg){
-    if(validate_regs(newureg) < 0){
+  if(ureg){
+    if(validate_regs(ureg) < 0){
+      free(ureg);
       return -1;
     }
   }
@@ -104,6 +105,7 @@ int sys_swexn(void *esp3, swexn_handler_t eip, void *arg, ureg_t *newureg)
   /* Validate and install new handler */
   if((eip) && (esp3)){
     if((validate_pc(eip)) || (validate_sp(esp3))){
+      free(ureg);
       return -1;
     }
     curr_thr->swexn.esp3 = esp3;
@@ -116,8 +118,9 @@ int sys_swexn(void *esp3, swexn_handler_t eip, void *arg, ureg_t *newureg)
   }
 
   /* Install the registers and return to userland */
-  if(newureg){
-    craft_state(*newureg);
+  if(ureg){
+    craft_state(*ureg);
+    /* MEMORY LEAK, ureg should be on stack */
   }
 
   /* Or simply return */
