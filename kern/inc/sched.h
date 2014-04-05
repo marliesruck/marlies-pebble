@@ -21,7 +21,11 @@ extern mutex_s sched_lock;
 extern queue_s runnable;
 
 /* The currently running thread */
-thread_t *curr;
+thread_t *curr_thr;
+
+/* The currently running process */
+task_t *curr_pro;
+
 
 /* Scheduling API */
 int sched_block(thread_t *thr);

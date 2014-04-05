@@ -77,7 +77,7 @@ int sys_fork(unsigned int esp)
   void *sp, *pc;
   int tid;
 
-  parent = curr->task_info;
+  parent = curr_thr->task_info;
 
   cthread = task_init();
   if(!cthread) return -1;
@@ -94,7 +94,7 @@ int sys_fork(unsigned int esp)
   mutex_unlock(&parent->lock);
 
   /* Launch the child thread */
-  sp = kstack_copy(cthread->kstack, curr->kstack, esp);
+  sp = kstack_copy(cthread->kstack, curr_thr->kstack, esp);
   pc = asm_child_finish_sys_fork;
   thr_launch(cthread, sp, pc);
 
@@ -107,16 +107,16 @@ int sys_thread_fork(unsigned int esp)
   void *sp, *pc;
   int tid;
 
-  t = thread_init(curr->task_info);
+  t = thread_init(curr_thr->task_info);
   if (!t) return -1;
   tid = t->tid;
 
-  if (task_add_thread(curr->task_info, t)) {
+  if (task_add_thread(curr_thr->task_info, t)) {
     free(t);
     return -1;
   }
 
-  sp = kstack_copy(t->kstack, curr->kstack, esp);
+  sp = kstack_copy(t->kstack, curr_thr->kstack, esp);
   pc = asm_child_finish_sys_thread_fork;
   thr_launch(t, sp, pc);
 
@@ -141,13 +141,13 @@ int sys_exec(char *execname, char *argvec[])
   }
 
   /* Allocate kernel mem for argvec */
-  mutex_lock(&curr->task_info->lock);
-  if (!vm_find(&curr->task_info->vmi, (void *)argvec)) {
-    mutex_unlock(&curr->task_info->lock);
+  mutex_lock(&curr_thr->task_info->lock);
+  if (!vm_find(&curr_thr->task_info->vmi, (void *)argvec)) {
+    mutex_unlock(&curr_thr->task_info->lock);
     return -1;
   }
   for (i = 0; argvec[i] != NULL; ++i) continue;
-  mutex_unlock(&curr->task_info->lock);
+  mutex_unlock(&curr_thr->task_info->lock);
   argvec_k = malloc((i + 1) * sizeof(char *));
   if (!argvec_k) {
     free(execname_k);
@@ -168,10 +168,10 @@ int sys_exec(char *execname, char *argvec[])
   argvec_k[i] = NULL;
 
   /* Destroy the old address space; setup the new */
-  vm_final(&curr->task_info->vmi);
-  entry = load_file(&curr->task_info->vmi, execname_k);
-  sim_reg_process(&curr->task_info->cr3, execname_k);
-  stack = usr_stack_init(&curr->task_info->vmi, argvec_k);
+  vm_final(&curr_thr->task_info->vmi);
+  entry = load_file(&curr_thr->task_info->vmi, execname_k);
+  sim_reg_process(&curr_thr->task_info->cr3, execname_k);
+  stack = usr_stack_init(&curr_thr->task_info->vmi, argvec_k);
 
   /* Free copied parameters*/
   for (j = 0; j < i; ++j) free(argvec_k[j]);
@@ -186,28 +186,28 @@ int sys_exec(char *execname, char *argvec[])
 
 void sys_set_status(int status)
 {
-  mutex_lock(&curr->task_info->lock);
-  curr->task_info->status = status;
-  mutex_unlock(&curr->task_info->lock);
+  mutex_lock(&curr_thr->task_info->lock);
+  curr_thr->task_info->status = status;
+  mutex_unlock(&curr_thr->task_info->lock);
   return;
 }
 
 void sys_vanish(void)
 {
-  task_t *task = curr->task_info;
+  task_t *task = curr_thr->task_info;
 
-  assert( thrlist_del(curr) == 0 );
+  assert( thrlist_del(curr_thr) == 0 );
 
   mutex_lock(&task->lock);
 
   /* There are still live threads */
   if(0 < --task->num_threads){
-    sched_mutex_unlock_and_block(curr, &task->lock);
+    sched_mutex_unlock_and_block(curr_thr, &task->lock);
   }
   mutex_unlock(&task->lock);
 
   /* You were killed by the kernel */
-  if(curr->killed)
+  if(curr_thr->killed)
     task->status = -2;
 
   /* You are the last thread */ 
@@ -221,7 +221,7 @@ void sys_vanish(void)
 
 int sys_wait(int *status_ptr)
 {
-  task_t *child_task = task_find_zombie(curr->task_info);
+  task_t *child_task = task_find_zombie(curr_thr->task_info);
 
   /* You have no children to reap */
   if(!child_task) return -1;

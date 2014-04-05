@@ -79,10 +79,10 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 
 
   /* Keep track of init's task */
-  init = curr->task_info;
+  init = curr_thr->task_info;
 
   /* Give up the kernel stack that was given to us by the bootloader */
-  set_esp0((uint32_t)(&curr->kstack[KSTACK_SIZE]));
+  set_esp0((uint32_t)(&curr_thr->kstack[KSTACK_SIZE]));
 
   /* Use some memory */
 //  lprintf("ALLOCATING MEMORY UNECESSARILY!");
@@ -90,7 +90,7 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
 //    lprintf("unecessary allocation failed!");
 
   /* Launch init and enter user space...The iret enables interrupts */
-  half_dispatch(curr->pc, curr->sp);
+  half_dispatch(curr_thr->pc, curr_thr->sp);
 
   /* We should never reach here! */
   assert(0);
@@ -131,7 +131,7 @@ void init_kdata_structures(void)
 thread_t *hand_load_task(const char *fname)
 {
   thread_t *thread = task_init();
-  curr = thread;
+  curr_thr = thread;
   task_t *task = thread->task_info;
 
   /* Enable paging */

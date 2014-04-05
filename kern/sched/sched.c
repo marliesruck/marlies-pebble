@@ -225,7 +225,7 @@ void schedule(void)
   queue_enqueue(&runnable, q);
 
   /* Only switch if the next thread is different */
-  if (next != curr) {
+  if (next != curr_thr) {
     dispatch_wrapper(next);
   }
 

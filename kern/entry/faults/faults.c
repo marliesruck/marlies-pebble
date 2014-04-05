@@ -59,7 +59,7 @@ void int_divzero(void)
   ureg_t *state;
 
   /* A software exception handler was installed by the user */
-  if(curr->swexn.eip){
+  if(curr_thr->swexn.eip){
 
     /* Retrieve execution state */
     state = (ureg_t *)(get_ebp());
@@ -85,7 +85,7 @@ void int_debug(void)
   ureg_t *state;
 
   /* A software exception handler was installed by the user */
-  if(curr->swexn.eip){
+  if(curr_thr->swexn.eip){
 
     /* Retrieve execution state */
     state = (ureg_t *)(get_ebp());
@@ -125,7 +125,7 @@ void int_breakpoint(void)
   ureg_t *state;
 
   /* A software exception handler was installed by the user */
-  if(curr->swexn.eip){
+  if(curr_thr->swexn.eip){
 
     /* Retrieve execution state */
     state = (ureg_t *)(get_ebp());
@@ -151,7 +151,7 @@ void int_overflow(void)
   ureg_t *state;
 
   /* A software exception handler was installed by the user */
-  if(curr->swexn.eip){
+  if(curr_thr->swexn.eip){
 
     /* Retrieve execution state */
     state = (ureg_t *)(get_ebp());
@@ -177,7 +177,7 @@ void int_bound(void)
   ureg_t *state;
 
   /* A software exception handler was installed by the user */
-  if(curr->swexn.eip){
+  if(curr_thr->swexn.eip){
 
     /* Retrieve execution state */
     state = (ureg_t *)(get_ebp());
@@ -203,7 +203,7 @@ void int_undef_opcode(void)
   ureg_t *state;
 
   /* A software exception handler was installed by the user */
-  if(curr->swexn.eip){
+  if(curr_thr->swexn.eip){
 
     /* Retrieve execution state */
     state = (ureg_t *)(get_ebp());
@@ -229,7 +229,7 @@ void int_device_unavail(void)
   ureg_t *state;
 
   /* A software exception handler was installed by the user */
-  if(curr->swexn.eip){
+  if(curr_thr->swexn.eip){
 
     /* Retrieve execution state */
     state = (ureg_t *)(get_ebp());
@@ -297,7 +297,7 @@ void int_seg_not_present(void)
   ureg_t *state;
 
   /* A software exception handler was installed by the user */
-  if(curr->swexn.eip){
+  if(curr_thr->swexn.eip){
 
     /* Retrieve execution state */
     state = (ureg_t *)(get_ebp());
@@ -321,7 +321,7 @@ void int_stack_seg(void)
   ureg_t *state;
 
   /* A software exception handler was installed by the user */
-  if(curr->swexn.eip){
+  if(curr_thr->swexn.eip){
 
 
     /* Retrieve execution state */
@@ -346,7 +346,7 @@ void int_gen_prot(void)
   ureg_t *state;
 
   /* A software exception handler was installed by the user */
-  if(curr->swexn.eip){
+  if(curr_thr->swexn.eip){
 
     /* Retrieve execution state */
     state = (ureg_t *)(get_ebp());
@@ -384,7 +384,7 @@ void int_page_fault(void)
   {
     state = (ureg_t *)(get_ebp());
     /* A software exception handler was installed by the user */
-    if(curr->swexn.eip){
+    if(curr_thr->swexn.eip){
 
       /* Retrieve execution state */
       state = (ureg_t *)(get_ebp());
@@ -394,7 +394,7 @@ void int_page_fault(void)
     }
     else{
       lprintf("Error: Page fault on table-less address %p by thread: %d"
-              " and eip: %x", addr, curr->tid, state->eip);
+              " and eip: %x", addr, curr_thr->tid, state->eip);
 
       /* You were killed by the kernel */
       slaughter();
@@ -413,7 +413,7 @@ void int_float(void)
   ureg_t *state;
 
   /* A software exception handler was installed by the user */
-  if(curr->swexn.eip){
+  if(curr_thr->swexn.eip){
 
     /* Retrieve execution state */
     state = (ureg_t *)(get_ebp());
@@ -438,7 +438,7 @@ void int_align(void)
   ureg_t *state;
 
   /* A software exception handler was installed by the user */
-  if(curr->swexn.eip){
+  if(curr_thr->swexn.eip){
 
     /* Retrieve execution state */
     state = (ureg_t *)(get_ebp());
@@ -477,7 +477,7 @@ void int_simd(void)
   ureg_t *state;
 
   /* A software exception handler was installed by the user */
-  if(curr->swexn.eip){
+  if(curr_thr->swexn.eip){
 
     /* Retrieve execution state */
     state = (ureg_t *)(get_ebp());

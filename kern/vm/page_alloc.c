@@ -385,7 +385,7 @@ int pg_page_fault_handler(void *vaddr)
   pg_info_s *pgi;
 
   /* Grab the faulter's page info */
-  pgi = &curr->task_info->vmi.pg_info;
+  pgi = &curr_thr->task_info->vmi.pg_info;
 
   /* Get the faulting address' PTE */
   if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte))

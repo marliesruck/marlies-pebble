@@ -78,14 +78,14 @@ void cvar_wait(cvar_s *cv, mutex_s *mp)
   assert(cv);
 
   /* lock cvar mutex and atomically enqueue */
-  queue_init_node(&n, curr);
+  queue_init_node(&n, curr_thr);
   spin_lock(&cv->lock);
   queue_enqueue(&cv->queue, &n);
 
   /* Release world mutex, unlock-and-block and deschedule */
   if (mp) mutex_unlock(mp);
 
-  sched_spin_unlock_and_block(curr, &cv->lock);
+  sched_spin_unlock_and_block(curr_thr, &cv->lock);
 
   /* Lock world mutex and make progress */
   if (mp) mutex_lock(mp);

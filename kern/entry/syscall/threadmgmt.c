@@ -17,7 +17,7 @@
 
 int sys_gettid(void)
 {
-  return curr->tid;
+  return curr_thr->tid;
 }
 
 int sys_yield(int pid)
@@ -36,25 +36,25 @@ int sys_deschedule(int *reject)
 {
   unsigned int attrs;
 
-  mutex_lock(&curr->lock);
+  mutex_lock(&curr_thr->lock);
 
   /* Make sure the reject is valid
    * can't use copy_from_user(...); already have the task lock
    */
-  if (vm_get_attrs(&curr->task_info->vmi, reject, &attrs)
+  if (vm_get_attrs(&curr_thr->task_info->vmi, reject, &attrs)
       || !(attrs & VM_ATTR_RDWR))
   {
-    mutex_unlock(&curr->lock);
+    mutex_unlock(&curr_thr->lock);
     return -1;
   }
 
   /* Check reject value */
   if (*reject) {
-    mutex_unlock(&curr->lock);
+    mutex_unlock(&curr_thr->lock);
     return 0;
   }
 
-  sched_mutex_unlock_and_block(curr, &curr->lock);
+  sched_mutex_unlock_and_block(curr_thr, &curr_thr->lock);
 
   return 0;
 }
@@ -91,7 +91,7 @@ int sys_sleep(int ticks)
   if (ticks < 0) return -1;
 
   time = tmr_get_ticks();
-  go_to_sleep(curr, time + ticks);
+  go_to_sleep(curr_thr, time + ticks);
 
   return 0;
 }

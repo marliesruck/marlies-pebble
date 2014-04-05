@@ -23,8 +23,8 @@ void dispatch_wrapper(thread_t *next)
 {
   thread_t *prev;
 
-  prev = curr;
-  curr = next;
+  prev = curr_thr;
+  curr_thr = next;
 
   dispatch(&prev->sp, &prev->pc, next->sp, next->pc,
                next->task_info->cr3, &next->kstack[KSTACK_SIZE]);

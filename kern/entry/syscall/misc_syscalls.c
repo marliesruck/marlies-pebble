@@ -103,13 +103,13 @@ int sys_swexn(void *esp3, swexn_handler_t eip, void *arg, ureg_t *newureg)
     if((validate_pc(eip)) || (validate_sp(esp3))){
       return -1;
     }
-    curr->swexn.esp3 = esp3;
-    curr->swexn.eip = eip;
-    curr->swexn.arg = arg;
+    curr_thr->swexn.esp3 = esp3;
+    curr_thr->swexn.eip = eip;
+    curr_thr->swexn.arg = arg;
   }
   /* Or deregister old handler */
   else{
-    deregister(&curr->swexn);
+    deregister(&curr_thr->swexn);
   }
 
   /* Install the registers and return to userland */

@@ -44,7 +44,7 @@
 void slaughter(void)
 {
   /* You were killed by the kernel */
-  curr->killed = 1;
+  curr_thr->killed = 1;
 
   /* Free your kernel resources */
   sys_vanish();
@@ -69,12 +69,12 @@ void init_exn_stack(ureg_t *state, unsigned int cause, void *cr2)
   state->cr2 = (unsigned int)(cr2);
 
   /* Store out handler to call */
-  swexn_handler_t eip = curr->swexn.eip;
-  void *esp3 = curr->swexn.esp3;
-  void *arg = curr->swexn.arg;
+  swexn_handler_t eip = curr_thr->swexn.eip;
+  void *esp3 = curr_thr->swexn.esp3;
+  void *arg = curr_thr->swexn.arg;
 
   /* Deregister old handler */
-  deregister(&curr->swexn);
+  deregister(&curr_thr->swexn);
 
   /* Copy the execution state onto the exception stack */
   esp3 = (char *)(esp3) - sizeof(ureg_t) - sizeof(unsigned int);
@@ -155,12 +155,12 @@ int validate_sp(void *sp)
 {
   unsigned int attrs;
 
-  mutex_lock(&curr->task_info->lock);
+  mutex_lock(&curr_thr->task_info->lock);
 
   /* Acquire the region's attributes */
-  assert(!vm_get_attrs(&curr->task_info->vmi, sp, &attrs));
+  assert(!vm_get_attrs(&curr_thr->task_info->vmi, sp, &attrs));
 
-  mutex_unlock(&curr->task_info->lock);
+  mutex_unlock(&curr_thr->task_info->lock);
 
   /* Stack must be writable and accessible in user mode */
   if((attrs & VM_ATTR_RDWR) && (attrs & VM_ATTR_USER))
@@ -179,12 +179,12 @@ int validate_pc(void *pc)
 {
   unsigned int attrs;
 
-  mutex_lock(&curr->task_info->lock);
+  mutex_lock(&curr_thr->task_info->lock);
 
   /* Acquire the region's attributes */
-  assert(!vm_get_attrs(&curr->task_info->vmi, pc, &attrs));
+  assert(!vm_get_attrs(&curr_thr->task_info->vmi, pc, &attrs));
 
-  mutex_unlock(&curr->task_info->lock);
+  mutex_unlock(&curr_thr->task_info->lock);
 
   /* Code must be accessible in user mode and not writeable */
   if((!(attrs & VM_ATTR_RDWR)) && (attrs & VM_ATTR_USER))
@@ -221,10 +221,10 @@ int sc_validate_argp(void *argp, int arity)
  **/
 int copy_from_user(char **dst, const char *src, size_t bytes)
 {
-  mutex_lock(&curr->task_info->lock);
+  mutex_lock(&curr_thr->task_info->lock);
 
-  if (!vm_find(&curr->task_info->vmi, (void *)src)) {
-    mutex_unlock(&curr->task_info->lock);
+  if (!vm_find(&curr_thr->task_info->vmi, (void *)src)) {
+    mutex_unlock(&curr_thr->task_info->lock);
     return -1;
   }
 
@@ -233,7 +233,7 @@ int copy_from_user(char **dst, const char *src, size_t bytes)
 
   memcpy(*dst, src, bytes);
 
-  mutex_unlock(&curr->task_info->lock);
+  mutex_unlock(&curr_thr->task_info->lock);
   return 0;
 }
 
@@ -249,18 +249,18 @@ int copy_to_user(char *dst, const char *src, size_t bytes)
 {
   unsigned int attrs;
 
-  mutex_lock(&curr->task_info->lock);
+  mutex_lock(&curr_thr->task_info->lock);
 
-  if (vm_get_attrs(&curr->task_info->vmi, dst, &attrs)
+  if (vm_get_attrs(&curr_thr->task_info->vmi, dst, &attrs)
       || !(attrs & VM_ATTR_RDWR))
   {
-    mutex_unlock(&curr->task_info->lock);
+    mutex_unlock(&curr_thr->task_info->lock);
     return -1;
   }
 
   memcpy(dst, src, bytes);
 
-  mutex_unlock(&curr->task_info->lock);
+  mutex_unlock(&curr_thr->task_info->lock);
   return 0;
 }
 
@@ -276,10 +276,10 @@ int copy_str_from_user(char **dst, const char *src)
 {
   size_t len;
 
-  mutex_lock(&curr->task_info->lock);
+  mutex_lock(&curr_thr->task_info->lock);
 
-  if (!vm_find(&curr->task_info->vmi, (void *)src)) {
-    mutex_unlock(&curr->task_info->lock);
+  if (!vm_find(&curr_thr->task_info->vmi, (void *)src)) {
+    mutex_unlock(&curr_thr->task_info->lock);
     return -1;
   }
 
@@ -289,7 +289,7 @@ int copy_str_from_user(char **dst, const char *src)
 
   memcpy(*dst, src, len);
 
-  mutex_unlock(&curr->task_info->lock);
+  mutex_unlock(&curr_thr->task_info->lock);
   return 0;
 }
 

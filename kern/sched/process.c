@@ -51,7 +51,7 @@ thread_t *task_init(void)
   queue_init(&task->dead_children);
   cvar_init((&task->cv));
 
-  task->parent_tid = curr->task_info->tid;
+  task->parent_tid = curr_thr->task_info->tid;
 
   /* Initialize the task struct lock */
   mutex_init(&task->lock);
@@ -261,7 +261,7 @@ void task_signal_parent(task_t *task)
   cvar_signal(&parent->cv);
 
   /* Your parent should not reap you until you've descheduled yourself */
-  sched_mutex_unlock_and_block(curr, &parent->lock);
+  sched_mutex_unlock_and_block(curr_thr, &parent->lock);
 
   return;
 }

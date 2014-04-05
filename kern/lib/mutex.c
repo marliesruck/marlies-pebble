@@ -74,11 +74,11 @@ void mutex_lock(mutex_s *mp)
   if (mp->state == MUTEX_LOCKED)
   {
     /* Add yourself to the queue */
-    queue_init_node(&n, curr);
+    queue_init_node(&n, curr_thr);
     queue_enqueue(&mp->queue, &n);
 
     /* Unlock-and-block and deschedule */
-    sched_spin_unlock_and_block(curr, &mp->lock);
+    sched_spin_unlock_and_block(curr_thr, &mp->lock);
 
     /* Clean-up your cll node */
     cll_final_node(&n);
@@ -87,7 +87,7 @@ void mutex_lock(mutex_s *mp)
   /* It's all yours, buddy */
   else {
     mp->state = MUTEX_LOCKED;
-    mp->owner = curr->tid;
+    mp->owner = curr_thr->tid;
     spin_unlock(&mp->lock);
   }
 
@@ -111,7 +111,7 @@ void mutex_unlock(mutex_s *mp)
   spin_lock(&mp->lock);
 
   /* You can only unlock locked mutexes that you locked...or can you? */
-  assert(mp->owner == curr->tid);
+  assert(mp->owner == curr_thr->tid);
   assert(mp->state == MUTEX_LOCKED);
 
   /* There's someone waiting on you */

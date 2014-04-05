@@ -45,7 +45,7 @@ int go_to_sleep(thread_t *t, unsigned int wake_time)
 
   ent.thread = t;
   ent.wake_time = wake_time;
-  ent.node = &curr->zzz_node; 
+  ent.node = &curr_thr->zzz_node; 
   queue_init_node(ent.node, ent.thread);
   cll_init_node(&n, &ent);
 
