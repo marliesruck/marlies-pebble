@@ -117,21 +117,21 @@ void destroy_mem_region(vm_info_s *vmi, mem_region_s *targ)
   if(pdi_lo == pdi_hi)
   {
     /* Only free the tables if we don't share them */
-    if(!share_lo && !share_hi) pg_tbl_free(&vmi->pg_info, targ->start);
+    if(!share_lo && !share_hi) pg_free_table(&vmi->pg_info, targ->start);
   }
 
   /* The region has multiple page tables */
   else
   {
     /* Free your low table if it's not shared */
-    if(!share_lo) pg_tbl_free(&vmi->pg_info, targ->start);
+    if(!share_lo) pg_free_table(&vmi->pg_info, targ->start);
 
     /* Free your high table if it's not shared */
-    if(!share_hi) pg_tbl_free(&vmi->pg_info, targ->start);
+    if(!share_hi) pg_free_table(&vmi->pg_info, targ->start);
 
     /* Free any tables in between */
     for(i = ++pdi_lo; i < pdi_hi - 1; i++)
-      pg_tbl_free(&vmi->pg_info, &tomes[i]);
+      pg_free_table(&vmi->pg_info, &tomes[i]);
   }
 
   /* Extract and free the node */
@@ -236,10 +236,10 @@ void *vm_alloc(vm_info_s *vmi, void *va_start, size_t len,
   /* Allocate frames for the requested memory */
   for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE)
   {
-    if (!alloc_page(&vmi->pg_info, addr, attrs))
+    if (!pg_alloc(&vmi->pg_info, addr, attrs))
     {
       for (addr2 = mreg->start; addr2 < addr; addr2 += PAGE_SIZE)
-        free_page(&vmi->pg_info, addr2);
+        pg_free(&vmi->pg_info, addr2);
       destroy_mem_region(vmi, mreg);
       return NULL;
     }
@@ -290,7 +290,7 @@ int vm_set_attrs(vm_info_s *vmi, void *va_start, unsigned int attrs)
 
   /* Free pages in that region */
   for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE) {
-    if (page_set_attrs(&vmi->pg_info, addr, attrs))
+    if (pg_set_attrs(&vmi->pg_info, addr, attrs))
       return -1;
   }
 
@@ -340,10 +340,10 @@ int vm_copy(vm_info_s *dst, vm_info_s *src)
     /* Allocate pages for the region */
     for (addr = sreg->start; addr < sreg->limit; addr += PAGE_SIZE)
     {
-      if(copy_page(&dst->pg_info, &src->pg_info, addr, buf))
+      if(pg_copy(&dst->pg_info, &src->pg_info, addr, buf))
       {
         for (addr2 = sreg->start; addr2 < addr; addr2 += PAGE_SIZE)
-          free_page(&dst->pg_info, addr2);
+          pg_free(&dst->pg_info, addr2);
         vm_final(dst);
         unmap_dest_tables(dst, src);
         sfree(buf, PAGE_SIZE);
@@ -377,7 +377,7 @@ void vm_free(vm_info_s *vmi, void *va_start)
 
   /* Free pages in that region */
   for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE) {
-    free_page(&vmi->pg_info, addr);
+    pg_free(&vmi->pg_info, addr);
   }
 
   /* Free the region and it's page tables */
@@ -409,7 +409,7 @@ void vm_final(vm_info_s *vmi)
   cll_foreach(&vmi->mmap, n) {
     mreg = cll_entry(mem_region_s *, n); 
     for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE)
-      free_page(&vmi->pg_info, addr);
+      pg_free(&vmi->pg_info, addr);
   }
 
   /* Free each region's page tables */
@@ -422,7 +422,7 @@ void vm_final(vm_info_s *vmi)
     pdi = PG_DIR_INDEX(mreg->start);
     if(pdi == prev_pdi) ++pdi;
     for( ; (void *)&tomes[pdi] < mreg->limit; pdi++)
-      pg_tbl_free(&vmi->pg_info, &tomes[pdi]);
+      pg_free_table(&vmi->pg_info, &tomes[pdi]);
 
     /* Store out the index of the last page table freed */
     prev_pdi = PG_DIR_INDEX(mreg->limit);

@@ -21,15 +21,16 @@ struct page_info {
 typedef struct page_info pg_info_s;
 
 int pg_init_allocator(void);
-void *alloc_page_table(pg_info_s *pgi, void *vaddr);
-void *alloc_page(pg_info_s *pgi, void *vaddr, unsigned int attrs);
-void *pg_alloc_phys(pg_info_s *pgi, void *vaddr);
-void free_page(pg_info_s *pgi, void *vaddr);
-int page_set_attrs(pg_info_s *pgi, void *vaddr, unsigned int attrs);
-int copy_page(pg_info_s *dst, pg_info_s *src, void *vaddr, void *buf);
+
+/* Page stuff */
+void *pg_alloc(pg_info_s *pgi, void *vaddr, unsigned int attrs);
+void pg_free(pg_info_s *pgi, void *vaddr);
+int pg_set_attrs(pg_info_s *pgi, void *vaddr, unsigned int attrs);
+int pg_copy(pg_info_s *dst, pg_info_s *src, void *vaddr, void *buf);
 int pg_page_fault_handler(void *addr);
 
-void pg_tbl_free(pg_info_s *pgi, void *addr);
+/* Page table stuff */
+void pg_free_table(pg_info_s *pgi, void *vaddr);
 
 /*** Invariant checkers ***/
 void validate_pd(pg_info_s *pgi);
