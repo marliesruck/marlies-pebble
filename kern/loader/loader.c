@@ -112,6 +112,8 @@ int validate_file(simple_elf_t *se, const char* filename)
  *  @return The entry point of the newly loaded executable or NULL if the file 
  *  is invalid
  **/
+/* For debugging cho variant */
+#include <sched.h>
 void *load_file(vm_info_s *vmi, const char* filename)
 {
   simple_elf_t se;
@@ -159,7 +161,7 @@ void *load_file(vm_info_s *vmi, const char* filename)
    unsigned int attrs;
    vm_get_attrs(vmi,(void *) se.e_txtstart, &attrs);
    if(!(attrs & PG_TBL_WRITABLE)){
-     lprintf("Page table not writeable");
+     lprintf("Page table not writeable for task: %s", curr_tsk->execname);
      MAGIC_BREAK;
    }
 

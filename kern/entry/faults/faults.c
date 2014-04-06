@@ -48,7 +48,7 @@ void install_fault_handlers(void)
   install_trap_gate(IDT_AC, asm_int_align, IDT_KERN_DPL);
   install_trap_gate(IDT_MC, asm_int_machine_check, IDT_KERN_DPL);
   install_trap_gate(IDT_XF, asm_int_simd, IDT_KERN_DPL);
-  install_trap_gate(IDT_PF, asm_int_page_fault, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_PF, asm_int_page_fault, IDT_KERN_DPL);
 
   return;
 }
