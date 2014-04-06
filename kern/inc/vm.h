@@ -18,17 +18,6 @@
 #define VM_ATTR_ZFOD  0x200    /* 0: page is note ZFOD; 1: page is ZFOD */
 #define VM_ATTR_NEWPG  0x004
 
-/** @struct mem_region
- *  @brief A contiguous region in memory.
- **/
-struct mem_region {
-  void *start;          /**< The first byte in the region **/
-  void *limit;          /**< The last byte in the region **/
-  unsigned int attrs;   /**< Attributes for the region **/
-  cll_node node;
-};
-typedef struct mem_region mem_region_s;
-
 /** @struct vm_info
  *  @brief Information used by the VM sub-system.
  **/
