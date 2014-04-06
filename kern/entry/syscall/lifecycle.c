@@ -67,7 +67,8 @@ void *kstack_copy(char *dst, char *src, unsigned int esp)
  * state
  *
  * @param child_cr3 Physical address of child's page directory
- * @return Address of malloc'd child pcb 
+ * @return Address of malloc'd child pcb, -1 if out of memory, -2 if program is
+ * mulithreaded
  */
 int sys_fork(unsigned int esp)
 {
@@ -77,6 +78,10 @@ int sys_fork(unsigned int esp)
   int tid;
 
   parent = curr_tsk;
+
+  /* Only single threaded tasks can fork */
+  if(curr_tsk->num_threads != 1)
+    return -1;
 
   cthread = task_init();
   if(!cthread) return -1;
@@ -135,6 +140,10 @@ int sys_exec(char *execname, char *argvec[])
   void *entry, *stack;
   simple_elf_t se;
   int i, j;
+
+  /* Only single threaded tasks can exec */
+  if(curr_tsk->num_threads != 1)
+    return -1;
 
   /* Copy the execname from the user */
   if (copy_str_from_user(&execname_k, execname))
