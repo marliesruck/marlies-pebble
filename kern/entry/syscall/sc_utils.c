@@ -43,14 +43,6 @@
  **/
 void slaughter(void)
 {
-
-#include <process.h>
-  /* Are you holding any locks? */
-  if(curr_thr->tid == task_list_lock.owner){
-    lprintf("you got killed while holding the task list lock!");
-    MAGIC_BREAK;
-  }
-
   /* You were killed by the kernel */
   curr_thr->killed = 1;
 
@@ -255,7 +247,6 @@ int copy_from_user_static(void *dst, void *src, size_t bytes)
 
   if (!vm_find(&curr_tsk->vmi, src)) {
     mutex_unlock(&curr_tsk->lock);
-    MAGIC_BREAK;
     return -1;
   }
 

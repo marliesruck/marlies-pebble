@@ -48,8 +48,7 @@ void install_fault_handlers(void)
   install_trap_gate(IDT_AC, asm_int_align, IDT_KERN_DPL);
   install_trap_gate(IDT_MC, asm_int_machine_check, IDT_KERN_DPL);
   install_trap_gate(IDT_XF, asm_int_simd, IDT_KERN_DPL);
-  //install_interrupt_gate(IDT_PF, asm_int_page_fault, IDT_KERN_DPL);
-  install_trap_gate(IDT_PF, asm_int_page_fault, IDT_KERN_DPL);
+  install_interrupt_gate(IDT_PF, asm_int_page_fault, IDT_KERN_DPL);
 
   return;
 }
@@ -275,10 +274,6 @@ int int_page_fault(ureg_t *ureg)
 
     ureg->cause = SWEXN_CAUSE_PAGEFAULT;
     ureg->cr2 = (unsigned int)cr2;
-
-    if((strcmp(curr_tsk->execname, "remove_pages_test2")) &&
-       (strcmp(curr_tsk->execname, "wild_test1")))
-        MAGIC_BREAK;
 
     return -1;
   }
