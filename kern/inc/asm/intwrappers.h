@@ -1,9 +1,6 @@
 /** @files intwrappers.h
  *
- *  @brief Contains generic interrupt-wrapping assembly macros.
- *
- *  All the interrupts, traps and interrupts proper, need the same assembly
- *  wrappers.  We leverage that with these generic assembly macros.
+ *  @brief Contains generic assembly wrapper macros for interrupts.
  *
  *  @author Enrique Naudon (esn)
  *  @author Marlies Ruck (mruck)
@@ -133,16 +130,15 @@ asm_\handler:
 
 .endm
 
-/** @brief Wraps a fault handler with an error code.
+/** @brief Wraps a fault handler with an error code that cannot have a handler
+ *  installed by the user.
  *
- *  All the fault handlers with error codes need the same assembly wrapper;
- *  we leverage that with this generic assembly macros.
- *
- *  We take advantage of the order registers are pushed on the stack so that we
- *  can simply cast the stack to a ureg for the user exception handler.
- *  Consequently, we do not have a prologue or epilogue.
- *
- *  @param handler The name of the handler for this interrupt.
+ *  The pebbles spec does not provide a SWEXN_CAUSE macro for certain faults,
+ *  consequently the kernel cannot populate the ureg_t cause field correctly.
+ *  As a result, for these faults we do not call the user handler, even if one
+ *  is installed. 
+ * 
+ *  @param handler The name of the kernel handler for this interrupt.
  *
  *  @return Void.
  **/
@@ -152,6 +148,10 @@ asm_\handler:
 .extern \handler
 .global asm_\handler
 asm_\handler:
+
+  # Prologue
+  push  %ebp                      # Store old EBP
+  movl  %esp, %ebp                # Set up new EBP
 
   pusha                           # Store GP registers
   push %ds                        # Store DS data segment
@@ -169,18 +169,16 @@ asm_\handler:
   popa                            # Restore GP registers
 
   add  $4, %esp                   # Readjust ESP to account for the error code 
+
+  # Epilogue
+  pop   %ebp                      # Restore old EBP
+
   iret                            # Return from the interrupt
 
 .endm
 
-/** @brief Wraps a fault handler that has no error code.
- *
- *  All the fault handlers with no error code need the same assembly wrapper;
- *  we leverage that with this generic assembly macros.
- *
- *  We take advantage of the order registers are pushed on the stack so that we
- *  can simply cast the stack to a ureg for the user exception handler.
- *  Consequently, we do not have a prologue or epilogue.
+/** @brief Wraps a fault handler that has no error code and cannot have a
+ *  handler installed.
  *
  *  @param handler The name of the handler for this interrupt.
  *
@@ -192,6 +190,10 @@ asm_\handler:
 .extern \handler
 .global asm_\handler
 asm_\handler:
+
+  # Prologue
+  push  %ebp                      # Store old EBP
+  movl  %esp, %ebp                # Set up new EBP
 
   pusha                           # Store GP registers
   push %ds                        # Store DS data segment
@@ -208,18 +210,25 @@ asm_\handler:
   pop %ds                         # Restore DS data segment
   popa                            # Restore GP registers
 
+  # Epilogue
+  pop   %ebp                      # Restore old EBP
+
   iret                            # Return from the interrupt
 
 .endm
 
 
-/** @brief Wraps a fault handler with an error code that may also have user
- *  defined handler.
+/** @brief Wraps a fault handler with an error code that may have a user handler
+ *   installed.
  *
  *  This routine passes the address of the kernel handler to a generic wrapper
  *  function, which first allow the kernel to attempt to silently handle the
  *  fault, then calls the user defined software exception handler (if
- *  installed), and if all else fails, then proceeds to slaughter the faulting thread.
+ *  installed), and if all else fails,then proceeds to slaughter the faulting
+ *  thread.
+ *
+ *  Note that we do not have a prologue and epilogue because we cast the
+ *  contents of the stack to a ureg_t.
  *
  *  @param handler The address of the kernel handler.
  *
@@ -239,7 +248,8 @@ asm_\handler:
   push %fs                        # Store FS data segment
   push %gs                        # Store GS data segment
 
-  push \handler                   # Push the interrupt handler
+  leal \handler, %eax             # Load and push the address of the 
+  push %eax                       # kernel interrupt handler
   call fault_wrapper
   add  $4, %esp                   # Clean up the stack
 
@@ -261,7 +271,11 @@ asm_\handler:
  *  This routine passes the address of the kernel handler to a generic wrapper
  *  function, which first allow the kernel to attempt to silently handle the
  *  fault, then calls the user defined software exception handler (if
- *  installed), and if all else fails, then proceeds to slaughter the faulting thread.
+ *  installed), and if all else fails, proceeds to slaughter the faulting
+ *  thread.
+ *
+ *  Note that we do not have a prologue and epilogue because we cast the
+ *  contents of the stack to a ureg_t.
  *
  *  @param handler The address of the kernel handler.
  *
@@ -281,7 +295,8 @@ asm_\handler:
   push %fs                        # Store FS data segment
   push %gs                        # Store GS data segment
 
-  push \handler                   # Push the kernel interrupt handler
+  leal \handler, %eax             # Load and push the address of the 
+  push %eax                       # kernel interrupt handler
   call fault_wrapper
   add  $4, %esp                   # Clean up the stack
 

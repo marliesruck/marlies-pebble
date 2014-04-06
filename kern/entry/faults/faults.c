@@ -17,14 +17,63 @@
 
 /* Libc specific includes */
 #include <assert.h>
+#include <string.h>   /* FOR DEBUGGING */
 
 /* x86 specific includes */
+#include <x86/cr.h>
 #include <x86/idt.h>
 
-/* A function pointer to be passed to the fault wrapper for a swexn */
+/* @brief Pointer to a kernel handler.
+ *
+ * Let the kernel attempt to silently handle the fault. If it fails, the kernel
+ * can populate the ureg struct cause and addr fields accordingly, then return 
+ * and call the user's handler if installed.  
+ *
+ * @param ureg Current execution state.
+ *
+ * @ return 0 if the kernel successfully handles, else -1. 
+ **/
 typedef int (*func_p)(ureg_t *ureg);
 
+/** @brief Generic function called by fault wrappers
+ *
+ *  This fault wrapper is called from all faults that may have a software
+ *  exception handler installed.  The fault wrapper first allows the kernel to
+ *  attempt to silently handle the fault.  If this fails, the user software
+ *  exception handler is called, and if that fails then the thread is killed.
+ *
+ *  @param f Pointer to kernel fault handler.
+ *
+ *  @return Void.
+ **/
+void fault_wrapper(func_p f)
+{
+  ureg_t *ureg;
+
+  /* Retrieve execution state */
+  ureg = (ureg_t *)((char *)(get_ebp()) + sizeof(unsigned));
+
+  /* Let the kernel try to silently handle */
+  if(f(ureg) < 0){
+
+    /* Call the user defined exception handler */
+    if(curr_thr->swexn.eip){
+
+      /* Craft contents of exception stack and call handler */
+      init_exn_stack(ureg);
+    }
+
+    /* You were killed by the kernel */
+    slaughter();
+  }
+  return;
+}
+
 /** @brief Installs our fault handlers.
+ *
+ *  All our fault handlers use trap gates, except for page faults, because we
+ *  want to avoid a nested page fault that would clobber cr3 for the interrupted
+ *  handler.  
  *
  *  @return Void.
  **/
@@ -55,30 +104,30 @@ void install_fault_handlers(void)
 
 /** @brief Handles division by zero.
  *
- *  @return Void.
+ *  @return 0 if the kernel handles the fault, else -1.
  **/
-void int_divzero(ureg_t *ureg)
+int int_divzero(ureg_t *ureg)
 {
   lprintf("Error: Division by zero!");
 
   ureg->cause = SWEXN_CAUSE_DIVIDE;
   ureg->cr2 = 0;
 
-  return;
+  return -1;
 }
 
 /** @brief Handles debug interrupts.
  *
- *  @return Void.
+ *  @return 0 if the kernel handles the fault, else -1.
  **/
-void int_debug(ureg_t *ureg)
+int int_debug(ureg_t *ureg)
 {
   lprintf("Alert: Got debug interrupt...");
 
   ureg->cause = SWEXN_CAUSE_DEBUG;
   ureg->cr2 = 0;
 
-  return;
+  return -1;
 }
 
 /** @brief Handles non-maskable interrupts.
@@ -96,72 +145,72 @@ void int_nmi(void)
 
 /** @brief Handles breakpoint interrupts.
  *
- *  @return Void.
+ *  @return 0 if the kernel handles the fault, else -1.
  **/
-void int_breakpoint(ureg_t *ureg)
+int int_breakpoint(ureg_t *ureg)
 {
   lprintf("Alert: Encountered breakpoint (INT 3)!");
 
   ureg->cause = SWEXN_CAUSE_BREAKPOINT;
   ureg->cr2 = 0;
 
-  return;
+  return -1;
 }
 
 /** @brief Handles overflow exceptions.
  *
- *  @return Void.
+ *  @return 0 if the kernel handles the fault, else -1.
  **/
-void int_overflow(ureg_t *ureg)
+int int_overflow(ureg_t *ureg)
 {
   lprintf("Error: Overflow (INTO)!");
 
   ureg->cause = SWEXN_CAUSE_OVERFLOW;
   ureg->cr2 = 0;
 
-  return;
+  return -1;
 }
 
 /** @brief Handles out of bounds exceptions.
  *
- *  @return Void.
+ *  @return 0 if the kernel handles the fault, else -1.
  **/
-void int_bound(ureg_t *ureg)
+int int_bound(ureg_t *ureg)
 {
   lprintf("Error: Range exceeded (BOUND)!");
 
   ureg->cause = SWEXN_CAUSE_BOUNDCHECK;
   ureg->cr2 = 0;
 
-  return;
+  return -1;
 }
 
 /** @brief Handles invalid instructions.
  *
- *  @return Void.
+ *  @return 0 if the kernel handles the fault, else -1.
  **/
-void int_undef_opcode(ureg_t *ureg)
+int int_undef_opcode(ureg_t *ureg)
 {
   lprintf("Error: Invalid instruction!");
 
   ureg->cause = SWEXN_CAUSE_OPCODE;
   ureg->cr2 = 0;
 
-  return;
+  return -1;
 }
 
 /** @brief Handles unavailable devices.
  *
- *  @return Void.
+ *  @return 0 if the kernel handles the fault, else -1.
  **/
-void int_device_unavail(ureg_t *ureg)
+int int_device_unavail(ureg_t *ureg)
 {
   lprintf("Error: Device not available!");
 
   ureg->cause = SWEXN_CAUSE_NOFPU;
   ureg->cr2 = 0;
 
-  return;
+  return -1;
 }
 
 /** @brief Handles double faults.
@@ -208,56 +257,50 @@ void int_tss(void)
 
 /** @brief Handles non-present segments.
  *
- *  @return Void.
+ *  @return 0 if the kernel handles the fault, else -1.
  **/
-void int_seg_not_present(ureg_t *ureg)
+int int_seg_not_present(ureg_t *ureg)
 {
   lprintf("Error: segment not present!");
 
   ureg->cause = SWEXN_CAUSE_SEGFAULT;
   ureg->cr2 = 0;
 
-  return;
+  return -1;
 }
 
 /** @brief Handles stack segment faults.
  *
- *  @return Void.
+ *  @return 0 if the kernel handles the fault, else -1.
  **/
-void int_stack_seg(ureg_t *ureg)
+int int_stack_seg(ureg_t *ureg)
 {
   lprintf("Error: stack segmentation fault!");
 
   ureg->cause = SWEXN_CAUSE_STACKFAULT;
   ureg->cr2 = 0;
 
-  return;
+  return -1;
 }
 
 /** @brief Handles general protection faults.
  *
- *  @return Void.
+ *  @return 0 if the kernel handles the fault, else -1.
  **/
-void int_gen_prot(ureg_t *ureg)
+int int_gen_prot(ureg_t *ureg)
 {
   lprintf("Error: general protection fault!");
 
   ureg->cause = SWEXN_CAUSE_PROTFAULT;
   ureg->cr2 = 0;
 
-  return;
+  return -1;
 }
 
 /** @brief Handles page faults.
  *
- *  @return Void.
+ *  @return 0 if the kernel handles the fault, else -1.
  **/
-/* Pebbles specific includes */
-#include <sched.h>
-/* x86 specific includes */
-#include <x86/cr.h>
-/* Libc includes */
-#include <string.h>
 int int_page_fault(ureg_t *ureg)
 {
   void *cr2;
@@ -269,7 +312,7 @@ int int_page_fault(ureg_t *ureg)
   /* Try to handle the fault */
   if ((retval = pg_page_fault_handler(cr2)))
   {
-    lprintf("Error: Page fault handler returned %d\nFaulting address %p\n"
+    lprintf("Error:\nPage fault handler returned %d\nFaulting address %p\n"
             "Faulting instruction: 0x%x\nFaulting task: %s", retval, cr2, 
              ureg->eip,curr_tsk->execname);
 
@@ -287,30 +330,30 @@ int int_page_fault(ureg_t *ureg)
 
 /** @brief Handles floating point exceptions.
  *
- *  @return Void.
+ *  @return 0 if the kernel handles the fault, else -1.
  **/
-void int_float(ureg_t *ureg)
+int int_float(ureg_t *ureg)
 {
   lprintf("Error: Floating point exception!");
 
   ureg->cause = SWEXN_CAUSE_FPUFAULT;
   ureg->cr2 = 0;
 
-  return;
+  return -1;
 }
 
 /** @brief Handles (failed?) alignment checks.
  *
- *  @return Void.
+ *  @return 0 if the kernel handles the fault, else -1.
  **/
-void int_align(ureg_t *ureg)
+int int_align(ureg_t *ureg)
 {
   lprintf("Error: Alignment check!");
 
   ureg->cause = SWEXN_CAUSE_ALIGNFAULT;
   ureg->cr2 = 0;
 
-  return;
+  return -1;
 }
 
 /** @brief Handles machine checks.
@@ -329,16 +372,16 @@ void int_machine_check(void)
 
 /** @brief Handles SIMD exceptions.
  *
- *  @return Void.
+ *  @return 0 if the kernel handles the fault, else -1.
  **/
-void int_simd(ureg_t *ureg)
+int int_simd(ureg_t *ureg)
 {
   lprintf("Error: SIMD floating point exception!");
 
   ureg->cause = SWEXN_CAUSE_SIMDFAULT;
   ureg->cr2 = 0;
 
-  return;
+  return -1;
 }
 
 /** @brief Handles pretty much anything else.
@@ -356,24 +399,3 @@ void int_generic(void)
 }
 
 
-void fault_wrapper(func_p f)
-{
-  ureg_t *ureg;
-
-  /* Retrieve execution state */
-  ureg = (ureg_t *)((char *)(get_ebp()) + sizeof(unsigned));
-
-  /* Let the kernel try to silently handle */
-  //f(ureg);
-  if(int_page_fault(ureg) < 0){
-    /* Call the user defined exception handler */
-    if(curr_thr->swexn.eip){
-      /* Craft contents of exception stack and call handler */
-      init_exn_stack(ureg);
-    }
-    /* You were killed by the thread */
-    slaughter();
-  }
-
-  return;
-}
