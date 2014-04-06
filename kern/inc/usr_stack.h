@@ -19,7 +19,7 @@
 #define USR_STACK_SIZE ( PAGE_SIZE * PG_TBL_ENTRIES )
 #define USR_SP_HI ( (void *)tomes[PG_TBL_ENTRIES - 2] )
 
-void *usr_stack_init(vm_info_s *vmi, char **argv);
+void *usr_stack_init(vm_info_s *vmi, int arg_cnt, char **arg_vec);
 
 #endif /* _USR_STACK_H */
 

@@ -12,11 +12,11 @@
 #include <x86/cr.h>
 
 
-void *usr_stack_init(vm_info_s *vmi, char **arg_vec)
+void *usr_stack_init(vm_info_s *vmi, int arg_cnt, char **arg_vec)
 {
   void *base, *sp;
   char **argv = NULL;
-  int argc = 0;
+  int argv_len;
   int i;
 
   /* Allocate user's stack */
@@ -25,13 +25,12 @@ void *usr_stack_init(vm_info_s *vmi, char **arg_vec)
   sp = USR_SP_HI;
 
   /* Calculate argc and malloc argv */
-  for (i = 0; arg_vec[i] != NULL; ++i) continue;
-  argc = i + 1;
-  argv = malloc(argc * sizeof(char *) * sizeof(char *));
+  argv_len = arg_cnt + 1;
+  argv = malloc(argv_len * sizeof(char *) * sizeof(char *));
   if (!argv) return NULL;
 
   /* Copy each arg string onto the user stack */
-  for (i = 0; i < argc; ++i)
+  for (i = 0; i < argv_len; ++i)
   {
     sp = sp - CEILING(strlen(arg_vec[i]) + 1, sizeof(unsigned int));
     strcpy(sp, arg_vec[i]);
@@ -40,19 +39,19 @@ void *usr_stack_init(vm_info_s *vmi, char **arg_vec)
   argv[i] = NULL;
 
   /* Copy argv into the user stack */
-  sp = sp - CEILING(argc * sizeof(char *), sizeof(unsigned int));
-  memcpy(sp, argv, argc * sizeof(char *));
+  sp = sp - CEILING(argv_len * sizeof(char *), sizeof(unsigned int));
+  memcpy(sp, argv, argv_len * sizeof(char *));
 
   /* Free up argv and point it to the stack */
   free(argv);
   argv = sp;
 
   /* Push _main(...)'s arguments */
-  PUSH(sp,base);            /* stack_low */
-  PUSH(sp,USR_SP_HI);       /* stack_high */
-  PUSH(sp,argv);            /* argv */
-  PUSH(sp,argc - 1);        /* argc */
-  PUSH(sp,0);               /* "return address" */
+  PUSH(sp,base);        /* stack_low */
+  PUSH(sp,USR_SP_HI);   /* stack_high */
+  PUSH(sp,argv);        /* argv */
+  PUSH(sp,arg_cnt);     /* argc */
+  PUSH(sp,0);           /* "return address" */
 
   return sp;
 }

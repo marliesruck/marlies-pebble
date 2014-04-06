@@ -89,7 +89,10 @@ int sys_fork(unsigned int esp)
   ctask = cthread->task_info;
 
   /* Copy address space */
-  assert(vm_copy(&ctask->vmi, &parent->vmi) == 0);
+  if (vm_copy(&ctask->vmi, &parent->vmi)) {
+    task_free(ctask);
+    return -1;
+  }
 
   /* Register the process with simics for debugging */
   ctask->execname = parent->execname;
@@ -139,14 +142,14 @@ int sys_exec(char *execname, char *argvec[])
   char *execname_k, **argvec_k;
   void *entry, *stack;
   simple_elf_t se;
-  int i, j;
+  int argcnt, i;
 
   /* Only single threaded tasks can exec */
   if(curr_tsk->num_threads != 1)
     return -2;
 
   /* Copy the execname from the user */
-  if (copy_str_from_user(&execname_k, execname))
+  if (copy_str_from_user(&execname_k, execname) < 0)
     return -1;
 
   /* Make sure it exists */
@@ -155,44 +158,24 @@ int sys_exec(char *execname, char *argvec[])
     return -1;
   }
 
-  /* Allocate kernel mem for argvec */
-  mutex_lock(&curr_tsk->lock);
-  if (!vm_find(&curr_tsk->vmi, (void *)argvec)) {
-    mutex_unlock(&curr_tsk->lock);
-    return -1;
-  }
-  for (i = 0; argvec[i] != NULL; ++i) continue;
-  mutex_unlock(&curr_tsk->lock);
-  argvec_k = malloc((i + 1) * sizeof(char *));
-  if (!argvec_k) {
+  /* Copy the argument vector from user */
+  argcnt = copy_argv_from_user(&argvec_k, argvec);
+  if (argcnt < 0) {
     free(execname_k);
     return -1;
   }
-
-  /* Copy each arg from user-space */
-  for (i = 0; argvec[i] != NULL; ++i)
-  {
-    if (copy_str_from_user(&argvec_k[i], argvec[i]))
-    {
-      for (j = 0; j < i; ++j) free(argvec_k[j]);
-      free(argvec_k);
-      free(execname_k);
-      return -1;
-    }
-  }
-  argvec_k[i] = NULL;
 
   /* Destroy the old address space; setup the new */
   vm_final(&curr_tsk->vmi);
   entry = load_file(&curr_tsk->vmi, execname_k);
   sim_reg_process(&curr_tsk->cr3, execname_k);
-  stack = usr_stack_init(&curr_tsk->vmi, argvec_k);
+  stack = usr_stack_init(&curr_tsk->vmi, argcnt, argvec_k);
 
   /* Zero the status */
   curr_tsk->status = 0;
 
   /* Free copied parameters*/
-  for (j = 0; j < i; ++j) free(argvec_k[j]);
+  for (i = 0; i < argcnt; ++i) free(argvec_k[i]);
   free(argvec_k);
 
   /* Keep the new execname for debugging */

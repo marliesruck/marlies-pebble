@@ -84,11 +84,9 @@ int kernel_main(mbinfo_t *mbinfo, int argc, char **argv, char **envp)
   set_esp0((uint32_t)(&curr_thr->kstack[KSTACK_SIZE]));
 
   /* Use some memory */
-  /*
   lprintf("ALLOCATING MEMORY UNECESSARILY!");
   if (!malloc(3 * PAGE_SIZE * PG_TBL_ENTRIES))
     lprintf("unecessary allocation failed!");
-    */
 
   /* Launch init and enter user space...The iret enables interrupts */
   half_dispatch(curr_thr->pc, curr_thr->sp);
@@ -141,7 +139,7 @@ thread_t *hand_load_task(const char *fname)
 
   /* Prepare to drop into user mode */
   thread->pc = load_file(&curr_tsk->vmi, fname);
-  thread->sp = usr_stack_init(&curr_tsk->vmi, NULL);
+  thread->sp = usr_stack_init(&curr_tsk->vmi, 0, NULL);
 
   /* Add the task to the runnable queue */
   raw_unblock(thread, &thread->node);

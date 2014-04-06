@@ -119,7 +119,6 @@ int sys_swexn(void *esp3, swexn_handler_t eip, void *arg, ureg_t *newureg)
     craft_state(ureg);
   }
 
-  /* Or simply return */
   return 0;
 }
 

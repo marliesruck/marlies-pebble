@@ -286,9 +286,9 @@ int copy_to_user(char *dst, const char *src, size_t bytes)
  *
  *  @param dst The destionation pointer.
  *  @param src The (user-space) string pointer.
- *  @param bytes The number of bytes to copy.
  *
- *  @return 0 on success; a negative integer error code on failure.
+ *  @return The length of the string on success; a negative integer error
+ *  code on failure.
  **/
 int copy_str_from_user(char **dst, const char *src)
 {
@@ -308,7 +308,53 @@ int copy_str_from_user(char **dst, const char *src)
   memcpy(*dst, src, len);
 
   mutex_unlock(&curr_tsk->lock);
-  return 0;
+  return len;
+}
+
+/** @brief Safely copy a NULL-terminated character array from user-space.
+ *
+ *  @param dst The destionation array.
+ *  @param src The (user-space) array.
+ *
+ *  @return The number of array entries on success; a negative integer
+ *  error code on failure.
+ **/
+int copy_argv_from_user(char **dst[], char *src[])
+{
+  int argc;
+  char **argv;
+  int i, j;
+
+  /* Safely calculate arg vector length */
+  mutex_lock(&curr_tsk->lock);
+  if (!vm_find(&curr_tsk->vmi, (void *)src)) {
+    mutex_unlock(&curr_tsk->lock);
+    return -1;
+  }
+  for (argc = 0; src[argc] != NULL; ++argc) continue;
+  mutex_unlock(&curr_tsk->lock);
+
+  /* Allocate kernel mem for kernel-side arg vector */
+  argv = malloc((argc + 1) * sizeof(char *));
+  if (!argv) return -1;
+
+  /* Copy each arg from user-space */
+  for (i = 0; i < argc; ++i)
+  {
+    if (copy_str_from_user(&argv[i], src[i]) < 0)
+    {
+      for (j = 0; j < i; ++j) free(argv[j]);
+      free(argv);
+      return -1;
+    }
+  }
+
+  /* Null terminate */
+  argv[argc] = NULL;
+
+  /* Return kernel argv and argc */
+  *dst = argv;
+  return argc;
 }
 
 /** @brief Installs our system calls.

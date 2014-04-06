@@ -93,7 +93,7 @@ AUTOSTACK_OBJS = autostack.o
 #
 # Kernel object files you provide in from kern/
 #
-KERNEL_OBJS = kernel.o lib/page_util.o lib/atomic.o lib/spin.o lib/cvar.o lib/mutex.o lib/cllist.o sched/process.o sched/dispatch_wrapper.o sched/sched.o sched/dispatch.o lib/malloc_wrappers.o vm/vm.o vm/asm_tlb.o vm/tlb.o vm/page_alloc.o vm/frame_alloc.o vm/pg_table.o loader/loader.o loader/usr_stack.o entry/drivers/keyboard.o entry/drivers/timer.o entry/idt.o entry/drivers/driver_wrappers.o entry/drivers/console.o entry/drivers/cursor.o entry/syscall/lifecycle.o entry/syscall/swexn.o entry/syscall/threadmgmt.o entry/syscall/mem_mgmt.o entry/syscall/misc_syscalls.o entry/syscall/console_io.o entry/syscall/sc_utils.o entry/syscall/syscall_wrappers.o entry/faults/faults.o entry/faults/fault_wrappers.o entry/drivers/drivers.o sched/thread.o 
+KERNEL_OBJS = kernel.o lib/page_util.o lib/atomic.o lib/spin.o lib/cvar.o lib/mutex.o lib/cllist.o sched/process.o sched/dispatch_wrapper.o sched/sched.o sched/dispatch.o lib/malloc_wrappers.o vm/vm.o vm/mreg.o vm/asm_tlb.o vm/tlb.o vm/page_alloc.o vm/frame_alloc.o vm/pg_table.o loader/loader.o loader/usr_stack.o entry/drivers/keyboard.o entry/drivers/timer.o entry/idt.o entry/drivers/driver_wrappers.o entry/drivers/console.o entry/drivers/cursor.o entry/syscall/lifecycle.o entry/syscall/swexn.o entry/syscall/threadmgmt.o entry/syscall/mem_mgmt.o entry/syscall/misc_syscalls.o entry/syscall/console_io.o entry/syscall/sc_utils.o entry/syscall/syscall_wrappers.o entry/faults/faults.o entry/faults/fault_wrappers.o entry/drivers/drivers.o sched/thread.o 
 
 ###########################################################################
 # WARNING: Do not put **test** programs into the REQPROGS variables.  Your
