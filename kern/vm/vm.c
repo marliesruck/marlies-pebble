@@ -429,7 +429,7 @@ int vm_set_attrs(vm_info_s *vmi, void *va_start, unsigned int attrs)
   mreg = mreg_lookup(&vmi->mmap, &temp);
   if (!mreg) return -1;
 
-  /* Free pages in that region */
+  /* Set page attrs in that region */
   for (addr = mreg->start; addr < mreg->limit; addr += PAGE_SIZE) {
     if (page_set_attrs(&vmi->pg_info, addr, attrs))
       return -1;

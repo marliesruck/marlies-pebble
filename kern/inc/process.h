@@ -21,6 +21,9 @@
 /* Libc specific includes */
 #include <stdint.h>
 
+/* TODO: for debugging, get rid of this */
+extern mutex_s task_list_lock;
+
 struct task{
   int parent_tid;         /* Tid of root thread in my parent */
   queue_s  dead_children; /* The list I wait() on */

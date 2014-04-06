@@ -67,6 +67,7 @@ void free_frame(void *frame, void *vaddr)
   return;
 }
 
+
 void *alloc_page_table(pg_info_s *pgi, void *vaddr)
 {
   pte_t pde, pte;
@@ -387,17 +388,35 @@ int pg_page_fault_handler(void *vaddr)
   /* Grab the faulter's page info */
   pgi = &curr_tsk->vmi.pg_info;
 
+  int found = 0;
+  if((strcmp(curr_tsk->execname, "remove_pages_test2")) &&
+     (strcmp(curr_tsk->execname, "wild_test1")))
+    found = 1;
+
   /* Get the faulting address' PTE */
-  if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte))
+  if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte)){
+    if(found){
+      lprintf("page handler: get pte failed");
+      MAGIC_BREAK;
+    }
     return -1;
+  }
 
   /* Don't back ZFOD pages */
-  if (GET_ADDR(pte) != zfod)
+  if (GET_ADDR(pte) != zfod){
+    if(found){
+      lprintf("page handler: get pte failed");
+      MAGIC_BREAK;
+    }
     return -1;
+  }
 
   /* Try to get a real frame */
-  if (!pg_alloc_phys(pgi, vaddr))
+  if (!pg_alloc_phys(pgi, vaddr)){
+    lprintf("No frames");
+    MAGIC_BREAK;
     return -1;
+  }
 
   /* Make the page writable and zero it */
   page_set_attrs(pgi, vaddr, GET_ATTRS(pte) | PG_TBL_WRITABLE);

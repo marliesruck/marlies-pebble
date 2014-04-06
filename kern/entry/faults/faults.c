@@ -44,11 +44,12 @@ void install_fault_handlers(void)
   install_trap_gate(IDT_NP, asm_int_seg_not_present, IDT_KERN_DPL);
   install_trap_gate(IDT_SS, asm_int_stack_seg, IDT_KERN_DPL);
   install_trap_gate(IDT_GP, asm_int_gen_prot, IDT_KERN_DPL);
-  install_trap_gate(IDT_PF, asm_int_page_fault, IDT_KERN_DPL);
   install_trap_gate(IDT_MF, asm_int_float, IDT_KERN_DPL);
   install_trap_gate(IDT_AC, asm_int_align, IDT_KERN_DPL);
   install_trap_gate(IDT_MC, asm_int_machine_check, IDT_KERN_DPL);
   install_trap_gate(IDT_XF, asm_int_simd, IDT_KERN_DPL);
+  //install_interrupt_gate(IDT_PF, asm_int_page_fault, IDT_KERN_DPL);
+  install_trap_gate(IDT_PF, asm_int_page_fault, IDT_KERN_DPL);
 
   return;
 }
@@ -269,10 +270,15 @@ int int_page_fault(ureg_t *ureg)
   if (pg_page_fault_handler(cr2))
   {
     lprintf("Error: Page fault on table-less address %p by thread: %d"
-            " and eip: 0x%x", cr2, curr_thr->tid, ureg->eip);
+            " and eip: 0x%x and task: %s", cr2, curr_thr->tid, ureg->eip,
+            curr_tsk->execname);
 
     ureg->cause = SWEXN_CAUSE_PAGEFAULT;
     ureg->cr2 = (unsigned int)cr2;
+
+    if((strcmp(curr_tsk->execname, "remove_pages_test2")) &&
+       (strcmp(curr_tsk->execname, "wild_test1")))
+        MAGIC_BREAK;
 
     return -1;
   }

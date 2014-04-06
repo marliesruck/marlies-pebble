@@ -155,6 +155,7 @@ int sys_thread_fork(unsigned int esp)
 
 int sys_exec(char *execname, char *argvec[])
 {
+  lprintf("execing %s", execname);
   char *execname_k, **argvec_k;
   void *entry, *stack;
   simple_elf_t se;
@@ -212,6 +213,7 @@ int sys_exec(char *execname, char *argvec[])
 
   /* Keep the new execname for debugging */
   curr_tsk->execname = execname_k;
+  /* MEMORY LEAK */
 
   /* Execute the new program */
   half_dispatch(entry, stack);
