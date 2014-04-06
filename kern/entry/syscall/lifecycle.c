@@ -81,7 +81,7 @@ int sys_fork(unsigned int esp)
 
   /* Only single threaded tasks can fork */
   if(curr_tsk->num_threads != 1)
-    return -1;
+    return -2;
 
   cthread = task_init();
   if(!cthread) return -1;
@@ -143,7 +143,7 @@ int sys_exec(char *execname, char *argvec[])
 
   /* Only single threaded tasks can exec */
   if(curr_tsk->num_threads != 1)
-    return -1;
+    return -2;
 
   /* Copy the execname from the user */
   if (copy_str_from_user(&execname_k, execname))
