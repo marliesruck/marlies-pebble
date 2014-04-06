@@ -48,7 +48,7 @@ void install_fault_handlers(void)
   install_trap_gate(IDT_AC, asm_int_align, IDT_KERN_DPL);
   install_trap_gate(IDT_MC, asm_int_machine_check, IDT_KERN_DPL);
   install_trap_gate(IDT_XF, asm_int_simd, IDT_KERN_DPL);
-  install_interrupt_gate(IDT_PF, asm_int_page_fault, IDT_KERN_DPL);
+  install_trap_gate(IDT_PF, asm_int_page_fault, IDT_KERN_DPL);
 
   return;
 }
@@ -261,23 +261,27 @@ void int_gen_prot(ureg_t *ureg)
 int int_page_fault(ureg_t *ureg)
 {
   void *cr2;
+  int retval;
 
   /* Grab the faulting cr2ess and page info */
   cr2 = (void *)get_cr2();
 
   /* Try to handle the fault */
-  if (pg_page_fault_handler(cr2))
+  if ((retval = pg_page_fault_handler(cr2)))
   {
-    lprintf("Error: Page fault on table-less address %p by thread: %d"
-            " and eip: 0x%x and task: %s", cr2, curr_thr->tid, ureg->eip,
-            curr_tsk->execname);
+    lprintf("Error: Page fault handler returned %d\nFaulting address %p\n"
+            "Faulting instruction: 0x%x\nFaulting task: %s", retval, cr2, 
+             ureg->eip,curr_tsk->execname);
 
     ureg->cause = SWEXN_CAUSE_PAGEFAULT;
     ureg->cr2 = (unsigned int)cr2;
 
+    /* Debug code: cho variant's thread should NEVER be killed */
+    if(!strcmp(curr_tsk->execname, "cho_variant")) {
+      MAGIC_BREAK;
+    }
     return -1;
   }
-
   return 0;
 }
 

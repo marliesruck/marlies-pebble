@@ -379,6 +379,7 @@ void free_page(pg_info_s *pgi, void *vaddr)
  *
  *  @return 0 on success; a negative integer error code on failure.
  **/
+/* For debugging cho variant, please keep */
 #include <sched.h>
 int pg_page_fault_handler(void *vaddr)
 {
@@ -395,12 +396,12 @@ int pg_page_fault_handler(void *vaddr)
 
   /* Don't back ZFOD pages */
   if (GET_ADDR(pte) != zfod){
-    return -1;
+    return -2;
   }
 
   /* Try to get a real frame */
   if (!pg_alloc_phys(pgi, vaddr)){
-    return -1;
+    return -3;
   }
 
   /* Make the page writable and zero it */
