@@ -20,7 +20,7 @@ VOID_FAULT_ERROR int_tss
 VOID_FAULT int_machine_check
 VOID_FAULT int_generic
 
-/*** --- Faults that users can install a heandler for --- ***/
+/*** --- Faults that users can install a handler for --- ***/
 
 VOID_FAULT_SWEXN int_divzero
 VOID_FAULT_SWEXN int_debug

@@ -89,15 +89,13 @@ int sys_readfile(char *filename, char *buf, int count, int offset)
 
 int sys_swexn(void *esp3, swexn_handler_t eip, void *arg, ureg_t *newureg)
 {
-  ureg_t *ureg;
+  ureg_t ureg; 
 
-  if(copy_from_user((char **)&ureg, (char *)newureg, sizeof(ureg_t)))
-    return -1;
-
-  /* Validate register values */
-  if(ureg){
-    if(validate_regs(ureg) < 0){
-      free(ureg);
+  /* Validate and copy register values */
+  if(newureg){
+    if(copy_from_user_static(&ureg, newureg, sizeof(ureg_t)))
+      return -1;
+    if(validate_regs(&ureg) < 0){
       return -1;
     }
   }
@@ -105,7 +103,6 @@ int sys_swexn(void *esp3, swexn_handler_t eip, void *arg, ureg_t *newureg)
   /* Validate and install new handler */
   if((eip) && (esp3)){
     if((validate_pc(eip)) || (validate_sp(esp3))){
-      free(ureg);
       return -1;
     }
     curr_thr->swexn.esp3 = esp3;
@@ -118,13 +115,10 @@ int sys_swexn(void *esp3, swexn_handler_t eip, void *arg, ureg_t *newureg)
   }
 
   /* Install the registers and return to userland */
-  if(ureg){
-    /* TODO: FIX MEMORY LEAK, ureg should be on stack */
-    craft_state(*ureg);
+  if(newureg){
+    craft_state(ureg);
   }
 
-  /* Or simply return */
-  free(ureg);
   return 0;
 }
 

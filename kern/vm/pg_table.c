@@ -186,7 +186,7 @@ int get_pte(pte_t *pd, pt_t *pt, void *addr, pte_t *dst)
 
   /* Return an error if the PTE isn't present */
   if ( !(pt[pdi][pti] & PG_TBL_PRESENT) )
-    return -1;
+    return -2;
 
   /* "Return" the entry */
   if (dst) *dst = pt[pdi][pti];

@@ -111,6 +111,8 @@ int validate_file(simple_elf_t *se, const char* filename)
  *  @return The entry point of the newly loaded executable or NULL if the file 
  *  is invalid
  **/
+/* For debugging cho variant */
+#include <sched.h>
 void *load_file(vm_info_s *vmi, const char* filename)
 {
   simple_elf_t se;
@@ -128,6 +130,13 @@ void *load_file(vm_info_s *vmi, const char* filename)
     ret = vm_alloc(vmi, (void *)se.e_txtstart, se.e_txtlen, 
                    VM_ATTR_RDWR | VM_ATTR_USER);
     assert(ret != NULL);
+
+    /* Load text */
+    if(0 > getbytes(filename, se.e_txtoff, se.e_txtlen, (void *)se.e_txtstart))
+      return NULL;
+
+    /* Update attributes */
+    vm_set_attrs(vmi, (void *)se.e_txtstart, VM_ATTR_USER);
   }
   /* ELF contains text and rodata */
   else{
@@ -143,22 +152,27 @@ void *load_file(vm_info_s *vmi, const char* filename)
     ret = vm_alloc(vmi, start, len, VM_ATTR_RDWR | VM_ATTR_USER);
     assert(ret != NULL);
 
+    /* Load text */
+    if(0 > getbytes(filename, se.e_txtoff, se.e_txtlen, (void *)se.e_txtstart))
+      return NULL;
+
+   /* Debug code: No one should touch the PTE permissions between here */
+   unsigned int attrs;
+   vm_get_attrs(vmi,(void *) se.e_txtstart, &attrs);
+   if(!(attrs & PG_TBL_WRITABLE)){
+     lprintf("Page table not writeable for task: %s", curr_tsk->execname);
+     MAGIC_BREAK;
+   }
+
     /* Load rodata */
-    if(0 > getbytes(filename, se.e_rodatoff, se.e_rodatlen, 
+   if(0 > getbytes(filename, se.e_rodatoff, se.e_rodatlen, 
           (void *)se.e_rodatstart)){
       return NULL;
     }
 
     /* Update attributes */
-    vm_set_attrs(vmi, (void *)se.e_rodatstart, VM_ATTR_USER);
+    vm_set_attrs(vmi, (void *)se.e_txtstart, VM_ATTR_USER);
   }
-
-  /* Load text */
-  if(0 > getbytes(filename, se.e_txtoff, se.e_txtlen, (void *)se.e_txtstart))
-    return NULL;
-
-  /* Update attributes */
-  vm_set_attrs(vmi, (void *)se.e_txtstart, VM_ATTR_USER);
 
             /*** --- Allocate and load read/write memory --- ***/
 

@@ -67,6 +67,7 @@ void free_frame(void *frame, void *vaddr)
   return;
 }
 
+
 void *alloc_page_table(pg_info_s *pgi, void *vaddr)
 {
   pte_t pde, pte;
@@ -378,6 +379,7 @@ void free_page(pg_info_s *pgi, void *vaddr)
  *
  *  @return 0 on success; a negative integer error code on failure.
  **/
+/* For debugging cho variant, please keep */
 #include <sched.h>
 int pg_page_fault_handler(void *vaddr)
 {
@@ -388,16 +390,19 @@ int pg_page_fault_handler(void *vaddr)
   pgi = &curr_tsk->vmi.pg_info;
 
   /* Get the faulting address' PTE */
-  if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte))
+  if (get_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte)){
     return -1;
+  }
 
   /* Don't back ZFOD pages */
-  if (GET_ADDR(pte) != zfod)
-    return -1;
+  if (GET_ADDR(pte) != zfod){
+    return -2;
+  }
 
   /* Try to get a real frame */
-  if (!pg_alloc_phys(pgi, vaddr))
-    return -1;
+  if (!pg_alloc_phys(pgi, vaddr)){
+    return -3;
+  }
 
   /* Make the page writable and zero it */
   page_set_attrs(pgi, vaddr, GET_ATTRS(pte) | PG_TBL_WRITABLE);

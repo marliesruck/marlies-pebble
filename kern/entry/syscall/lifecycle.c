@@ -30,7 +30,6 @@
 /* x86 includes */
 #include <x86/asm.h>
 
-
 /*************************************************************************
  *  Internal helper functions
  *************************************************************************/
@@ -68,7 +67,8 @@ void *kstack_copy(char *dst, char *src, unsigned int esp)
  * state
  *
  * @param child_cr3 Physical address of child's page directory
- * @return Address of malloc'd child pcb 
+ * @return Address of malloc'd child pcb, -1 if out of memory, -2 if program is
+ * mulithreaded
  */
 int sys_fork(unsigned int esp)
 {
@@ -78,6 +78,10 @@ int sys_fork(unsigned int esp)
   int tid;
 
   parent = curr_tsk;
+
+  /* Only single threaded tasks can fork */
+  if(curr_tsk->num_threads != 1)
+    return -2;
 
   cthread = task_init();
   if(!cthread) return -1;
@@ -89,6 +93,13 @@ int sys_fork(unsigned int esp)
     task_free(ctask);
     return -1;
   }
+
+  /* Register the process with simics for debugging */
+  ctask->execname = parent->execname;
+  sim_reg_process((void *)ctask->cr3, ctask->execname);
+
+  /* Zero the status */
+  ctask->status = 0;
 
   /* Atomically increment live children in case you are vying with another
    * thread who is forking */
@@ -133,6 +144,10 @@ int sys_exec(char *execname, char *argvec[])
   simple_elf_t se;
   int argcnt, i;
 
+  /* Only single threaded tasks can exec */
+  if(curr_tsk->num_threads != 1)
+    return -2;
+
   /* Copy the execname from the user */
   if (copy_str_from_user(&execname_k, execname) < 0)
     return -1;
@@ -156,10 +171,16 @@ int sys_exec(char *execname, char *argvec[])
   sim_reg_process(&curr_tsk->cr3, execname_k);
   stack = usr_stack_init(&curr_tsk->vmi, argcnt, argvec_k);
 
+  /* Zero the status */
+  curr_tsk->status = 0;
+
   /* Free copied parameters*/
   for (i = 0; i < argcnt; ++i) free(argvec_k[i]);
   free(argvec_k);
-  free(execname_k);
+
+  /* Keep the new execname for debugging */
+  curr_tsk->execname = execname_k;
+  /* MEMORY LEAK */
 
   /* Execute the new program */
   half_dispatch(entry, stack);
@@ -191,7 +212,6 @@ void sys_vanish(void)
 
   /* You were killed by the kernel */
   if(curr_thr->killed){
-    lprintf("curr_thr->killed: %d", curr_thr->killed);
     task->status = -2;
   }
 

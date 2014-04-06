@@ -34,7 +34,7 @@ UPDATE_METHOD = web
 # A list of the test programs you want compiled in from the 410user/progs
 # directory.
 #
-410TESTS = ck1 merchant peon knife fork_test1 exec_basic_helper exec_basic exec_nonexist coolness new_pages remove_pages_test1 remove_pages_test2 mem_permissions print_basic readline_basic deschedule_hang loader_test1 loader_test2 fork_wait wait_getpid sleep_test1 minclone_mem swexn_basic_test swexn_cookie_monster swexn_dispatch swexn_stands_for_swextensible swexn_uninstall_test swexn_regs make_crash_helper make_crash register_test fork_exit_bomb fork_bomb fork_wait_bomb cho cho2 cho_variant yield_desc_mkrun actual_wait agility_drill beady_test bistromath cat cvar_test cyclone excellent getpid_test1 halt_test join_specific_test juggle largetest mandelbrot misbehave misbehave_wrap multitest mutex_destroy_test nibbles paraguay racer stack_test1 startle switzerland thr_exit_join wild_test1 rwlock_downgrade_read_test slaughter
+410TESTS = ck1 merchant peon knife fork_test1 exec_basic_helper exec_basic exec_nonexist coolness new_pages remove_pages_test1 remove_pages_test2 mem_permissions print_basic readline_basic deschedule_hang loader_test1 loader_test2 fork_wait wait_getpid sleep_test1 minclone_mem swexn_basic_test swexn_cookie_monster swexn_dispatch swexn_stands_for_swextensible swexn_uninstall_test swexn_regs make_crash_helper make_crash register_test fork_exit_bomb fork_bomb fork_wait_bomb cho cho2 cho_variant yield_desc_mkrun actual_wait agility_drill beady_test bistromath cat cvar_test cyclone excellent getpid_test1 halt_test join_specific_test juggle largetest mandelbrot misbehave misbehave_wrap multitest mutex_destroy_test nibbles paraguay racer stack_test1 startle switzerland thr_exit_join wild_test1 rwlock_downgrade_read_test slaughter 
 
 ###########################################################################
 # Test programs you have written which you wish to run
@@ -42,7 +42,7 @@ UPDATE_METHOD = web
 # A list of the test programs you want compiled in from the user/progs
 # directory.
 #
-STUDENTTESTS =  introspective schizo introvert garrulous mimic zfod cooperative annoying coquettish coy cooperative_terminate merchant_terminate peon_terminate coolness_terminate coy_terminate regression epileptic rogue intrepid carpe_diem mutex polycephalic
+STUDENTTESTS =  introspective schizo introvert garrulous mimic zfod cooperative annoying coquettish coy cooperative_terminate merchant_terminate peon_terminate coolness_terminate coy_terminate regression epileptic rogue intrepid carpe_diem mutex polycephalic loquacious
 
 ###########################################################################
 # Data files provided by course staff to build into the RAM disk

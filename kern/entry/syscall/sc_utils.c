@@ -233,6 +233,28 @@ int copy_from_user(char **dst, const char *src, size_t bytes)
   return 0;
 }
 
+/** @brief Statically safely copy data from user-space.
+ *
+ *  @param dst The destionation pointer.
+ *  @param src The (user-space) source pointer.
+ *  @param bytes The number of bytes to copy.
+ *
+ *  @return 0 on success; a negative integer error code on failure.
+ **/
+int copy_from_user_static(void *dst, void *src, size_t bytes)
+{
+  mutex_lock(&curr_tsk->lock);
+
+  if (!vm_find(&curr_tsk->vmi, src)) {
+    mutex_unlock(&curr_tsk->lock);
+    return -1;
+  }
+
+  memcpy(dst, src, bytes);
+
+  mutex_unlock(&curr_tsk->lock);
+  return 0;
+}
 /** @brief Safely copy data to user-space.
  *
  *  @param dst The destionation pointer.

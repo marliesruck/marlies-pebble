@@ -28,7 +28,6 @@ int main()
   if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-
   char *sleep_args[] = {"sleep_test1", "20", NULL};
   if(!fork()) exec("sleep_test1", sleep_args);
   while(wait(NULL) >= 0);
@@ -95,12 +94,6 @@ int main()
   if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
    
-  /* This tests runs forever, uncomment as you see fit...
-  args[0] = "fork_bomb";
-  if(!fork()) exec(args[0], args);
-  while(wait(NULL) >= 0);
-  */
-
   args[0] = "exec_nonexist";
   if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
