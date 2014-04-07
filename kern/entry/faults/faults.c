@@ -71,7 +71,7 @@ void fault_wrapper(handler f)
       init_exn_stack(ureg);
     }
 
-    /* TODO: ELIMINATE!
+    /* TODO: ELIMINATE before submitting 
      * Avoid false negatives */
     int i;
     int should_fail = 0;
@@ -81,6 +81,9 @@ void fault_wrapper(handler f)
       if(!strcmp(curr_tsk->execname, fail[i]))
         should_fail = 1;
     }
+    lprintf("Error:\nFaulting address 0x%x\nFaulting instruction: 0x%x\n"
+            "Faulting task: %s", ureg->cr2, ureg->eip,curr_tsk->execname);
+
     if(!should_fail)
       MAGIC_BREAK;
 
@@ -129,8 +132,6 @@ void install_fault_handlers(void)
  **/
 int int_divzero(ureg_t *ureg)
 {
-  lprintf("Error: Division by zero!");
-
   ureg->cause = SWEXN_CAUSE_DIVIDE;
   ureg->cr2 = 0;
 
@@ -143,8 +144,6 @@ int int_divzero(ureg_t *ureg)
  **/
 int int_debug(ureg_t *ureg)
 {
-  lprintf("Alert: Got debug interrupt...");
-
   ureg->cause = SWEXN_CAUSE_DEBUG;
   ureg->cr2 = 0;
 
@@ -170,8 +169,6 @@ void int_nmi(void)
  **/
 int int_breakpoint(ureg_t *ureg)
 {
-  lprintf("Alert: Encountered breakpoint (INT 3)!");
-
   ureg->cause = SWEXN_CAUSE_BREAKPOINT;
   ureg->cr2 = 0;
 
@@ -184,8 +181,6 @@ int int_breakpoint(ureg_t *ureg)
  **/
 int int_overflow(ureg_t *ureg)
 {
-  lprintf("Error: Overflow (INTO)!");
-
   ureg->cause = SWEXN_CAUSE_OVERFLOW;
   ureg->cr2 = 0;
 
@@ -198,8 +193,6 @@ int int_overflow(ureg_t *ureg)
  **/
 int int_bound(ureg_t *ureg)
 {
-  lprintf("Error: Range exceeded (BOUND)!");
-
   ureg->cause = SWEXN_CAUSE_BOUNDCHECK;
   ureg->cr2 = 0;
 
@@ -212,8 +205,6 @@ int int_bound(ureg_t *ureg)
  **/
 int int_undef_opcode(ureg_t *ureg)
 {
-  lprintf("Error: Invalid instruction!");
-
   ureg->cause = SWEXN_CAUSE_OPCODE;
   ureg->cr2 = 0;
 
@@ -226,8 +217,6 @@ int int_undef_opcode(ureg_t *ureg)
  **/
 int int_device_unavail(ureg_t *ureg)
 {
-  lprintf("Error: Device not available!");
-
   ureg->cause = SWEXN_CAUSE_NOFPU;
   ureg->cr2 = 0;
 
@@ -282,8 +271,6 @@ void int_tss(void)
  **/
 int int_seg_not_present(ureg_t *ureg)
 {
-  lprintf("Error: segment not present!");
-
   ureg->cause = SWEXN_CAUSE_SEGFAULT;
   ureg->cr2 = 0;
 
@@ -296,8 +283,6 @@ int int_seg_not_present(ureg_t *ureg)
  **/
 int int_stack_seg(ureg_t *ureg)
 {
-  lprintf("Error: stack segmentation fault!");
-
   ureg->cause = SWEXN_CAUSE_STACKFAULT;
   ureg->cr2 = 0;
 
@@ -310,8 +295,6 @@ int int_stack_seg(ureg_t *ureg)
  **/
 int int_gen_prot(ureg_t *ureg)
 {
-  lprintf("Error: general protection fault!");
-
   ureg->cause = SWEXN_CAUSE_PROTFAULT;
   ureg->cr2 = 0;
 
@@ -333,10 +316,6 @@ int int_page_fault(ureg_t *ureg)
   /* Try to handle the fault */
   if ((retval = pg_page_fault_handler(cr2)))
   {
-    lprintf("Error:\nPage fault handler returned %d\nFaulting address %p\n"
-            "Faulting instruction: 0x%x\nFaulting task: %s", retval, cr2, 
-             ureg->eip,curr_tsk->execname);
-
     ureg->cause = SWEXN_CAUSE_PAGEFAULT;
     ureg->cr2 = (unsigned int)cr2;
 
@@ -351,8 +330,6 @@ int int_page_fault(ureg_t *ureg)
  **/
 int int_float(ureg_t *ureg)
 {
-  lprintf("Error: Floating point exception!");
-
   ureg->cause = SWEXN_CAUSE_FPUFAULT;
   ureg->cr2 = 0;
 
@@ -365,8 +342,6 @@ int int_float(ureg_t *ureg)
  **/
 int int_align(ureg_t *ureg)
 {
-  lprintf("Error: Alignment check!");
-
   ureg->cause = SWEXN_CAUSE_ALIGNFAULT;
   ureg->cr2 = 0;
 
@@ -393,8 +368,6 @@ void int_machine_check(void)
  **/
 int int_simd(ureg_t *ureg)
 {
-  lprintf("Error: SIMD floating point exception!");
-
   ureg->cause = SWEXN_CAUSE_SIMDFAULT;
   ureg->cr2 = 0;
 
