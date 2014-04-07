@@ -206,7 +206,7 @@ void sys_vanish(void)
 
   /* There are still live threads */
   if(0 < --task->num_threads){
-    sched_mutex_unlock_and_block(curr_thr, &task->lock);
+    sched_do_and_block(curr_thr, (sched_do_fn) mutex_unlock, &task->lock);
   }
   mutex_unlock(&task->lock);
 

@@ -103,19 +103,14 @@ int sched_block(thread_t *thr)
   return ret;
 }
 
-/** @brief Atomically unlock and make a thread ineligible for CPU time.
+/** @brief Atomically execute a caller-specified function and block.
  *
- *  If the lock paramter is non-NULL, it will be unlocked before blocking.
- *  The process of unlocking and blocking is atomic with respect to other
- *  atempts to block/unblock, and with respect to attempts to schedule
- *  another process.
- * 
  *  @param thr The thread to make unrunnable.
- *  @param lock The spinlock to unlock.
+ *  @param fn The function to execute before blocking.
  *
  *  @return 0 on success; a negative integer error code on failure.
  **/
-int sched_spin_unlock_and_block(thread_t *thr, spin_s *lock)
+int sched_do_and_block(thread_t *thr, sched_do_fn func, void *args)
 {
   int ret;
 
@@ -124,7 +119,7 @@ int sched_spin_unlock_and_block(thread_t *thr, spin_s *lock)
   /* Lock the run queue, unlock the world lock */
   disable_interrupts();
 
-  if (lock) spin_unlock(lock);
+  func(args);
 
   ret = raw_block(thr);
   assert(ret == 0);
@@ -134,33 +129,6 @@ int sched_spin_unlock_and_block(thread_t *thr, spin_s *lock)
   return ret;
 }
 
-/** @brief Atomically unlock and make a thread ineligible for CPU time.
- *
- *  If the lock paramter is non-NULL, it will be unlocked before blocking.
- *  The process of unlocking and blocking is atomic with respect to other
- *  atempts to block/unblock, and with respect to attempts to schedule
- *  another process.
- *
- *  @param thr The thread to make unrunnable.
- *  @param lock The mutex to unlock.
- *
- *  @return 0 on success; a negative integer error code on failure.
- **/
-int sched_mutex_unlock_and_block(thread_t *thr, mutex_s *lock)
-{
-  int ret;
-
-  /* Lock the run queue, unlock the world lock */
-  disable_interrupts();
-  if (lock) mutex_unlock(lock);
-
-  ret = raw_block(thr);
-  assert(ret == 0);
-
-  /* Unlock and return */
-  enable_interrupts();
-  return ret;
-}
 /** @brief Make a thread eligible for CPU time.
  *
  *  This operation is not atomic.

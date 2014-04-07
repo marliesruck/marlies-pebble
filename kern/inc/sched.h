@@ -15,22 +15,23 @@
 #include <spin.h>
 #include <thread.h>
 
+
 /* Scheduler lock */
 extern mutex_s sched_lock;
 
+/* Runnable queue */
 extern queue_s runnable;
 
-/* The currently running thread */
+/* Currently running thread/task */
 thread_t *curr_thr;
-
-/* The currently running task */
 task_t *curr_tsk;
 
+/* The "do" part of sched_do_and_block(...) */
+typedef void (*sched_do_fn)(void *args);
 
 /* Scheduling API */
 int sched_block(thread_t *thr);
-int sched_mutex_unlock_and_block(thread_t *thr, mutex_s *lock);
-int sched_spin_unlock_and_block(thread_t *thr, spin_s *lock);
+int sched_do_and_block(thread_t *thr, sched_do_fn func, void *args);
 void raw_unblock(thread_t *thr, queue_node_s *n);
 int sched_unblock(thread_t *thr);
 int sched_find(int tid);

@@ -230,7 +230,7 @@ void task_signal_parent(task_t *task)
   cvar_signal(&parent->cv);
 
   /* Your parent should not reap you until you've descheduled yourself */
-  sched_mutex_unlock_and_block(curr_thr, &parent->lock);
+  sched_do_and_block(curr_thr, (sched_do_fn) mutex_unlock, &parent->lock);
 
   return;
 }
