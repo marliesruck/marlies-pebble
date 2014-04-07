@@ -90,7 +90,9 @@ int sys_fork(unsigned int esp)
 
   /* Copy address space */
   if (vm_copy(&ctask->vmi, &parent->vmi)) {
-    task_free(ctask);
+    /* Free task_t, root thread and page directory...vm_copy() will
+     * free any allocated pages */
+    task_reap(ctask);
     return -1;
   }
 

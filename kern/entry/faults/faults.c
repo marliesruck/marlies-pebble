@@ -319,10 +319,11 @@ int int_page_fault(ureg_t *ureg)
     ureg->cause = SWEXN_CAUSE_PAGEFAULT;
     ureg->cr2 = (unsigned int)cr2;
 
-    /* Debug code: cho variant's thread should NEVER be killed */
-    if(!strcmp(curr_tsk->execname, "cho_variant")) {
+    if((strcmp(curr_tsk->execname, "remove_pages_test2")) &&
+       (strcmp(curr_tsk->execname, "wild_test1"))){
       MAGIC_BREAK;
     }
+
     return -1;
   }
   return 0;

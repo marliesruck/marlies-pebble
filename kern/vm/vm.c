@@ -5,6 +5,7 @@
  *  @author Enrique Naudon (esn)
  *  @author Marlies Ruck (mruck)
  **/
+#include <simics.h>
 
 /* VM includes */
 #include <vm.h>
@@ -342,8 +343,10 @@ int vm_copy(vm_info_s *dst, vm_info_s *src)
     {
       if(copy_page(&dst->pg_info, &src->pg_info, addr, buf))
       {
-        for (addr2 = sreg->start; addr2 < addr; addr2 += PAGE_SIZE)
+        for (addr2 = sreg->start; addr2 < addr; addr2 += PAGE_SIZE){
           free_page(&dst->pg_info, addr2);
+        }
+
         vm_final(dst);
         unmap_dest_tables(dst, src);
         sfree(buf, PAGE_SIZE);
