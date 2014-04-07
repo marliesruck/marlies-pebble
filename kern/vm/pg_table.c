@@ -42,8 +42,9 @@ void init_kern_pt(void)
   for (i = 0; i < KERN_PD_ENTRIES; i++)
   {
     /* Allocate kernel page table */
-    kern_pt[i] = retrieve_head();
-    update_head(*(void **)kern_pt[i]);
+    kern_pt[i] = fr_retrieve_head();
+    --fr_avail;
+    fr_update_head(*(void **)kern_pt[i]);
 
     /* Direct map kernel pages */
     for (j = 0; j < PG_TBL_ENTRIES; j++) {

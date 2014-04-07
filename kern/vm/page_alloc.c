@@ -55,7 +55,7 @@ void *physically_back_page(pg_info_s *pgi, void *vaddr)
   mutex_lock(&frame_allocator_lock);
 
   /* Grab the head of free list */
-  frame = retrieve_head();
+  frame = fr_retrieve_head();
   if (!frame) {
     mutex_unlock(&frame_allocator_lock);
     return NULL;
@@ -69,8 +69,9 @@ void *physically_back_page(pg_info_s *pgi, void *vaddr)
   tlb_inval_page(vaddr);
 
   /* Save the new head */
+  --fr_avail;
   new_head = *(void **)FLOOR(vaddr, PAGE_SIZE);
-  update_head(new_head);
+  fr_update_head(new_head);
 
   mutex_unlock(&frame_allocator_lock);
 
@@ -91,11 +92,12 @@ void free_frame(void *frame, void *vaddr)
   mutex_lock(&frame_allocator_lock);
 
   /* Retrieve and store out the old head while frame is mapped in */
-  void *old_head = retrieve_head();
+  void *old_head = fr_retrieve_head();
   *floor = (uint32_t)(old_head);
 
   /* Add frame to free list */
-  update_head(frame);
+  ++fr_avail;
+  fr_update_head(frame);
 
   mutex_unlock(&frame_allocator_lock);
   return;
@@ -133,7 +135,7 @@ void *alloc_table(pg_info_s *pgi, void *vaddr)
   mutex_lock(&frame_allocator_lock);
 
   /* Grab the head of free list */
-  void *frame = retrieve_head();
+  void *frame = fr_retrieve_head();
   if (!frame) {
     mutex_unlock(&frame_allocator_lock);
     return NULL;
@@ -146,8 +148,9 @@ void *alloc_table(pg_info_s *pgi, void *vaddr)
   set_pde(pgi->pg_dir, vaddr, &pde);
 
   /* Update the head of the free list */
+  --fr_avail;
   void *new_head = (void *)GET_ADDR(*pgi->pg_tbls[PG_DIR_INDEX(vaddr)]);
-  update_head(new_head);
+  fr_update_head(new_head);
 
   mutex_unlock(&frame_allocator_lock);
 

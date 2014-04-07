@@ -63,7 +63,7 @@ mem_region_s *create_mem_region(vm_info_s *vmi, void *va_start, size_t len,
 
   /* Check that the system has enough frames */
   pg_count = (pg_limit - pg_start)/PAGE_SIZE;
-  if (pg_count > frame_remaining()) return NULL;
+  if (pg_count > fr_avail) return NULL;
 
   /* Allocate and initialize the new region */
   mreg = malloc(sizeof(mem_region_s));
@@ -344,6 +344,7 @@ int vm_copy(vm_info_s *dst, vm_info_s *src)
       {
         for (addr2 = sreg->start; addr2 < addr; addr2 += PAGE_SIZE)
           pg_free(&dst->pg_info, addr2);
+        destroy_mem_region(dst, dreg);
         vm_final(dst);
         unmap_dest_tables(dst, src);
         sfree(buf, PAGE_SIZE);
