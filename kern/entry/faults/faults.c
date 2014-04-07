@@ -23,6 +23,14 @@
 #include <x86/cr.h>
 #include <x86/idt.h>
 
+/* TESTS THAT SHOULD FAIL */
+char *fail[] = {
+  "remove_pages_test2",
+  "wild_test1",
+  "swexn_stands_for_swextensible",
+  "swexn_uninstall_test",
+};
+
 /* @brief Pointer to a kernel handler.
  *
  * Let the kernel attempt to silently handle the fault. If it fails, the kernel
@@ -33,7 +41,7 @@
  *
  * @ return 0 if the kernel successfully handles, else -1. 
  **/
-typedef int (*func_p)(ureg_t *ureg);
+typedef int (*handler)(ureg_t *ureg);
 
 /** @brief Generic function called by fault wrappers
  *
@@ -46,7 +54,7 @@ typedef int (*func_p)(ureg_t *ureg);
  *
  *  @return Void.
  **/
-void fault_wrapper(func_p f)
+void fault_wrapper(handler f)
 {
   ureg_t *ureg;
 
@@ -62,6 +70,19 @@ void fault_wrapper(func_p f)
       /* Craft contents of exception stack and call handler */
       init_exn_stack(ureg);
     }
+
+    /* TODO: ELIMINATE!
+     * Avoid false negatives */
+    int i;
+    int should_fail = 0;
+    int num_tests = sizeof(fail)/sizeof(char*);
+    for(i = 0; i < num_tests; i++){
+      /* This thread should be killed */
+      if(!strcmp(curr_tsk->execname, fail[i]))
+        should_fail = 1;
+    }
+    if(!should_fail)
+      MAGIC_BREAK;
 
     /* You were killed by the kernel */
     slaughter();
@@ -318,11 +339,6 @@ int int_page_fault(ureg_t *ureg)
 
     ureg->cause = SWEXN_CAUSE_PAGEFAULT;
     ureg->cr2 = (unsigned int)cr2;
-
-    if((strcmp(curr_tsk->execname, "remove_pages_test2")) &&
-       (strcmp(curr_tsk->execname, "wild_test1"))){
-      MAGIC_BREAK;
-    }
 
     return -1;
   }

@@ -80,16 +80,25 @@ int sys_fork(unsigned int esp)
   parent = curr_tsk;
 
   /* Only single threaded tasks can fork */
-  if(curr_tsk->num_threads != 1)
+  if(curr_tsk->num_threads != 1){
+    lprintf("FORK FAILED");
+    MAGIC_BREAK;
     return -2;
+  }
 
   cthread = task_init();
-  if(!cthread) return -1;
+  if(!cthread){
+    lprintf("FORK FAILED");
+    MAGIC_BREAK;
+    return -1;
+  }
   tid = cthread->tid; 
   ctask = cthread->task_info;
 
   /* Copy address space */
   if (vm_copy(&ctask->vmi, &parent->vmi)) {
+    lprintf("FORK FAILED");
+    MAGIC_BREAK;
     /* Free task_t, root thread and page directory...vm_copy() will
      * free any allocated pages */
     task_reap(ctask);
