@@ -256,6 +256,7 @@ int sys_wait(int *status_ptr)
     }
   }
 
+  /* Free the task's remaining resources */
   task_reap(child_task);
 
   return tid;

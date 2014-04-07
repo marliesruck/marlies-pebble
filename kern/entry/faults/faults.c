@@ -29,6 +29,7 @@ char *fail[] = {
   "wild_test1",
   "swexn_stands_for_swextensible",
   "swexn_uninstall_test",
+  "mem_permissions",
 };
 
 /* @brief Pointer to a kernel handler.

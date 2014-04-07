@@ -189,25 +189,11 @@ int validate_pc(void *pc)
     return -1;
 }
 
-/** @brief Safely invoke kernel system call handlers.
- *
- *  After validating the system call arguments, we invoke the handler and
- *  pass the arguments along.  For simplicity, we assume that all system
- *  call handlers return an unsigned 32-bit integer; it is the caller's
- *  responsibility to ignore void values.
- *
- *  @param func The system call handler.
- *  @param args The arguments to the handler.
- *  @param arity The arity of the handler.
- *
- *  @return Whatever the sytem call handler returns.
- **/
-int sc_validate_argp(void *argp, int arity)
-{
-  return 0;
-}
-
 /** @brief Safely copy data from user-space.
+ *
+ *  We malloc in order to avoid imposing an artificial restriction on the number
+ *  of arguments a user can pass to exec or a filename.  If there is not enough
+ *  space, then malloc will fail.
  *
  *  @param dst The destionation pointer.
  *  @param src The (user-space) source pointer.
