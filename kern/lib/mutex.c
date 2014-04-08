@@ -15,6 +15,68 @@
 #include <sched.h>
 #include <spin.h>
 
+/** @enum unlock mode
+ *  @brief Flags for whether a mutex is being unlocked with interrupts
+ *         enabled or disabled
+ **/
+enum unlock_mode {
+  ENABLED,
+  DISABLED,
+};
+typedef enum unlock_mode unlock_mode_e;
+
+/** @brief Internal routine for unlocking mutexes.
+ *
+ *  @param mp The mutex to unlock.
+ *  @param mode Whether or not interrupts are currently enabled or disabled.
+ *
+ *  @return Void.
+ **/
+void mutex_unlock_internal(mutex_s *mp, unlock_mode_e mode)
+{
+  queue_node_s *n;
+  thread_t *thr;
+
+  assert(mp);
+
+  /* Wait your turn to access the waiting list */
+  spin_lock(&mp->lock);
+
+  /* You can only unlock locked mutexes that you locked...or can you? */
+  assert(mp->owner == curr_thr->tid);
+  assert(mp->state == MUTEX_LOCKED);
+
+  /* There's someone waiting on you */
+  if (!cll_empty(&mp->queue))
+  {
+    /* Extract the next guy in the queue */
+    n = queue_dequeue(&mp->queue);
+    thr = queue_entry(thread_t *, n);
+
+    /* Set the new owner */
+    mp->owner = thr->tid;
+
+    /* Unlock and awaken that guy */
+    spin_unlock(&mp->lock);
+
+    /* Interrupts are enabled */
+    if(mode == ENABLED){
+      assert(!sched_unblock(thr));
+    }
+    /* Interrupts are already disabled */
+    else{
+      raw_unblock(thr, &thr->node);
+    }
+  }
+  /* No one wants the lock */
+  else {
+    mp->owner = -1;
+    mp->state = MUTEX_UNLOCKED;
+    spin_unlock(&mp->lock);
+  }
+
+  return;
+}
 
 /** @brief Initialize a mutex.
  *
@@ -94,7 +156,7 @@ void mutex_lock(mutex_s *mp)
   return;
 }
 
-/** @brief Unlock a mutex.
+/** @brief Unlock a mutex with interrupts enabled.
  *
  *  @param mp The mutex to unlock.
  *
@@ -102,40 +164,18 @@ void mutex_lock(mutex_s *mp)
  **/
 void mutex_unlock(mutex_s *mp)
 {
-  queue_node_s *n;
-  thread_t *thr;
-
-  assert(mp);
-
-  /* Wait your turn to access the waiting list */
-  spin_lock(&mp->lock);
-
-  /* You can only unlock locked mutexes that you locked...or can you? */
-  assert(mp->owner == curr_thr->tid);
-  assert(mp->state == MUTEX_LOCKED);
-
-  /* There's someone waiting on you */
-  if (!cll_empty(&mp->queue))
-  {
-    /* Extract the next guy in the queue */
-    n = queue_dequeue(&mp->queue);
-    thr = queue_entry(thread_t *, n);
-
-    /* Set the new owner */
-    mp->owner = thr->tid;
-
-    /* Unlock and awaken that guy */
-    spin_unlock(&mp->lock);
-    assert(!sched_unblock(thr));
-  }
-
-  /* No one wants the lock */
-  else {
-    mp->owner = -1;
-    mp->state = MUTEX_UNLOCKED;
-    spin_unlock(&mp->lock);
-  }
-
+  mutex_unlock_internal(mp, ENABLED);
   return;
 }
 
+/** @brief Unlock a mutex with interrupts disabled.
+ *
+ *  @param mp The mutex to unlock.
+ *
+ *  @return Void.
+ **/
+void mutex_unlock_raw(mutex_s *mp)
+{
+  mutex_unlock_internal(mp, DISABLED);
+  return;
+}
