@@ -88,6 +88,14 @@ asm_\scname:
   # Prologue
   push  %ebp                      # Store old EBP
   movl  %esp, %ebp                # Set up new EBP
+
+  # Store GP registers
+  push  %esi                      # Save ESI
+  push  %edi                      # Save EDI
+  push  %ebx                      # Save EBX
+  push  %edx                      # Save EDX
+  push  %ecx                      # Save ECX
+
   push  %ds                       # Store DS data segment
   push  %es                       # Store ES data segment
   push  %fs                       # Store FS data segment
@@ -101,6 +109,14 @@ asm_\scname:
   pop   %fs                       # Restore FS data segment
   pop   %es                       # Restore ES data segment
   pop   %ds                       # Restore DS data segment
+
+  # Restore GP registers
+  pop   %ecx                      # Restore ECX
+  pop   %edx                      # Restore EDX
+  pop   %ebx                      # Restore EBX
+  pop   %edi                      # Restore EDI
+  pop   %esi                      # Restore ESI
+
   pop   %ebp                      # Restore old EBP
   iret                            # Return from the system call
 
@@ -122,6 +138,14 @@ asm_\scname:
   # Prologue
   push  %ebp                      # Store old EBP
   movl  %esp, %ebp                # Set up new EBP
+
+  # Store GP registers
+  push  %esi                      # Save ESI
+  push  %edi                      # Save EDI
+  push  %ebx                      # Save EBX
+  push  %edx                      # Save EDX
+  push  %ecx                      # Save ECX
+
   push  %ds                       # Store DS data segment
   push  %es                       # Store ES data segment
   push  %fs                       # Store FS data segment
@@ -138,6 +162,14 @@ asm_\scname:
   pop   %fs                       # Restore FS data segment
   pop   %es                       # Restore ES data segment
   pop   %ds                       # Restore DS data segment
+
+  # Restore GP registers
+  pop   %ecx                      # Restore ECX
+  pop   %edx                      # Restore EDX
+  pop   %ebx                      # Restore EBX
+  pop   %edi                      # Restore EDI
+  pop   %esi                      # Restore ESI
+
   pop   %ebp                      # Restore old EBP
   iret                            # Return from the system call
 
@@ -168,11 +200,12 @@ asm_\scname:
   push  %fs                       # Store FS data segment
   push  %gs                       # Store GS data segment
 
-  # Store MOVS registers
+  # Store GP registers
   push  %esi                      # Save ESI
   push  %edi                      # Save EDI
   push  %ebx                      # Save EBX
-  push  %edx
+  push  %edx                      # Save EDX
+  push  %ecx                      # Save ECX
 
 copy_args_\scname: 
 
@@ -205,8 +238,9 @@ userland_\scname:
   # Clean up stack
   add   %ebx, %esp        
 
-  # Restore MOVS registers
-  pop   %edx
+  # Restore GP registers
+  pop   %ecx                      # Restore ECX
+  pop   %edx                      # Restore EDX
   pop   %ebx                      # Restore EBX
   pop   %edi                      # Restore EDI
   pop   %esi                      # Restore ESI
@@ -250,6 +284,8 @@ asm_\scname:
   push %esi
   push %edi
   push %ebx
+  push %ecx
+  push %edx
 
   # Pass ESP and invoke the handler
   push  %esp
@@ -266,6 +302,8 @@ asm_\scname:
 
   asm_finish_\scname:
     # Restore general purpose registers
+    pop %edx
+    pop %ecx
     pop %ebx
     pop %edi
     pop %esi
