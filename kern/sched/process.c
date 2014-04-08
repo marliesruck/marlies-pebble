@@ -44,12 +44,12 @@ thread_t *task_init(void)
 
   /* Keep track of threads in a task */
   task->num_threads = 0;
-  cll_init_list(&task->peer_threads);
 
   /* Keep track of children alive and dead */
   task->live_children = 0;
   queue_init(&task->dead_children);
   cvar_init((&task->cv));
+  task->dead_kid = NULL;
 
   task->parent_tid = curr_tsk->tid;
 
@@ -67,11 +67,7 @@ thread_t *task_init(void)
   }
 
   /* Add it to the new task */
-  if (task_add_thread(task, thread)) {
-    free(thread);
-    free(task);
-    return NULL;
-  }
+  task_add_thread(task, thread);
   task->tid = thread->tid;
 
   /* Add to task list */
@@ -81,14 +77,26 @@ thread_t *task_init(void)
   return thread;
 }
 
-int task_add_thread(task_t *tsk, thread_t *thr)
+void task_add_thread(task_t *tsk, thread_t *thr)
 {
   mutex_lock(&tsk->lock);
-  cll_insert(&tsk->peer_threads, &thr->task_node);
   tsk->num_threads += 1;
   mutex_unlock(&tsk->lock);
 
-  return 0;
+  return;
+}
+
+void task_del_thread(task_t *tsk, thread_t *thr)
+{
+  /* Free the last dead kid */
+  if (tsk->dead_kid)
+    free(tsk->dead_kid);
+
+  /* Make yourself dead and dec thread count */
+  tsk->dead_kid = thr;
+  tsk->num_threads -= 1;
+
+  return;
 }
 
 /** @brief Add a task to the task list.

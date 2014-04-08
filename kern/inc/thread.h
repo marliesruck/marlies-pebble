@@ -48,7 +48,7 @@ struct thread {
   void *sp;
   void *pc;
   swexn_t swexn;
-  char kstack[KSTACK_SIZE];
+  char *kstack;
 };
 typedef struct thread thread_t;
 

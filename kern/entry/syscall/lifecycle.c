@@ -125,10 +125,7 @@ int sys_thread_fork(unsigned int esp)
   if (!t) return -1;
   tid = t->tid;
 
-  if (task_add_thread(curr_tsk, t)) {
-    free(t);
-    return -1;
-  }
+  task_add_thread(curr_tsk, t);
 
   sp = kstack_copy(t->kstack, curr_thr->kstack, esp);
   pc = asm_child_finish_sys_thread_fork;
@@ -196,7 +193,7 @@ void sys_set_status(int status)
   return;
 }
 
-#include <tcb_alloc.h>
+#include <slab_alloc.h>
 
 struct thr_free_args {
   mutex_s *lock;
@@ -207,7 +204,7 @@ void thr_free_self(void *args)
 {
   struct thr_free_args *tf_args = (struct thr_free_args *)args;
   mutex_unlock_raw(tf_args->lock);
-  stack_populate_entry(tf_args->datap, curr_thr);
+  slab_populate_entry(tf_args->datap, curr_thr->kstack);
 }
 
 void sys_vanish(void)
@@ -219,8 +216,9 @@ void sys_vanish(void)
 
   /* There are still live threads */
   mutex_lock(&task->lock);
-  if (0 < --task->num_threads) {
-    tf_args.datap = stack_create_entry();
+  task_del_thread(task, curr_thr);
+  if (0 < task->num_threads) {
+    tf_args.datap = slab_create_entry();
     tf_args.lock = &task->lock;
     sched_do_and_block(curr_thr, (sched_do_fn) thr_free_self, &tf_args);
   }
@@ -236,7 +234,7 @@ void sys_vanish(void)
   task_t *parent = task_signal_parent(task);
 
   /* Your parent should not reap you until you've descheduled yourself */
-  tf_args.datap = stack_create_entry();
+  tf_args.datap = slab_create_entry();
   tf_args.lock = &parent->lock;
   sched_do_and_block(curr_thr, (sched_do_fn) thr_free_self, &tf_args);
 

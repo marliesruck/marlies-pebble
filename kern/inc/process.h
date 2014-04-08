@@ -26,9 +26,7 @@ struct task{
   queue_s  dead_children; /* The list I wait() on */
   cvar_s  cv;             /* For the parent to sleep on while it's waiting to
                              reap its children */
-  cll_list peer_threads;  /* As the task spawns thread, add them here. When the
-                             last thread vanishes, we traverse this list and
-                             free all threads but ourselves */
+  struct thread *dead_kid;
   uint32_t cr3;           /* PTBR */
   vm_info_s vmi;          /* Virtual Memory */
   uint32_t num_threads;   /* For knowing when vanish() should 
@@ -52,7 +50,8 @@ task_t *init;
 /* Task manipulation routines */
 struct thread *task_init(void);
 void task_free(task_t *task);
-int task_add_thread(task_t *tsk, struct thread *thr);
+void task_add_thread(task_t *tsk, struct thread *thr);
+void task_del_thread(task_t *tsk, struct thread *thr);
 task_t *task_signal_parent(task_t *task);
 task_t *task_find_zombie(task_t *task);
 void task_reap(task_t *victim);
