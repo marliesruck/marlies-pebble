@@ -161,20 +161,4 @@ int main()
   if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  /*** --- Classic Init Routine --- ***/
-
-  int pid, exitstatus;
-  char shell[] = "shell";
-  args[0] = shell;
-  args[1] = NULL;
-
-  while(1) {
-    pid = fork();
-    if (!pid)
-      exec(shell, args);
-    
-    while (pid != wait(&exitstatus));
-  
-    printf("Shell exited with status %d; starting it back up...", exitstatus);
-  }
 }

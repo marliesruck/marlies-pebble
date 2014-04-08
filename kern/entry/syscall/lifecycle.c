@@ -196,24 +196,33 @@ void sys_set_status(int status)
 void sys_vanish(void)
 {
   task_t *task = curr_tsk;
+  mutex_s *lock = &task->lock;
 
   assert( thrlist_del(curr_thr) == 0 );
 
-  /* There are still live threads */
-  mutex_lock(&task->lock);
+  mutex_lock(lock);
+
+  /* Delete your thread from the task and reap a peer thread */
   task_del_thread(task, curr_thr);
-  if (0 < task->num_threads) {
-    sched_do_and_block(curr_thr, (sched_do_fn) mutex_unlock_raw, &task->lock);
-  }
-  mutex_unlock(&task->lock);
 
   /* You are the last thread */ 
-  task_free(task);
-  task_t *parent = task_signal_parent(task);
+  if (0 == task->num_threads)
+  {
+    /* You are not competing with any one */
+    mutex_unlock(lock);
 
-  /* Your parent should not reap you until you've descheduled yourself */
-  sched_do_and_block(curr_thr, (sched_do_fn) mutex_unlock_raw, &parent->lock);
+    /* Remove yourself from the task list, free your virtual memory and child
+     * your children  */
+    task_free(task);
 
+    /* Enqueue your exit status, reap a sibiling, signal your parent */
+    task_t *parent = task_signal_parent(task);
+
+    /* Drop your parent's lock upon descheduling */
+    lock = &parent->lock;
+  }
+
+  sched_do_and_block(curr_thr, (sched_do_fn) mutex_unlock_raw, lock);
   return;
 }
 
