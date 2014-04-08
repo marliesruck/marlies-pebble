@@ -54,7 +54,7 @@ int sys_deschedule(int *reject)
     return 0;
   }
 
-  sched_do_and_block(curr_thr, (sched_do_fn) mutex_unlock,
+  sched_do_and_block(curr_thr, (sched_do_fn) mutex_unlock_raw,
                      &curr_thr->lock);
 
   return 0;

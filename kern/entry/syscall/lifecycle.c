@@ -206,7 +206,7 @@ struct thr_free_args {
 void thr_free_self(void *args)
 {
   struct thr_free_args *tf_args = (struct thr_free_args *)args;
-  mutex_unlock(tf_args->lock);
+  mutex_unlock_raw(tf_args->lock);
   stack_populate_entry(tf_args->datap, curr_thr);
 }
 
