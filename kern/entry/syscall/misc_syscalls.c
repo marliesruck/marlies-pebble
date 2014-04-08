@@ -42,6 +42,14 @@ void craft_state(ureg_t state);
 
 void sys_halt()
 {
+  sim_halt();
+
+  disable_interrupts();
+
+  lprintf("Execution ceased");
+
+  while(1);
+
   return;
 }
 
