@@ -21,12 +21,13 @@
 /* Libc specific includes */
 #include <stdint.h>
 
-struct task{
+struct task {
   int parent_tid;         /* Tid of root thread in my parent */
   queue_s  dead_children; /* The list I wait() on */
   cvar_s  cv;             /* For the parent to sleep on while it's waiting to
                              reap its children */
-  struct thread *dead_kid;
+  struct task *dead_task;
+  struct thread *dead_thr;
   uint32_t cr3;           /* PTBR */
   vm_info_s vmi;          /* Virtual Memory */
   uint32_t num_threads;   /* For knowing when vanish() should 
@@ -38,7 +39,7 @@ struct task{
                              wait should block */
   mutex_s  lock;          /* Hold this lock when modifying the task struct */
   int status;             /* My exit status */
-  cll_node tasklist_entry;  /* Node for the task list */
+  cll_node *tasklist_entry;  /* Node for the task list */
   char *execname;          /* For simics and debugging in general...currently
                               a memory leak, get rid of this before submitting */
 };
@@ -57,8 +58,8 @@ task_t *task_find_zombie(task_t *task);
 void task_reap(task_t *victim);
 
 /* Task list manipulation routines */
-int tasklist_add(task_t *t);
-int tasklist_del(task_t *t);
+void tasklist_add(task_t *t);
+void tasklist_del(task_t *t);
 
 
 #endif /* __PROCESS_H__ */

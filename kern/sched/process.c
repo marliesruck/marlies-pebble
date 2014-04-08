@@ -35,8 +35,17 @@ task_t *task_find_and_lock_parent(task_t *task);
  */
 thread_t *task_init(void)
 {
+  /* Allocate a PCB */
   task_t *task = malloc(sizeof(task_t));
   if(!task) return NULL;
+
+  /* Allocate a cll node */
+  task->tasklist_entry = malloc(sizeof(cll_node));
+  if (!task->tasklist_entry) {
+    free(task);
+    return NULL;
+  }
+  cll_init_node(task->tasklist_entry, task);
 
   /* Initialize vm */
   vm_init(&task->vmi);
@@ -49,7 +58,7 @@ thread_t *task_init(void)
   task->live_children = 0;
   queue_init(&task->dead_children);
   cvar_init((&task->cv));
-  task->dead_kid = NULL;
+  task->dead_thr = NULL;
 
   task->parent_tid = curr_tsk->tid;
 
@@ -62,6 +71,7 @@ thread_t *task_init(void)
   /* Initialize root thread */
   thread_t *thread = thread_init(task);
   if(!thread) {
+    free(task->tasklist_entry);
     free(task);
     return NULL;
   }
@@ -71,8 +81,7 @@ thread_t *task_init(void)
   task->tid = thread->tid;
 
   /* Add to task list */
-  cll_init_node(&task->tasklist_entry, task);
-  if(tasklist_add(task) < 0) return NULL;  
+  tasklist_add(task);
 
   return thread;
 }
@@ -88,12 +97,12 @@ void task_add_thread(task_t *tsk, thread_t *thr)
 
 void task_del_thread(task_t *tsk, thread_t *thr)
 {
-  /* Free the last dead kid */
-  if (tsk->dead_kid)
-    free(tsk->dead_kid);
+  /* Free the last dead thread */
+  if (tsk->dead_thr)
+    thr_free(tsk->dead_thr);
 
   /* Make yourself dead and dec thread count */
-  tsk->dead_kid = thr;
+  tsk->dead_thr = thr;
   tsk->num_threads -= 1;
 
   return;
@@ -105,16 +114,16 @@ void task_del_thread(task_t *tsk, thread_t *thr)
  *
  *  @return -1 on error, else 0.
  **/
-int tasklist_add(task_t *t)
+void tasklist_add(task_t *t)
 {
   assert(t);
 
   /* Lock, insert, unlock */
   mutex_lock(&task_list_lock);
-  cll_insert(task_list.next, &t->tasklist_entry);
+  cll_insert(task_list.next, t->tasklist_entry);
   mutex_unlock(&task_list_lock);
 
-  return 0;
+  return;
 }
 
 /** @brief Remove a task from the task list.
@@ -123,15 +132,15 @@ int tasklist_add(task_t *t)
  *
  *  @return -1 on error, else 0.
  **/
-int tasklist_del(task_t *t)
+void tasklist_del(task_t *t)
 {
   assert(t);
 
   /* Lock, delete, unlock */
   mutex_lock(&task_list_lock);
-  assert(cll_extract(&task_list, &t->tasklist_entry));
+  assert(cll_extract(&task_list, t->tasklist_entry));
   mutex_unlock(&task_list_lock);
-  return 0;
+  return;
 }
 
 /** @brief Free a task's resources.
@@ -153,7 +162,7 @@ void task_free(task_t *task)
 
   /* Remove yourself from the task list so that your children cannot add
    * themselves to your dead children list */
-  assert(tasklist_del(task) == 0);
+  tasklist_del(task);
 
   /* Acquire and release your lock in case your child grabbed your task lock
    * before you removed yourself from the task list */
@@ -168,11 +177,13 @@ void task_free(task_t *task)
     n = queue_dequeue(&task->dead_children);
     victim = queue_entry(task_t *, n);
     task_reap(victim);
+    free(n);
     /* Node is statically allocated so we don't free it */
   }
 
   return;
 }
+
 /** @brief Find your parent and lock their task struct
  *
  *  Atomically searches the task list for your parent's task struct in order to
@@ -214,6 +225,31 @@ task_t *task_find_and_lock_parent(task_t *task)
   return parent;
 }
 
+void task_enqueue_status(task_t *parent, task_t *child)
+{
+  /* Add your status */
+  queue_enqueue(&parent->dead_children, child->tasklist_entry);
+
+  /* Signal your parent */
+  cvar_signal(&parent->cv);
+
+  return;
+}
+
+void task_del_child(task_t *parent, task_t *child)
+{
+//  /* Free the most recently deceased task */
+//  if (parent->dead_task)
+//    task_reap(parent->dead_task);
+//  parent->dead_task = child;
+
+  /* Live children count is for nuclear family only */
+  if(parent->tid == child->parent_tid)
+    parent->live_children--;
+
+  return;
+}
+
 /** @brief Wake your parent and remove yourself from the runnable queue.
  *
  *  @param task Task whose parent we should awaken.
@@ -224,15 +260,9 @@ task_t *task_signal_parent(task_t *task)
 {
   task_t *parent = task_find_and_lock_parent(task);
 
-  /* Live children count is for nuclear family only */
-  if(parent->tid == task->parent_tid)
-    parent->live_children--;
+  task_del_child(parent, task);
 
-  /* Add yourself as a dead child */
-  queue_enqueue(&parent->dead_children, &task->tasklist_entry);
-
-  /* Signal your parent */
-  cvar_signal(&parent->cv);
+  task_enqueue_status(parent, task);
 
   return parent;
 }
@@ -264,6 +294,7 @@ task_t *task_find_zombie(task_t *task)
   /* Remove dead child */
   n = queue_dequeue(&task->dead_children);
   task_t *child_task = queue_entry(task_t*, n);
+  free(n);
  
   /* Relinquish lock */
   mutex_unlock(&task->lock);
@@ -282,10 +313,13 @@ task_t *task_find_zombie(task_t *task)
  **/
 void task_reap(task_t *victim)
 {
-  /* Free task's page directory */
-  sfree((void *)(victim->cr3), PAGE_SIZE);
+  /* Free the last thread to die */
+  if (victim->dead_thr) thr_free(victim->dead_thr);
 
-  /* Free task struct */
+  /* Free the page directory and PCB */
+  sfree((void *)(victim->cr3), PAGE_SIZE);
   free(victim);
+
+  return;
 }
  

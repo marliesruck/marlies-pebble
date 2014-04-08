@@ -22,7 +22,9 @@
 #include <x86/page.h>
 #include <stdint.h>
 
-#define KSTACK_SIZE PAGE_SIZE
+
+#define KSTACK_SIZE   PAGE_SIZE
+#define KSTACK_ALIGN  4
 
 /** @enum thread_state
  *  @brief Flag values for thread state.
@@ -52,8 +54,9 @@ struct thread {
 };
 typedef struct thread thread_t;
 
-/* Initialization routines */
+/* Thread manipulation */
 thread_t *thread_init(struct task *t);
+void thr_free(thread_t *t);
 int thr_launch(thread_t *t, void *sp, void *pc);
 
 /* Thread list manipulation */
