@@ -1,12 +1,7 @@
 /** @file tcb_alloc.c
  *  
- *  @brief Implements a simple TCB allocator.
+ *  @brief Implements a simple SLAB allocator.
  *
- *  The primary purpose of this module is to allow us to reuse TCBs before
- *  the parent gets around to cleaning up after the exited thread.  To
- *  this end, we maintain a list of not-in-use, but not yet freed stacks
- *  which we can give to new threads.
- *  
  *  @author Enrique Naudon (esn)
  *  @author Marlies Ruck (mruck)
  *
@@ -22,37 +17,37 @@
 #include <string.h>
 
 
-cll_list stack_list = CLL_LIST_INITIALIZER(stack_list);
+cll_list slab_list = CLL_LIST_INITIALIZER(slab_list);
 mutex_s salloc_lock = MUTEX_INITIALIZER(salloc_lock);
 
-/** @brief Allocate a stack from the free list.
+/** @brief Allocate a slab from the free list.
  *
- *  @return A pointer to the base of the stack.
+ *  @return A pointer to the base of the slab.
  **/
 void *alloc_from_list(void)
 {
   cll_node *n;
   void *base;
 
-  /* Search for a usable stack */
-  cll_foreach(&stack_list, n)
+  /* Search for a usable slab */
+  cll_foreach(&slab_list, n)
     if (cll_entry(void *,n)) break;
-  if (n == &stack_list) return NULL;
+  if (n == &slab_list) return NULL;
 
   /* Grab one from the list */
-  n = cll_extract(&stack_list, n);
+  n = cll_extract(&slab_list, n);
   base = cll_entry(void *, n);
 
   free(n);
-  memset(base, 0, sizeof(thread_t));
+  memset(base, 0, PAGE_SIZE);
   return base;
 }
 
-/** @brief Allocate a stack.
+/** @brief Allocate a slab.
  *
- *  @return A pointer to the base of the stack.
+ *  @return A pointer to the base of the slab.
  **/
-void *stack_alloc(void)
+void *slab_alloc(void)
 {
   void *base;
 
@@ -60,8 +55,8 @@ void *stack_alloc(void)
   base = alloc_from_list();
   mutex_unlock(&salloc_lock);
 
-  /* Use a new stack if that fails */
-  if (!base) base = malloc(sizeof(thread_t));
+  /* Use a new slab if that fails */
+  if (!base) base = smemalign(PAGE_SIZE, PAGE_SIZE);
 
   return base;
 }
@@ -70,11 +65,11 @@ void *stack_alloc(void)
  *
  *  The dummy node contain's no data, but we return a pointer to it's data
  *  field.  The expectation is that the caller will fill in the data field
- *  with his/her stack.
+ *  with his/her slab.
  *
  *  @return A pointer to the data field of the dummy entry.
  **/
-void **stack_create_entry(void)
+void **slab_create_entry(void)
 {
   cll_node *n;
 
@@ -85,7 +80,7 @@ void **stack_create_entry(void)
 
   /* Add it to the list */
   mutex_lock(&salloc_lock);
-  cll_insert(stack_list.next, n);
+  cll_insert(slab_list.next, n);
   mutex_unlock(&salloc_lock);
 
   return &n->data;
@@ -95,7 +90,7 @@ void **stack_create_entry(void)
  *
  *  @return Void.
  **/
-void stack_populate_entry(void **datap, void *data)
+void slab_populate_entry(void **datap, void *data)
 {
   *datap = data;
   return;

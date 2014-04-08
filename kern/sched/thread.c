@@ -19,7 +19,7 @@
 #include <process.h>
 #include <sched.h>
 #include <sc_utils.h>
-#include <tcb_alloc.h>
+#include <slab_alloc.h>
 #include <thread.h>
 #include <vm.h>
 
@@ -27,6 +27,7 @@
 #include <assert.h>
 #include <malloc.h>
 #include <stdlib.h>
+
 
 /* Atomically acquire a tid */
 static int tid = 0;
@@ -51,8 +52,15 @@ thread_t *thread_init(task_t *task)
   assert(task);
 
   /* Allocate the thread structure */
-  thread_t *thread = stack_alloc();
+  thread_t *thread = malloc(sizeof(thread_t));
   if(!thread) return NULL;
+
+  /* Allocate the kernel stack */
+  thread->kstack = slab_alloc();
+  if (!thread->kstack) {
+    free(thread);
+    return NULL;
+  }
 
   /* Atomically acquire TID */
   mutex_lock(&tid_lock);
@@ -81,7 +89,6 @@ thread_t *thread_init(task_t *task)
 
 int thr_launch(thread_t *t, void *sp, void *pc)
 {
-
   /* Set stack and instruction pointers */
   t->sp = sp;
   t->pc = pc;
@@ -89,7 +96,7 @@ int thr_launch(thread_t *t, void *sp, void *pc)
   /* Add the thread to the thread list */
   assert(!thrlist_add(t));
 
-  /* Unblock (also sets state to THR_RUNNABLE */
+  /* Unblock (also sets state to THR_RUNNABLE) */
   assert(!sched_unblock(t));
 
   return 0;
