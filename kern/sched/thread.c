@@ -19,7 +19,6 @@
 #include <process.h>
 #include <sched.h>
 #include <sc_utils.h>
-#include <slab_alloc.h>
 #include <thread.h>
 #include <vm.h>
 
@@ -56,7 +55,7 @@ thread_t *thread_init(task_t *task)
   if(!thread) return NULL;
 
   /* Allocate the kernel stack */
-  thread->kstack = slab_alloc();
+  thread->kstack = smemalign(KSTACK_ALIGN, KSTACK_SIZE);
   if (!thread->kstack) {
     free(thread);
     return NULL;
@@ -85,6 +84,21 @@ thread_t *thread_init(task_t *task)
   deregister(&thread->swexn); 
     
   return thread;
+}
+
+/** @brief Free a thread.
+ *
+ *  We free the thread's kernel stack, then the thread's TCB.
+ *
+ *  @param t The thread to free.
+ *
+ *  @return Void.
+ **/
+void thr_free(thread_t *t)
+{
+  sfree(t->kstack, PAGE_SIZE);
+  free(t);
+  return;
 }
 
 int thr_launch(thread_t *t, void *sp, void *pc)
