@@ -238,6 +238,7 @@ int pg_set_attrs(pg_info_s *pgi, void *vaddr, unsigned int attrs)
   translate_attrs(&pte, attrs);
   assert( !set_pte(pgi->pg_dir, pgi->pg_tbls, vaddr, &pte) );
   /* Do we need an tlb_inval_page() here? */
+  tlb_inval_page(vaddr);
 
   return 0;
 }
