@@ -21,7 +21,15 @@
 /* Libc specific includes */
 #include <stdint.h>
 
+struct mini_pcb {
+  int tid;
+  int status;
+  cll_node entry;
+};
+typedef struct mini_pcb mini_pcb_s;
+
 struct task {
+  mini_pcb_s *mini_pcb;
   int parent_tid;         /* Tid of root thread in my parent */
   queue_s  dead_children; /* The list I wait() on */
   cvar_s  cv;             /* For the parent to sleep on while it's waiting to
@@ -32,14 +40,9 @@ struct task {
   vm_info_s vmi;          /* Virtual Memory */
   uint32_t num_threads;   /* For knowing when vanish() should 
                              deallocate ALL resources */
-  int tid;                /* Wait() returns the TID of the origin thread of the 
-                             exiting tasks, not the tid of the last thread 
-                             to vanish */
   int live_children;      /* This and dead_children determine whether or not
                              wait should block */
   mutex_s  lock;          /* Hold this lock when modifying the task struct */
-  int status;             /* My exit status */
-  cll_node *tasklist_entry;  /* Node for the task list */
   char *execname;          /* For simics and debugging in general...currently
                               a memory leak, get rid of this before submitting */
 };
@@ -54,7 +57,7 @@ void task_free(task_t *task);
 void task_add_thread(task_t *tsk, struct thread *thr);
 void task_del_thread(task_t *tsk, struct thread *thr);
 task_t *task_signal_parent(task_t *task);
-task_t *task_find_zombie(task_t *task);
+int task_find_zombie(task_t *task, int *status);
 void task_reap(task_t *victim);
 
 /* Task list manipulation routines */
