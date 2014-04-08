@@ -6,8 +6,6 @@
  * @author Marlies Ruck (mruck)
  */
 
-#include <simics.h>
-
 /* Pebble specific includes */
 #include <cllist.h>
 #include <process.h>
@@ -39,14 +37,6 @@ thread_t *task_init(void)
   task_t *task = malloc(sizeof(task_t));
   if(!task) return NULL;
 
-  /* Allocate a cll node */
-  task->tasklist_entry = malloc(sizeof(cll_node));
-  if (!task->tasklist_entry) {
-    free(task);
-    return NULL;
-  }
-  cll_init_node(task->tasklist_entry, task);
-
   /* Initialize vm */
   vm_init(&task->vmi);
   task->cr3 = (uint32_t) task->vmi.pg_info.pg_dir;
@@ -59,26 +49,31 @@ thread_t *task_init(void)
   queue_init(&task->dead_children);
   cvar_init((&task->cv));
   task->dead_thr = NULL;
+  task->dead_task = NULL;
 
-  task->parent_tid = curr_tsk->tid;
+  task->parent_tid = curr_tsk->mini_pcb->tid;
 
   /* Initialize the task struct lock */
   mutex_init(&task->lock);
 
-  /* Zero the status */
-  task->status = 0;
-
-  /* Initialize root thread */
+  /* Initialize root thread and add it to the task*/
   thread_t *thread = thread_init(task);
   if(!thread) {
-    free(task->tasklist_entry);
     free(task);
     return NULL;
   }
-
-  /* Add it to the new task */
   task_add_thread(task, thread);
-  task->tid = thread->tid;
+
+  /* Allocate and initialize the mini PCB */
+  task->mini_pcb = malloc(sizeof(mini_pcb_s));
+  if (!task->mini_pcb) {
+    thr_free(thread);
+    free(task);
+    return NULL;
+  }
+  task->mini_pcb->status = 0;
+  task->mini_pcb->tid = thread->tid;
+  cll_init_node(&task->mini_pcb->entry, task);
 
   /* Add to task list */
   tasklist_add(task);
@@ -120,7 +115,7 @@ void tasklist_add(task_t *t)
 
   /* Lock, insert, unlock */
   mutex_lock(&task_list_lock);
-  cll_insert(task_list.next, t->tasklist_entry);
+  cll_insert(task_list.next, &t->mini_pcb->entry);
   mutex_unlock(&task_list_lock);
 
   return;
@@ -138,7 +133,7 @@ void tasklist_del(task_t *t)
 
   /* Lock, delete, unlock */
   mutex_lock(&task_list_lock);
-  assert(cll_extract(&task_list, t->tasklist_entry));
+  assert(cll_extract(&task_list, &t->mini_pcb->entry));
   mutex_unlock(&task_list_lock);
   return;
 }
@@ -158,7 +153,7 @@ void tasklist_del(task_t *t)
 void task_free(task_t *task)
 {
   cll_node *n;
-  task_t *victim;
+  mini_pcb_s *mini;
 
   /* Remove yourself from the task list so that your children cannot add
    * themselves to your dead children list */
@@ -175,10 +170,8 @@ void task_free(task_t *task)
   /* Free your kids' resources */
   while(!queue_empty(&task->dead_children)){
     n = queue_dequeue(&task->dead_children);
-    victim = queue_entry(task_t *, n);
-    task_reap(victim);
-    free(n);
-    /* Node is statically allocated so we don't free it */
+    mini = queue_entry(mini_pcb_s *, n);
+    free(mini);
   }
 
   return;
@@ -206,11 +199,11 @@ task_t *task_find_and_lock_parent(task_t *task)
   mutex_lock(&task_list_lock);
   cll_foreach(&task_list, n) {
     t = cll_entry(task_t *,n);
-    if (t->tid == parent_tid) break;
+    if (t->mini_pcb->tid == parent_tid) break;
   }
 
   /* Your parent is dead. Tell init instead */
-  if(t->tid != parent_tid) 
+  if(t->mini_pcb->tid != parent_tid) 
     parent = init; 
   else
     parent = t;
@@ -227,8 +220,11 @@ task_t *task_find_and_lock_parent(task_t *task)
 
 void task_enqueue_status(task_t *parent, task_t *child)
 {
+  mini_pcb_s *mini = child->mini_pcb;
+
   /* Add your status */
-  queue_enqueue(&parent->dead_children, child->tasklist_entry);
+  queue_init_node(&mini->entry, mini);
+  queue_enqueue(&parent->dead_children, &mini->entry);
 
   /* Signal your parent */
   cvar_signal(&parent->cv);
@@ -238,13 +234,13 @@ void task_enqueue_status(task_t *parent, task_t *child)
 
 void task_del_child(task_t *parent, task_t *child)
 {
-//  /* Free the most recently deceased task */
-//  if (parent->dead_task)
-//    task_reap(parent->dead_task);
-//  parent->dead_task = child;
+  /* Free the most recently deceased task */
+  if (parent->dead_task)
+    task_reap(parent->dead_task);
+  parent->dead_task = child;
 
   /* Live children count is for nuclear family only */
-  if(parent->tid == child->parent_tid)
+  if(parent->mini_pcb->tid == child->parent_tid)
     parent->live_children--;
 
   return;
@@ -273,34 +269,40 @@ task_t *task_signal_parent(task_t *task)
  *
  *  @return NULL if you have no child, else the address of the zombie.
  **/
-task_t *task_find_zombie(task_t *task)
+int task_find_zombie(task_t *task, int *status)
 {
   queue_node_s *n;
+  mini_pcb_s *mini;
+  int tid;
 
   /* Atomically check for dead children */
   mutex_lock(&task->lock);
 
-  while(queue_empty(&task->dead_children)){
-    if(task->live_children == 0){
-        /* Avoid unbounded blocking */
+  while (queue_empty(&task->dead_children))
+  {
+    /* Return error for no kids */
+    if (task->live_children == 0) {
         mutex_unlock(&task->lock);
-        return NULL;
-      }
-    else{
-      cvar_wait(&task->cv, &task->lock);
+        return -1;
     }
+
+    /* Wait for a death */
+    else cvar_wait(&task->cv, &task->lock);
   }
 
-  /* Remove dead child */
+  /* Save child info */
   n = queue_dequeue(&task->dead_children);
-  task_t *child_task = queue_entry(task_t*, n);
-  free(n);
+  mini = queue_entry(mini_pcb_s *, n);
+  tid = mini->tid;
+  *status = mini->status;
  
   /* Relinquish lock */
   mutex_unlock(&task->lock);
 
-  return child_task;
+  free(mini);
+  return tid;
 }
+
 /** @brief Reap a child task.
  *
  *  The parent frees the child's page directory, kernel stacks and task struct.

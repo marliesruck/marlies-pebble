@@ -98,9 +98,6 @@ int sys_fork(unsigned int esp)
   ctask->execname = parent->execname;
   sim_reg_process((void *)ctask->cr3, ctask->execname);
 
-  /* Zero the status */
-  ctask->status = 0;
-
   /* Atomically increment live children in case you are vying with another
    * thread who is forking */
   mutex_lock(&parent->lock);
@@ -169,7 +166,7 @@ int sys_exec(char *execname, char *argvec[])
   stack = usr_stack_init(&curr_tsk->vmi, argcnt, argvec_k);
 
   /* Zero the status */
-  curr_tsk->status = 0;
+  curr_tsk->mini_pcb->status = 0;
 
   /* Free copied parameters*/
   for (i = 0; i < argcnt; ++i) free(argvec_k[i]);
@@ -188,7 +185,7 @@ int sys_exec(char *execname, char *argvec[])
 void sys_set_status(int status)
 {
   mutex_lock(&curr_tsk->lock);
-  curr_tsk->status = status;
+  curr_tsk->mini_pcb->status = status;
   mutex_unlock(&curr_tsk->lock);
   return;
 }
@@ -228,26 +225,20 @@ void sys_vanish(void)
 
 int sys_wait(int *status_ptr)
 {
-  task_t *child_task = task_find_zombie(curr_tsk);
+  int tid, status;
+  
+  tid = task_find_zombie(curr_tsk, &status);
 
   /* You have no children to reap */
-  if(!child_task) return -1;
-
-  /* Store out root task tid to return */
-  int tid = child_task->tid;
+  if(tid < 0) return -1;
  
   /* Scribble to status
    * TODO: what if this fails?
    */
   if(status_ptr) {
-    if ( copy_to_user((char *)status_ptr, (char *)&child_task->status,
-                     sizeof(int)) )
-    {
+    if (copy_to_user((char *)status_ptr, (char *)&status, sizeof(int)))
       return -1;
-    }
   }
-
-  task_reap(child_task);
 
   return tid;
 }

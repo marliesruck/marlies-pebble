@@ -161,4 +161,6 @@ int main()
   if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
+  return 0;
+
 }
