@@ -43,8 +43,8 @@
  **/
 void slaughter(void)
 {
-  /* You were killed by the kernel */
-  curr_thr->killed = 1;
+  /* Set status -2 */
+  sys_set_status(-2);
 
   /* Free your kernel resources */
   sys_vanish();
