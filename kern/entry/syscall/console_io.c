@@ -65,7 +65,7 @@ int sys_print(int size, char *buf)
   }
 
   /* Write to the console */
-  putbytes(buf, size);
+  putbytes(buf_k, size);
 
   free(buf_k);
   return 0;

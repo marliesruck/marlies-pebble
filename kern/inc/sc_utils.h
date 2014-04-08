@@ -155,6 +155,7 @@ asm_\scname:
 .macro N_ARY_SYSCALL scname,argc
 
 # Export and label it...
+.extern copy_from_user_static
 .extern \scname
 .global asm_\scname
 asm_\scname:
@@ -171,18 +172,41 @@ asm_\scname:
   push  %esi                      # Save ESI
   push  %edi                      # Save EDI
   push  %ebx                      # Save EBX
+  push  %edx
 
-  movl \argc, %ecx                # ECX = argument count (for rep)
-  leal (,%ecx, 4), %ebx           # Compute space on stack for args
-  sub  %ebx, %esp                 # Make space on the stack for the args
-  movl %esp, %edi                 # EDI = kernel stack
-  rep movsl                       # Copy args onto kernel stack
+copy_args_\scname: 
+
+  # Set up exception stack to copy arguments from user space
+  movl  \argc, %edi               # EDI = argument count (for rep)
+  leal  (,%edi, 4), %ebx          # Compute space on stack for args
+  sub   %ebx, %esp                # Make space on the stack for the args
+  movl  %esp, %edi                # Save dest for copying
+  push  %ebx                      # Push num bytes to copy
+  push  %esi                      # Push src
+  push  %edi                      # Push dest
+
+  # Copy arguments onto exception stack
+  call  copy_from_user_static
+
+  # Clean up stack
+  add  $12, %esp
+
+  # Check if arguments were copied successfully
+  test  %eax, %eax
+  jnz   userland_\scname
+
+handle_exn_\scname: 
 
   # Invoke system call handler
   call \scname                    # Call the system call handler
-  add   %ebx, %esp                # Clean up ESP from args pushed on by rep
+
+userland_\scname: 
+
+  # Clean up stack
+  add   %ebx, %esp        
 
   # Restore MOVS registers
+  pop   %edx
   pop   %ebx                      # Restore EBX
   pop   %edi                      # Restore EDI
   pop   %esi                      # Restore ESI
@@ -210,7 +234,6 @@ asm_\scname:
 .macro FORK_SYSCALL scname
 
 # Export and label it...
-.extern sim_breakpoint
 .extern \scname
 .global asm_\scname
 asm_\scname:

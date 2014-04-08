@@ -239,6 +239,7 @@ int copy_from_user_static(void *dst, void *src, size_t bytes)
   memcpy(dst, src, bytes);
 
   mutex_unlock(&curr_tsk->lock);
+
   return 0;
 }
 /** @brief Safely copy data to user-space.

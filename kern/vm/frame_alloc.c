@@ -5,13 +5,13 @@
  *  @author Enrique Naudon (esn)
  *  @author Marlies Ruck (mruck)
  **/
+#include <simics.h>
 
 /* Frame allocator includes */
 #include <frame_alloc.h>
 
 /* Pebbles includes */
 #include <common_kern.h>
-#include <x86/page.h>
 #include <util.h>
 #include <page_alloc.h>
 
@@ -20,21 +20,15 @@
 #include <stdint.h>
 #include <assert.h>
 
-#include <simics.h>
+#define FIRST_FRAME_INDEX ( USER_MEM_START/sizeof(frame_t) )
 
-typedef char frame_t[PAGE_SIZE];
 const frame_t *frames = (const frame_t *)NULL;
-int frame_index = USER_MEM_START/sizeof(frame_t);
+int fr_avail = 0;
 
 mutex_s frame_allocator_lock = MUTEX_INITIALIZER(frame_allocator_lock);
 
 /* Pointer to the head of the free list */
 static void *freelist_p;
-
-int frame_remaining(void)
-{
-  return machine_phys_frames() - frame_index;
-}
 
 /** @brief Initialize frame allocator.
  *
@@ -48,12 +42,13 @@ void fr_init_allocator(void)
   int i;
   int lim = machine_phys_frames();
 
-  for(i = frame_index; i < lim - 1; i++){
+  for(i = FIRST_FRAME_INDEX; i < lim - 1; i++){
     *((uint32_t *)frames[i]) = (uint32_t)(frames[i + 1]);
+    ++fr_avail;
   }
  *((uint32_t *)(frames[i])) = 0;
 
- freelist_p = (void *)(frames[frame_index]);
+ freelist_p = (void *)(frames[FIRST_FRAME_INDEX]);
 
  return;
 }
@@ -70,7 +65,7 @@ void fr_init_allocator(void)
  *
  *  @return Head of free list.
  */
-void *retrieve_head(void)
+void *fr_retrieve_head(void)
 {
   return freelist_p;
 }
@@ -80,27 +75,12 @@ void *retrieve_head(void)
  *  Assumes free list is locked. 
  *
  *  @param frame Address of frame.
+ *
  *  @return Void.
  **/
-void update_head(void *frame)
+void fr_update_head(void *frame)
 {
   freelist_p = frame;
-  return;
-}
-
-/* @brief Updates head.
- *
- * Takes a virtual address, computes the floor (the location of the implicit
- * pointer to the next free frame), and updates the head accordingly.
- *
- * @param addr.
- * @return Void.
- */
-void update_head_wrapper(void *addr)
-{
-  uint32_t *floor = (uint32_t *)(FLOOR(addr, PAGE_SIZE));
-  update_head((void *)*floor);
-
   return;
 }
 
