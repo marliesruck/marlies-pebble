@@ -10,14 +10,9 @@
 #ifndef __SCHED_H__
 #define __SCHED_H__
 
-#include <mutex.h>
 #include <queue.h>
-#include <spin.h>
 #include <thread.h>
 
-
-/* Scheduler lock */
-extern mutex_s sched_lock;
 
 /* Runnable queue */
 extern queue_s runnable;

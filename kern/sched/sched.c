@@ -24,8 +24,6 @@
  **/
 queue_s runnable = QUEUE_INITIALIZER(runnable);
 
-mutex_s sched_lock = MUTEX_INITIALIZER(sched_lock);
-
 /** @brief Make a thread ineligible for CPU time.
  *
  *  In this function we use the linked list functions instead of the queue

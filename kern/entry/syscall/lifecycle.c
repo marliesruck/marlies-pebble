@@ -80,28 +80,17 @@ int sys_fork(unsigned int esp)
   parent = curr_tsk;
 
   /* Only single threaded tasks can fork */
-  if(curr_tsk->num_threads != 1){
-    lprintf("FORK FAILED");
-    MAGIC_BREAK;
+  if(curr_tsk->num_threads != 1)
     return -2;
-  }
 
   cthread = task_init();
-  if(!cthread){
-    lprintf("FORK FAILED");
-    MAGIC_BREAK;
-    return -1;
-  }
+  if(!cthread) return -1;
   tid = cthread->tid; 
   ctask = cthread->task_info;
 
   /* Copy address space */
   if (vm_copy(&ctask->vmi, &parent->vmi)) {
-    lprintf("FORK FAILED");
-    MAGIC_BREAK;
-    /* Free task_t, root thread and page directory...vm_copy() will
-     * free any allocated pages */
-    task_reap(ctask);
+    task_free(ctask);
     return -1;
   }
 
@@ -207,17 +196,33 @@ void sys_set_status(int status)
   return;
 }
 
+#include <tcb_alloc.h>
+
+struct thr_free_args {
+  mutex_s *lock;
+  void **datap;
+};
+
+void thr_free_self(void *args)
+{
+  struct thr_free_args *tf_args = (struct thr_free_args *)args;
+  mutex_unlock(tf_args->lock);
+  stack_populate_entry(tf_args->datap, curr_thr);
+}
+
 void sys_vanish(void)
 {
   task_t *task = curr_tsk;
+  struct thr_free_args tf_args;
 
   assert( thrlist_del(curr_thr) == 0 );
 
-  mutex_lock(&task->lock);
-
   /* There are still live threads */
-  if(0 < --task->num_threads){
-    sched_do_and_block(curr_thr, (sched_do_fn) mutex_unlock, &task->lock);
+  mutex_lock(&task->lock);
+  if (0 < --task->num_threads) {
+    tf_args.datap = stack_create_entry();
+    tf_args.lock = &task->lock;
+    sched_do_and_block(curr_thr, (sched_do_fn) thr_free_self, &tf_args);
   }
   mutex_unlock(&task->lock);
 
@@ -228,9 +233,12 @@ void sys_vanish(void)
 
   /* You are the last thread */ 
   task_free(task);
+  task_t *parent = task_signal_parent(task);
 
-  /*Tell your parent to reap you */
-  task_signal_parent(task);
+  /* Your parent should not reap you until you've descheduled yourself */
+  tf_args.datap = stack_create_entry();
+  tf_args.lock = &parent->lock;
+  sched_do_and_block(curr_thr, (sched_do_fn) thr_free_self, &tf_args);
 
   return;
 }
@@ -256,7 +264,6 @@ int sys_wait(int *status_ptr)
     }
   }
 
-  /* Free the task's remaining resources */
   task_reap(child_task);
 
   return tid;

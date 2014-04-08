@@ -212,10 +212,8 @@ task_t *task_find_and_lock_parent(task_t *task)
  *
  *  @return Void.
  **/
-void task_signal_parent(task_t *task)
+task_t *task_signal_parent(task_t *task)
 {
-  queue_node_s n;
-
   task_t *parent = task_find_and_lock_parent(task);
 
   /* Live children count is for nuclear family only */
@@ -223,17 +221,14 @@ void task_signal_parent(task_t *task)
     parent->live_children--;
 
   /* Add yourself as a dead child */
-  queue_init_node(&n, task);
-  queue_enqueue(&parent->dead_children, &n);
+  queue_enqueue(&parent->dead_children, &task->tasklist_entry);
 
   /* Signal your parent */
   cvar_signal(&parent->cv);
 
-  /* Your parent should not reap you until you've descheduled yourself */
-  sched_do_and_block(curr_thr, (sched_do_fn) mutex_unlock, &parent->lock);
-
-  return;
+  return parent;
 }
+
 /** @brief Search for a zombie child.
  *
  *  @param task Task to search for.
@@ -279,16 +274,8 @@ task_t *task_find_zombie(task_t *task)
  **/
 void task_reap(task_t *victim)
 {
-  cll_node *n;
-
   /* Free task's page directory */
   sfree((void *)(victim->cr3), PAGE_SIZE);
-
-  /* Free task's thread resources */
-  while(!cll_empty(&victim->peer_threads)){
-    n = cll_extract(&victim->peer_threads, victim->peer_threads.next);
-    free(n->data);
-  }
 
   /* Free task struct */
   free(victim);

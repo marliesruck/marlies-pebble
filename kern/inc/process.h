@@ -53,7 +53,7 @@ task_t *init;
 struct thread *task_init(void);
 void task_free(task_t *task);
 int task_add_thread(task_t *tsk, struct thread *thr);
-void task_signal_parent(task_t *task);
+task_t *task_signal_parent(task_t *task);
 task_t *task_find_zombie(task_t *task);
 void task_reap(task_t *victim);
 

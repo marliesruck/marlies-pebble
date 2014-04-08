@@ -19,6 +19,7 @@
 #include <process.h>
 #include <sched.h>
 #include <sc_utils.h>
+#include <tcb_alloc.h>
 #include <thread.h>
 #include <vm.h>
 
@@ -50,7 +51,7 @@ thread_t *thread_init(task_t *task)
   assert(task);
 
   /* Allocate the thread structure */
-  thread_t *thread = malloc(sizeof(thread_t));
+  thread_t *thread = stack_alloc();
   if(!thread) return NULL;
 
   /* Atomically acquire TID */
