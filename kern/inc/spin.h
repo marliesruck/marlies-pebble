@@ -20,6 +20,7 @@
 struct spin_lock {
   unsigned int ticket;          /**< Imposeses an order on CS entries **/
   volatile unsigned int turn;   /**< Currently serving **/
+  int owner;                    /**< TID of current owner >**/
 };
 typedef struct spin_lock spin_s;
 
