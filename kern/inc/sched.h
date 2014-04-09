@@ -22,9 +22,9 @@ thread_t *curr_thr;
 task_t *curr_tsk;
 
 /* Scheduling API */
-int sched_unblock(thread_t *thr);
-int sched_block(thread_t *thr);
-int sched_do_and_block(thread_t *thr, sched_do_fn func, void *args);
+void sched_unblock(thread_t *thr);
+void sched_block(thread_t *thr);
+void sched_do_and_block(thread_t *thr, sched_do_fn func, void *args);
 int sched_find(int tid);
 void schedule(void);
 void schedule_unprotected(void);

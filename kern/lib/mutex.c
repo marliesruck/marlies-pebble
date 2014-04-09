@@ -16,6 +16,7 @@
 #include <spin.h>
 
 /** @enum unlock mode
+
  *  @brief Flags for whether a mutex is being unlocked with interrupts
  *         enabled or disabled
  **/
@@ -25,14 +26,25 @@ enum unlock_mode {
 };
 typedef enum unlock_mode unlock_mode_e;
 
-/** @brief Internal routine for unlocking mutexes.
+
+/*************************************************************************
+ *  Internal helper functions
+ *************************************************************************/
+
+/** @brief Internal unlocking function.
+ *
+ *  There are two unlocking modes, one where we disable interrupts and
+ *  schedule after adding the next thread to the runqueue, and one where we
+ *  do not schedule and do not disable interrupts.  The point is so that we
+ *  can unlock a mutex while interrupts are disabled (i.e. in
+ *  sched_do_and_unblock(...)).
  *
  *  @param mp The mutex to unlock.
  *  @param mode Whether or not interrupts are currently enabled or disabled.
  *
  *  @return Void.
  **/
-void mutex_unlock_internal(mutex_s *mp, unlock_mode_e mode)
+void unlock(mutex_s *mp, unlock_mode_e mode)
 {
   queue_node_s *n;
   thread_t *thr;
@@ -58,16 +70,10 @@ void mutex_unlock_internal(mutex_s *mp, unlock_mode_e mode)
 
     /* Unlock and awaken that guy */
     spin_unlock(&mp->lock);
-
-    /* Interrupts are enabled */
-    if(mode == ENABLED){
-      assert(!sched_unblock(thr));
-    }
-    /* Interrupts are already disabled */
-    else{
-      rq_add(thr);
-    }
+    if(mode == ENABLED) sched_unblock(thr);
+    else rq_add(thr);
   }
+
   /* No one wants the lock */
   else {
     mp->owner = -1;
@@ -77,6 +83,11 @@ void mutex_unlock_internal(mutex_s *mp, unlock_mode_e mode)
 
   return;
 }
+
+
+/*************************************************************************
+ *  Exported API
+ *************************************************************************/
 
 /** @brief Initialize a mutex.
  *
@@ -164,7 +175,7 @@ void mutex_lock(mutex_s *mp)
  **/
 void mutex_unlock(mutex_s *mp)
 {
-  mutex_unlock_internal(mp, ENABLED);
+  unlock(mp, ENABLED);
   return;
 }
 
@@ -176,6 +187,7 @@ void mutex_unlock(mutex_s *mp)
  **/
 void mutex_unlock_raw(mutex_s *mp)
 {
-  mutex_unlock_internal(mp, DISABLED);
+  unlock(mp, DISABLED);
   return;
 }
+

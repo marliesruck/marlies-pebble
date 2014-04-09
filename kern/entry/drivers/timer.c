@@ -38,7 +38,7 @@ struct sleep_list_entry {
 };
 typedef struct sleep_list_entry sl_entry;
 
-int go_to_sleep(thread_t *t, unsigned int wake_time)
+void go_to_sleep(thread_t *t, unsigned int wake_time)
 {
   cll_node *n;
   sl_entry ent, *temp;
@@ -58,7 +58,8 @@ int go_to_sleep(thread_t *t, unsigned int wake_time)
   cll_insert(n, &ent.node);
 
   /* sched_block(...) will enable interrupts */
-  return sched_block(t);
+  sched_block(t);
+  return;
 }
 
 void wake_up(unsigned int time)

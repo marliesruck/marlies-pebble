@@ -109,7 +109,7 @@ int thr_launch(thread_t *t, void *sp, void *pc)
   assert(!thrlist_add(t));
 
   /* Unblock (also sets state to THR_RUNNABLE) */
-  assert(!sched_unblock(t));
+  sched_unblock(t);
 
   return 0;
 }

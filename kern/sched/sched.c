@@ -143,7 +143,7 @@ int sched_add_to_rq(thread_t *thr)
  *
  *  @return 0 on success; a negative integer error code on failure.
  **/
-int sched_unblock(thread_t *thr)
+void sched_unblock(thread_t *thr)
 {
   disable_interrupts();
 
@@ -151,7 +151,7 @@ int sched_unblock(thread_t *thr)
   schedule_unprotected();
 
   enable_interrupts();
-  return 0;
+  return;
 }
 
 /** @brief Make a thread ineligible for CPU time.
@@ -160,7 +160,7 @@ int sched_unblock(thread_t *thr)
  *
  *  @return 0 on success; a negative integer error code on failure.
  **/
-int sched_block(thread_t *thr)
+void sched_block(thread_t *thr)
 {
   disable_interrupts();
 
@@ -168,7 +168,7 @@ int sched_block(thread_t *thr)
   schedule_unprotected();
 
   enable_interrupts();
-  return 0;
+  return;
 }
 
 /** @brief Atomically execute a caller-specified function and block.
@@ -178,21 +178,16 @@ int sched_block(thread_t *thr)
  *
  *  @return 0 on success; a negative integer error code on failure.
  **/
-int sched_do_and_block(thread_t *thr, sched_do_fn func, void *args)
+void sched_do_and_block(thread_t *thr, sched_do_fn func, void *args)
 {
-  assert(thr);
-
-  /* Lock the run queue, unlock the world lock */
   disable_interrupts();
 
   func(args);
-
   rq_del(thr);
   schedule_unprotected();
 
-  /* Unlock and return */
   enable_interrupts();
-  return 0;
+  return;
 }
 
 /** @brief Defer execution of the invoking thread in favor of another thread

@@ -63,21 +63,21 @@ int sys_deschedule(int *reject)
 int sys_make_runnable(int tid)
 {
   thread_t *thr;
-  int ret;
 
   /* Find and lock the target */
   thr = thrlist_find(tid);
   mutex_lock(&thr->lock);
 
+  /* The target must exist and be runnable */
   if (!thr || thr->state == THR_RUNNABLE) {
     mutex_unlock(&thr->lock);
     return -1;
   }
 
-  ret = sched_unblock(thr);
+  /* Unblock the target */
+  sched_unblock(thr);
   mutex_unlock(&thr->lock);
-
-  return ret;
+  return 0;
 }
 
 unsigned int sys_get_ticks(void)
