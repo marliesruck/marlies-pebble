@@ -30,6 +30,7 @@ inline void spin_init(spin_s *sp)
 {
   sp->ticket = 0;
   sp->turn = 0;
+  sp->owner = -1;
 
   return;
 }
