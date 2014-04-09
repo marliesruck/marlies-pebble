@@ -152,6 +152,25 @@ void raw_unblock(thread_t *thr, queue_node_s *n)
  *
  *  @return 0 on success; a negative integer error code on failure.
  **/
+int sched_add_to_rq(thread_t *thr)
+{
+  /* Don't malloc a node, instead use the embedded list traversal structure */
+
+  /* Lock, enqueue, unlock */
+  disable_interrupts();
+  raw_unblock(thr,&thr->node);
+  enable_interrupts();
+
+  return 0;
+}
+/** @brief Make a thread eligible for CPU time.
+ *
+ *  This operation is atomic.
+ *
+ *  @param thr The thread to make runnable.
+ *
+ *  @return 0 on success; a negative integer error code on failure.
+ **/
 int sched_unblock(thread_t *thr)
 {
   /* Don't malloc a node, instead use the embedded list traversal structure */

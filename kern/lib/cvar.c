@@ -143,8 +143,9 @@ void cvar_broadcast(cvar_s *cv)
   while (!queue_empty(&cv->queue)) {
     n = queue_dequeue(&cv->queue);
     thr = queue_entry(thread_t *, n);
-    /* Add the the runnable queue */
-    raw_unblock(thr, &thr->node);
+
+    /* Add t0 the runnable queue */
+    sched_add_to_rq(thr);
   }
 
   spin_unlock(&cv->lock);

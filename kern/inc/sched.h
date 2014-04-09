@@ -28,6 +28,7 @@ typedef void (*sched_do_fn)(void *args);
 int sched_block(thread_t *thr);
 int sched_do_and_block(thread_t *thr, sched_do_fn func, void *args);
 void raw_unblock(thread_t *thr, queue_node_s *n);
+int sched_add_to_rq(thread_t *thr);
 int sched_unblock(thread_t *thr);
 int sched_find(int tid);
 void schedule(void);
