@@ -143,12 +143,12 @@ void cvar_broadcast(cvar_s *cv)
   while (!queue_empty(&cv->queue)) {
     n = queue_dequeue(&cv->queue);
     thr = queue_entry(thread_t *, n);
-
-    spin_unlock(&cv->lock);
-    assert(!sched_unblock(thr));
+    /* Add the the runnable queue */
+    raw_unblock(thr, &thr->node);
   }
 
   spin_unlock(&cv->lock);
+  schedule();
   return;
 }
 

@@ -226,8 +226,8 @@ void task_enqueue_status(task_t *parent, task_t *child)
   queue_init_node(&mini->entry, mini);
   queue_enqueue(&parent->dead_children, &mini->entry);
 
-  /* Signal your parent */
-  cvar_signal(&parent->cv);
+  /* Broadcast to any parents waiting on you */
+  cvar_broadcast(&parent->cv);
 
   return;
 }
