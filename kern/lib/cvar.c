@@ -16,6 +16,15 @@
 #include <spin.h>
 #include <thread.h>
 
+/** @enum unlock mode
+ *  @brief Flags for whether a mutex is being unlocked with interrupts
+ *         enabled or disabled
+ **/
+enum signal_mode {
+  ENABLED,
+  DISABLED,
+};
+typedef enum signal_mode signal_mode_e;
 
 /* @brief Initialize cond var 
  * 
@@ -97,7 +106,7 @@ void cvar_wait(cvar_s *cv, mutex_s *mp)
  *
  * @param cv Condition variable with queue of threads to awaken
  */
-void cvar_signal(cvar_s *cv) 
+void cvar_signal_internal(cvar_s *cv, signal_mode_e mode) 
 {
   queue_node_s *n;
   thread_t *thr;
@@ -114,7 +123,15 @@ void cvar_signal(cvar_s *cv)
 
     /* Unlock and wake */
     spin_unlock(&cv->lock);
-    assert(!sched_unblock(thr));
+
+    /* Interrupts are enabled */
+    if(mode == ENABLED){
+      assert(!sched_unblock(thr));
+    }
+    /* Interrupts are already disabled */
+    else{
+      raw_unblock(thr, &thr->node);
+    }
   }
 
   /* Otherwise, just unlock */
@@ -153,3 +170,13 @@ void cvar_broadcast(cvar_s *cv)
   return;
 }
 
+void cvar_signal(cvar_s *cv)
+{
+  cvar_signal_internal(cv, ENABLED);
+  return;
+}
+void cvar_signal_raw(cvar_s *cv)
+{
+  cvar_signal_internal(cv, DISABLED);
+  return;
+}

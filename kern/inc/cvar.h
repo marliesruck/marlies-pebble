@@ -37,6 +37,7 @@ int cvar_init( cvar_s *cv );
 void cvar_final( cvar_s *cv );
 void cvar_wait( cvar_s *cv, mutex_s *mp );
 void cvar_signal( cvar_s *cv );
+void cvar_signal_raw( cvar_s *cv );
 void cvar_broadcast( cvar_s *cv );
 
 #endif /* __COND_H__ */

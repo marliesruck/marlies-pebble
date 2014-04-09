@@ -132,9 +132,12 @@ void kbd_int_handler(void)
   char scancode;
   kh_type k;
 
+  /* Grab the scancode */
   scancode = inb(KEYBOARD_PORT);
 
+  /* Process the scancode */
   k = process_scancode(scancode);
+
   if (KH_HASDATA(k) && KH_ISMAKE(k))
   {
     switch (kbd_state)
@@ -143,7 +146,7 @@ void kbd_int_handler(void)
     case KBD_AWAITING_LINE:
       if (update_getline_globals(k)) {
         kbd_state = KBD_AWAITING_NONE;
-        cvar_signal(&kbd_wait);
+        cvar_signal_raw(&kbd_wait);
       }
       break;
 
@@ -151,7 +154,7 @@ void kbd_int_handler(void)
     case KBD_AWAITING_CHAR:
       __buffer_write(k);
       kbd_state = KBD_AWAITING_NONE;
-      cvar_signal(&kbd_wait);
+      cvar_signal_raw(&kbd_wait);
       break;
 
     /* No one is waiting */
@@ -162,10 +165,9 @@ void kbd_int_handler(void)
     }
   }
 
-  /* We don't want nested keyboard interrupts
-   * (keystroke order matters)
-   */
+  /* Ack the interrupt */
   outb(INT_CTL_PORT, INT_ACK_CURRENT);
+
   return;
 }
 
