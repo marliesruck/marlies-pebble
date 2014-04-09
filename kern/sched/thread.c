@@ -74,8 +74,7 @@ thread_t *thread_init(task_t *task)
   thread->pc = NULL;
 
   /* Embedded list traversal */
-  cll_init_node(&thread->node, thread);
-  cll_init_node(&thread->zzz_node, thread);
+  cll_init_node(&thread->rq_entry, thread);
   cll_init_node(&thread->task_node, thread);
   cll_init_node(&thread->thrlist_entry, thread);
 

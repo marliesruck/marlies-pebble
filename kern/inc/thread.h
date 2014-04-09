@@ -31,7 +31,7 @@
  **/
 enum thread_state {
   THR_NASCENT,    /**< The thread is still being initialized **/
-  THR_RUNNING,    /**< The thread is currently runnable **/
+  THR_RUNNABLE,   /**< The thread is currently runnable **/
   THR_BLOCKED,    /**< The thread is currently not runnable **/
   THR_EXITING,    /**< The thread is exiting **/
 };
@@ -39,8 +39,7 @@ typedef enum thread_state thr_state_e;
 
 struct thread {
   struct task *task_info;
-  cll_node node; /* Embedded list traversal struct for the runnable queue */
-  cll_node zzz_node; /* Embedded list traversal struct for sleeping */
+  cll_node rq_entry; /* Embedded list traversal struct for the runnable queue */
   cll_node task_node; /* Embedded list traversal struct for task */
   cll_node thrlist_entry; /* Threadlist node */
   thr_state_e state;

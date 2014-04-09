@@ -69,7 +69,7 @@ int sys_make_runnable(int tid)
   thr = thrlist_find(tid);
   mutex_lock(&thr->lock);
 
-  if (!thr || thr->state == THR_RUNNING) {
+  if (!thr || thr->state == THR_RUNNABLE) {
     mutex_unlock(&thr->lock);
     return -1;
   }

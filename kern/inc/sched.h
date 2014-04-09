@@ -14,24 +14,27 @@
 #include <thread.h>
 
 
-/* Runnable queue */
-extern queue_s runnable;
+/* The "do" part of sched_do_and_block(...) */
+typedef void (*sched_do_fn)(void *args);
 
 /* Currently running thread/task */
 thread_t *curr_thr;
 task_t *curr_tsk;
 
-/* The "do" part of sched_do_and_block(...) */
-typedef void (*sched_do_fn)(void *args);
-
 /* Scheduling API */
+int sched_unblock(thread_t *thr);
 int sched_block(thread_t *thr);
 int sched_do_and_block(thread_t *thr, sched_do_fn func, void *args);
-void raw_unblock(thread_t *thr, queue_node_s *n);
-int sched_add_to_rq(thread_t *thr);
-int sched_unblock(thread_t *thr);
 int sched_find(int tid);
 void schedule(void);
+void schedule_unprotected(void);
+int sched_add_to_rq(thread_t *thr);
+
+/* Runqueue manipulation */
+void rq_add(thread_t *thr);
+void rq_del(thread_t *thr);
+thread_t *rq_rotate(void);
+thread_t *rq_find(int tid);
 
 
 #endif /* __SCHED_H__ */

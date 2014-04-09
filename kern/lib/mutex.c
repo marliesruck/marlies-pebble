@@ -65,7 +65,7 @@ void mutex_unlock_internal(mutex_s *mp, unlock_mode_e mode)
     }
     /* Interrupts are already disabled */
     else{
-      raw_unblock(thr, &thr->node);
+      rq_add(thr);
     }
   }
   /* No one wants the lock */

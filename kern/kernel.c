@@ -144,7 +144,7 @@ thread_t *hand_load_task(const char *fname)
   thread->sp = usr_stack_init(&curr_tsk->vmi, 0, NULL);
 
   /* Add the task to the runnable queue */
-  raw_unblock(thread, &thread->node);
+  rq_add(thread);
 
   sim_reg_process((void *)curr_tsk->cr3, fname);
   return thread;

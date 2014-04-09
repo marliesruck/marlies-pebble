@@ -34,32 +34,28 @@ static mutex_s sleep_lock = MUTEX_INITIALIZER(sleep_lock);
 struct sleep_list_entry {
   thread_t *thread;
   unsigned int wake_time;
-  cll_node *node;
+  cll_node node;
 };
 typedef struct sleep_list_entry sl_entry;
 
 int go_to_sleep(thread_t *t, unsigned int wake_time)
 {
-  cll_node n, *cursor;
+  cll_node *n;
   sl_entry ent, *temp;
 
   ent.thread = t;
   ent.wake_time = wake_time;
-  ent.node = &curr_thr->zzz_node; 
-  queue_init_node(ent.node, ent.thread);
-  cll_init_node(&n, &ent);
-
-  if (!ent.node) return -1;
+  cll_init_node(&ent.node, &ent);
 
   disable_interrupts();
 
   /* Find the spot we're inserting at */
-  cll_foreach(&sleep_list, cursor) {
-    temp = cll_entry(sl_entry *, cursor);
+  cll_foreach(&sleep_list, n) {
+    temp = cll_entry(sl_entry *, n);
     if (temp->wake_time > wake_time) break;
   }
 
-  cll_insert(cursor, &n);
+  cll_insert(n, &ent.node);
 
   /* sched_block(...) will enable interrupts */
   return sched_block(t);
@@ -75,9 +71,10 @@ void wake_up(unsigned int time)
     if (sleeper->wake_time > time) break;
     assert(cll_extract(&sleep_list, sleep_list.next));
 
-    raw_unblock(sleeper->thread, &sleeper->thread->node);
+    rq_add(sleeper->thread);
   }
 
+  /* Schedule will be called in the timer handler */
   return;
 }
 
@@ -99,8 +96,7 @@ void tmr_int_handler(void)
   ticks += 1;
 
   wake_up(ticks);
-  schedule();
-  enable_interrupts();
+  schedule_unprotected();
 
   return;
 }
