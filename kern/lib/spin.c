@@ -10,8 +10,12 @@
 
 #include <spin.h>
 
-#include <syscall.h>
+/* Pebbles specific includes */
 #include <atomic.h>
+#include <sched.h>
+
+/* Libc specific includes */
+#include <assert.h>
 
 
 /** @brief Initialize a spinlock.
@@ -41,6 +45,7 @@ inline void spin_lock(spin_s *sp)
   int turn;
   turn = fetch_and_add(&(sp->ticket), 1);
   while (sp->turn != turn) continue;
+  sp->owner = curr_thr->tid;
   return;
 }
 
@@ -56,6 +61,8 @@ inline void spin_lock(spin_s *sp)
  **/
 inline void spin_unlock(spin_s *sp)
 {
+  assert(sp->owner == curr_thr->tid);
+  sp->owner = -1;
   fetch_and_add(&(sp->turn), 1);
   return;
 }
