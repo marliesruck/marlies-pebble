@@ -151,18 +151,16 @@ int validate_sp(void *sp)
 {
   unsigned int attrs;
 
-  mutex_lock(&curr_tsk->lock);
-
   /* Acquire the region's attributes */
+  mutex_lock(&curr_tsk->lock);
   assert(!vm_get_attrs(&curr_tsk->vmi, sp, &attrs));
-
   mutex_unlock(&curr_tsk->lock);
 
   /* Stack must be writable and accessible in user mode */
   if((attrs & VM_ATTR_RDWR) && (attrs & VM_ATTR_USER))
     return 0;
-  else
-    return -1;
+
+  return -1;
 }
 
 /** @brief Validate program counter.
@@ -175,18 +173,16 @@ int validate_pc(void *pc)
 {
   unsigned int attrs;
 
-  mutex_lock(&curr_tsk->lock);
-
   /* Acquire the region's attributes */
+  mutex_lock(&curr_tsk->lock);
   assert(!vm_get_attrs(&curr_tsk->vmi, pc, &attrs));
-
   mutex_unlock(&curr_tsk->lock);
 
   /* Code must be accessible in user mode and not writeable */
   if((!(attrs & VM_ATTR_RDWR)) && (attrs & VM_ATTR_USER))
     return 0;
-  else
-    return -1;
+
+  return -1;
 }
 
 /** @brief Safely copy data from user-space.

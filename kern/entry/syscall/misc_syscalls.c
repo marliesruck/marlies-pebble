@@ -17,6 +17,7 @@
 #include <util.h>
 
 /* Libc specific includes */
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -40,6 +41,10 @@ void craft_state(ureg_t state);
  *  Miscellaneous system calls
  *************************************************************************/
 
+/** @brief Shut down the system.
+ *
+ *  @return Does not return.
+ **/
 void sys_halt()
 {
   sim_halt();
@@ -50,9 +55,23 @@ void sys_halt()
 
   while(1);
 
-  return;
+  assert(0);
 }
 
+/** @brief Read bytes from a file.
+ *
+ *  Read count bytes from position offset in the file filename.  Bytes read
+ *  from the file will be copied into buf.  If fewer than count bytes
+ *  remain in the file starting at offset, only that many bytes are read.
+ *
+ *  The number of bytes read into buf is returned.  If buf is in invaid
+ *  memory, or if file does not exist, an error code is returned.
+ *
+ *  @param filename The name of the file to read from.
+ *  @param buf The buffer to copy file data into.
+ *  @param count The number of bytes to copy.
+ *  @param offset The offset in the file to start reading from.
+ **/
 int sys_readfile(char *filename, char *buf, int count, int offset)
 {
   char *filename_k, *buf_k;
@@ -87,51 +106,67 @@ int sys_readfile(char *filename, char *buf, int count, int offset)
   return copied;
 }
 
-/* @bug Argument validation of pointers 
+/** @brief Register/deregister software exception handlers, and set
+ *  register values.
  *
- * Potential loop: Install handler, crash, handler is called and reinstalls
- * itself and replaces the registers with the exact same values
+ *  If esp3 and eip are bot non-zero, attempt to register a new software
+ *  exception handler; otherwise deregister the current handler, if one
+ *  exists.
  *
- * */
-
-
+ *  If newureg is non-zero, the specified register values are adopted upon
+ *  the return of sys_swexn(...) to user-space.
+ *
+ *  @param esp3 The software exception stack.
+ *  @param eip The address of the software exception handler.
+ *  @param arg The arguments to the software exception handler.
+ *  @param newureg New register values the kerenl should adopt.
+ *
+ *  @return 0 on success, or a negative integer error code on failure.
+ **/
 int sys_swexn(void *esp3, swexn_handler_t eip, void *arg, ureg_t *newureg)
 {
   ureg_t ureg; 
 
-  /* Validate and copy register values */
-  if(newureg){
+  /* Copy and validate register values */
+  if(newureg) {
     if(copy_from_user_static(&ureg, newureg, sizeof(ureg_t)))
       return -1;
-    if(validate_regs(&ureg) < 0){
+    if(validate_regs(&ureg) < 0)
       return -1;
-    }
   }
 
   /* Validate and install new handler */
-  if((eip) && (esp3)){
-    if((validate_pc(eip)) || (validate_sp(esp3))){
+  if((eip) && (esp3))
+  {
+    if((validate_pc(eip)) || (validate_sp(esp3))) {
       return -1;
     }
     curr_thr->swexn.esp3 = esp3;
     curr_thr->swexn.eip = eip;
     curr_thr->swexn.arg = arg;
   }
+
   /* Or deregister old handler */
-  else{
+  else
+  {
     swexn_deregister(&curr_thr->swexn);
   }
 
   /* Install the registers and return to userland */
-  if(newureg){
-    craft_state(ureg);
-  }
+  if(newureg) craft_state(ureg);
 
   return 0;
 }
 
 
-/* "Special" */
+/** @brief Changes the behavior of the kernel.
+ *
+ *  NOTE: unimplemented.
+ *
+ *  @param mode The desired behavior mode.
+ *
+ *  @return Void.
+ **/
 void sys_misbehave(int mode)
 {
   return;
