@@ -43,26 +43,63 @@ struct task {
   int live_children;      /* This and dead_children determine whether or not
                              wait should block */
   mutex_s  lock;          /* Hold this lock when modifying the task struct */
-  char *execname;          /* For simics and debugging in general...currently
-                              a memory leak, get rid of this before submitting */
+  char *execname;          /* For simics and debugging in general */
 };
 typedef struct task task_t;
 
 /* Keep track of init for zombie children */
 task_t *init;
 
+/** @brief Retrieve a task's TID
+ *
+ *  NOTE: This macro returns an lvalue, so you can use it like any other
+ *  lvalue: e.g. TASK_TID(t) = 123;
+ *
+ *  @param task The task whose TID we want.
+ *
+ *  @return The task's TID.
+ **/
+#define TASK_TID(task)          \
+  ( (task)->mini_pcb->tid )
+
+/** @brief Retrieve a task's status.
+ *
+ *  NOTE: This macro returns an lvalue, so you can use it like any other
+ *  lvalue: e.g. TASK_STATUS(t) = -1;
+ *
+ *  @param task The task whose status we want.
+ *
+ *  @return The task's status.
+ **/
+#define TASK_STATUS(task)       \
+  ( (task)->mini_pcb->status )
+
+/** @brief Retrieve a task's list node.
+ *
+ *  NOTE: This macro returns an lvalue, so you can use it like any other
+ *  lvalue: e.g. TASK_LIST_ENTRY(t).data;
+ *
+ *  @param task The task whose list node we want.
+ *
+ *  @return The task's list node.
+ **/
+#define TASK_LIST_ENTRY(task)   \
+  ( (task)->mini_pcb->entry )
+
 /* Task manipulation routines */
 struct thread *task_init(void);
-void task_free(task_t *task);
-void task_add_thread(task_t *tsk, struct thread *thr);
+void task_add_thread(task_t *tsk);
 void task_del_thread(task_t *tsk, struct thread *thr);
-task_t *task_signal_parent(task_t *task);
-int task_find_zombie(task_t *task, int *status);
-void task_reap(task_t *victim);
+void task_add_child(task_t *parent);
+void task_del_child(task_t *parent, task_t *child);
+void task_free(task_t *task);
+void task_final(task_t *victim);
+int task_reap(task_t *task, int *status);
 
 /* Task list manipulation routines */
 void tasklist_add(task_t *t);
 void tasklist_del(task_t *t);
+task_t *tasklist_find_and_lock_parent(task_t *task);
 
 
 #endif /* __PROCESS_H__ */

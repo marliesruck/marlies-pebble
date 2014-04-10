@@ -17,19 +17,15 @@
 #include <malloc.h>
 #include <stdlib.h>
 
-/** @var task_list 
- *  @brief The list of tasks.
- **/
-static cll_list task_list = CLL_LIST_INITIALIZER(task_list);
-/* And make all accesses atomic */
-mutex_s task_list_lock = MUTEX_INITIALIZER(task_list_lock);
 
-/*** --- Internal helper routines --- ***/
-task_t *task_find_and_lock_parent(task_t *task);
+/*************************************************************************
+ *  Task manipulation
+ *************************************************************************/
 
 /* @brief Initialize a task and its root thread.
  *
- * @return Address of the initializaed root thread or NULL if our of memory.
+ * @return Address of the initializaed root thread or NULL if
+ * initialization fails.
  */
 thread_t *task_init(void)
 {
@@ -51,7 +47,7 @@ thread_t *task_init(void)
   task->dead_thr = NULL;
   task->dead_task = NULL;
 
-  task->parent_tid = curr_tsk->mini_pcb->tid;
+  task->parent_tid = TASK_TID(curr_tsk);
 
   /* Initialize the task struct lock */
   mutex_init(&task->lock);
@@ -59,21 +55,25 @@ thread_t *task_init(void)
   /* Initialize root thread and add it to the task*/
   thread_t *thread = thread_init(task);
   if(!thread) {
+    vm_final(&task->vmi);
+    sfree((void *)(task->cr3), PAGE_SIZE);
     free(task);
     return NULL;
   }
-  task_add_thread(task, thread);
+  task_add_thread(task);
 
   /* Allocate and initialize the mini PCB */
   task->mini_pcb = malloc(sizeof(mini_pcb_s));
   if (!task->mini_pcb) {
     thr_free(thread);
+    vm_final(&task->vmi);
+    sfree((void *)(task->cr3), PAGE_SIZE);
     free(task);
     return NULL;
   }
-  task->mini_pcb->status = 0;
-  task->mini_pcb->tid = thread->tid;
-  cll_init_node(&task->mini_pcb->entry, task);
+  TASK_STATUS(task) = 0;
+  TASK_TID(task) = thread->tid;
+  cll_init_node(&TASK_LIST_ENTRY(task), task);
 
   /* Add to task list */
   tasklist_add(task);
@@ -81,7 +81,16 @@ thread_t *task_init(void)
   return thread;
 }
 
-void task_add_thread(task_t *tsk, thread_t *thr)
+/** @brief Add a thread to a task.
+ *
+ *  Thread's don't keep an explicit list of their threads, so we just
+ *  atomically increment the thread count.
+ *
+ *  @param tsk The task whose count we're incrementing.
+ *
+ *  @return Void.
+ **/
+void task_add_thread(task_t *tsk)
 {
   mutex_lock(&tsk->lock);
   tsk->num_threads += 1;
@@ -90,6 +99,19 @@ void task_add_thread(task_t *tsk, thread_t *thr)
   return;
 }
 
+/** @brief Delete a thread from a task.
+ *
+ *  This function is meant to be called by threads as they vanish.  The
+ *  vanishing thread is responsible for freeing the thread that vanished
+ *  before it, and pointing the dead_thr pointer at themself so the next
+ *  thread to vanish can free them.  The last thread in a task is freed by
+ *  the parent task (see task_final(...) and task_free(...)).
+ *
+ *  @param tsk The task whose count thread we're deleting.
+ *  @param thr The thread to delete.
+ *
+ *  @return Void.
+ **/
 void task_del_thread(task_t *tsk, thread_t *thr)
 {
   /* Free the last dead thread */
@@ -103,48 +125,72 @@ void task_del_thread(task_t *tsk, thread_t *thr)
   return;
 }
 
-/** @brief Add a task to the task list.
+/** @brief Add a child to a task.
  *
- *  @param t The task to add.
+ *  As with threads, tasks do not maintain a list of their children, so we
+ *  just need to increment the child count.
  *
- *  @return -1 on error, else 0.
+ *  @param parent A pointer to the parent task.
+ *
+ *  @return Void.
  **/
-void tasklist_add(task_t *t)
+void task_add_child(task_t *parent)
 {
-  assert(t);
+  mutex_lock(&parent->lock);
+  parent->live_children++;
+  mutex_unlock(&parent->lock);
+  return;
+}
 
-  /* Lock, insert, unlock */
-  mutex_lock(&task_list_lock);
-  cll_insert(task_list.next, &t->mini_pcb->entry);
-  mutex_unlock(&task_list_lock);
+/** @brief Delete a child from a task.
+ *
+ *  This function is analagous to the task_del_thread(...), but for child
+ *  tasks... vanishing children are supposed to call this function.  The
+ *  vanishing child is responsible for freeing the child that vanished
+ *  before it, and pointing the dead_task pointer at itself so the next
+ *  child to vanish can free them.  Each task is responsible for freeing
+ *  it's last child before it exits, and when it reaps (see task_final(...)
+ *  and task_free(...)).
+ *
+ *  Furthermore, the vanishing child is responsible for enqueueing it's
+ *  mini PCB in the parent's dead children list and signaling any waiting
+ *  threads in their parent task, so they can be reaped.
+ *
+ *  @param parent The task whose child we're deleting.
+ *  @param child The child to delete.
+ *
+ *  @return Void.
+ **/
+void task_del_child(task_t *parent, task_t *child)
+{
+  mini_pcb_s *mini = child->mini_pcb;
+
+  /* Free the most recently deceased task */
+  if (parent->dead_task)
+    task_final(parent->dead_task);
+  parent->dead_task = child;
+
+  /* Live children count is for nuclear family only */
+  if(TASK_TID(parent) == child->parent_tid)
+    parent->live_children--;
+
+  /* Add your status */
+  queue_init_node(&TASK_LIST_ENTRY(child), mini);
+  queue_enqueue(&parent->dead_children, &TASK_LIST_ENTRY(child));
+
+  /* Broadcast to any parents waiting on you */
+  cvar_broadcast(&parent->cv);
 
   return;
 }
 
-/** @brief Remove a task from the task list.
+/** @brief Free as much of the running task as possible.
  *
- *  @param t The task to delete.
- *
- *  @return -1 on error, else 0.
- **/
-void tasklist_del(task_t *t)
-{
-  assert(t);
-
-  /* Lock, delete, unlock */
-  mutex_lock(&task_list_lock);
-  assert(cll_extract(&task_list, &t->mini_pcb->entry));
-  mutex_unlock(&task_list_lock);
-  return;
-}
-
-/** @brief Free a task's resources.
- *
- *  Removes task from global task list, frees its virtual memory, reaps its dead
- *  children and gives it dead children to init.  Note that all these are
- *  operations that can be done easily by the vanishing task.  The parent is
- *  responisble for freeing the vanishing task's kernel stacks, page directory
- *  and task struct in task_reap().
+ *  This function frees only those parts of the task that can be freed
+ *  while that task is still running/runnable.  It is meant to be called by
+ *  tasks as they vanish.  The task_final(...) function, which should be
+ *  called by the task's parent, is responsible for freeing the reset of
+ *  the task.
  *
  *  @param task Task to free.
  *
@@ -174,102 +220,57 @@ void task_free(task_t *task)
     free(mini);
   }
 
-  return;
-}
-
-/** @brief Find your parent and lock their task struct
- *
- *  Atomically searches the task list for your parent's task struct in order to
- *  determine if your parent is still alive.  If so, locks your parent's task
- *  struct before releasing the task list lock.
- *
- *  Assumes the caller will release the parent's lock.
- *
- *  @param task Task whose parent to search for.
- *
- *  @return Address of init if your parent is dead, else address of your parent.
- **/
-task_t *task_find_and_lock_parent(task_t *task)
-{
-  cll_node *n;
-  task_t *t = NULL; 
-  task_t *parent;
-  int parent_tid = task->parent_tid;
-
-  mutex_lock(&task_list_lock);
-  cll_foreach(&task_list, n) {
-    t = cll_entry(task_t *,n);
-    if (t->mini_pcb->tid == parent_tid) break;
+  /* Free your last dead child */
+  if (task->dead_task) {
+    task_final(task->dead_task);
+    task->dead_task = NULL;
   }
 
-  /* Your parent is dead. Tell init instead */
-  if(t->mini_pcb->tid != parent_tid) 
-    parent = init; 
-  else
-    parent = t;
-
-  /* Grab your parent's lock to prevent him/her from exiting while you are trying
-   * to add yourself as a dead child */
-  mutex_lock(&parent->lock);
-
-  /* Release the list lock */
-  mutex_unlock(&task_list_lock);
-
-  return parent;
-}
-
-void task_enqueue_status(task_t *parent, task_t *child)
-{
-  mini_pcb_s *mini = child->mini_pcb;
-
-  /* Add your status */
-  queue_init_node(&mini->entry, mini);
-  queue_enqueue(&parent->dead_children, &mini->entry);
-
-  /* Broadcast to any parents waiting on you */
-  cvar_broadcast(&parent->cv);
-
   return;
 }
 
-void task_del_child(task_t *parent, task_t *child)
-{
-  /* Free the most recently deceased task */
-  if (parent->dead_task)
-    task_reap(parent->dead_task);
-  parent->dead_task = child;
-
-  /* Live children count is for nuclear family only */
-  if(parent->mini_pcb->tid == child->parent_tid)
-    parent->live_children--;
-
-  return;
-}
-
-/** @brief Wake your parent and remove yourself from the runnable queue.
+/** @brief Reap a child task.
  *
- *  @param task Task whose parent we should awaken.
+ *  In contrast to task_free(...), task_final(...) frees those parts of a
+ *  task which the task cannot free itself.  This includes the task's page
+ *  directory and the kernel stack.  This function should be called by the
+ *  task's parent.
+ *
+ *  We call this function task_final(...) because we are freeing the very
+ *  last bits of the task.
+ *
+ *  @param victim Task whose resources should be freed.
  *
  *  @return Void.
  **/
-task_t *task_signal_parent(task_t *task)
+void task_final(task_t *victim)
 {
-  task_t *parent = task_find_and_lock_parent(task);
+  /* Your kid should have freed their kid */
+  assert(victim->dead_task == NULL);
 
-  task_del_child(parent, task);
+  /* There should always be a last thread */
+  assert(victim->dead_thr);
 
-  task_enqueue_status(parent, task);
+  /* Free the task's resources */
+  thr_free(victim->dead_thr);
+  sfree((void *)(victim->cr3), PAGE_SIZE);
+  free(victim);
 
-  return parent;
+  return;
 }
 
-/** @brief Search for a zombie child.
+/** @brief Attempt to reap the exit status from a task's dead children.
  *
- *  @param task Task to search for.
+ *  If the task has any live children, this function will block until they
+ *  die, or until some other thread reaps the last child.
  *
- *  @return NULL if you have no child, else the address of the zombie.
+ *  @param task The task whose children we're reaping.
+ *  @param status A pointer to write the status into.
+ *
+ *  @return The TID of the reaped child, or -1 if there are no children, or
+ *  if some other thread reaps the last child before you.
  **/
-int task_find_zombie(task_t *task, int *status)
+int task_reap(task_t *task, int *status)
 {
   queue_node_s *n;
   mini_pcb_s *mini;
@@ -295,6 +296,12 @@ int task_find_zombie(task_t *task, int *status)
   mini = queue_entry(mini_pcb_s *, n);
   tid = mini->tid;
   *status = mini->status;
+
+  /* Free any recently dead children */
+  if (task->dead_task) {
+    task_final(task->dead_task);
+    task->dead_task = NULL;
+  }
  
   /* Relinquish lock */
   mutex_unlock(&task->lock);
@@ -303,25 +310,95 @@ int task_find_zombie(task_t *task, int *status)
   return tid;
 }
 
-/** @brief Reap a child task.
- *
- *  The parent frees the child's page directory, kernel stacks and task struct.
- *  Note how this differs from task_free(): these are all resources that are
- *  difficult for the vanishing task itself to free.
- *
- *  @param victim Task whose resources should be freed.
- *
- *  @return Void.
- **/
-void task_reap(task_t *victim)
-{
-  /* Free the last thread to die */
-  if (victim->dead_thr) thr_free(victim->dead_thr);
 
-  /* Free the page directory and PCB */
-  sfree((void *)(victim->cr3), PAGE_SIZE);
-  free(victim);
+/*************************************************************************
+ *  Task list manipulation
+ *************************************************************************/
+
+/** @var task_list 
+ *  @brief The list of tasks.
+ **/
+static cll_list task_list = CLL_LIST_INITIALIZER(task_list);
+
+/** @var task_list_lock
+ *  @brief Serializes access to the task list.
+ **/
+mutex_s task_list_lock = MUTEX_INITIALIZER(task_list_lock);
+
+/** @brief Add a task to the task list.
+ *
+ *  @param t The task to add.
+ *
+ *  @return -1 on error, else 0.
+ **/
+void tasklist_add(task_t *t)
+{
+  assert(t);
+
+  /* Lock, insert, unlock */
+  mutex_lock(&task_list_lock);
+  cll_insert(task_list.next, &TASK_LIST_ENTRY(t));
+  mutex_unlock(&task_list_lock);
 
   return;
 }
- 
+
+/** @brief Remove a task from the task list.
+ *
+ *  @param t The task to delete.
+ *
+ *  @return -1 on error, else 0.
+ **/
+void tasklist_del(task_t *t)
+{
+  assert(t);
+
+  /* Lock, delete, unlock */
+  mutex_lock(&task_list_lock);
+  assert(cll_extract(&task_list, &TASK_LIST_ENTRY(t)));
+  mutex_unlock(&task_list_lock);
+  return;
+}
+
+/** @brief Find and lock your parent's PCB.
+ *
+ *  Search the task list for your original parent.  In order to keep your
+ *  parent from exiting while you are using their PCB, we take the parent's
+ *  PCB lock before releasing the task list lock.  If your (original)
+ *  parent does not exist (i.e. already exited), your are init's child.
+ *
+ *  It is the responsibility of the caller to release their parent's lock.
+ *
+ *  @param task Task whose parent to search for.
+ *
+ *  @return The address of your parent's PCB, or init's PCB if your parent
+ *  does not exist.
+ **/
+task_t *tasklist_find_and_lock_parent(task_t *task)
+{
+  cll_node *n;
+  task_t *parent;
+  int parent_tid = task->parent_tid;
+
+  mutex_lock(&task_list_lock);
+
+  /* Search the task list for your parent */
+  cll_foreach(&task_list, n)
+  {
+    parent = cll_entry(task_t *,n);
+
+    /* Grab your parent's lock before releasing the task list lock */
+    if (TASK_TID(parent) == parent_tid)
+    {
+      mutex_lock(&parent->lock);
+      mutex_unlock(&task_list_lock);
+      return parent;
+    }
+  }
+
+  /* Your parent is dead, so you're init's problem */
+  mutex_lock(&init->lock);
+  mutex_unlock(&task_list_lock);
+  return init;
+}
+

@@ -90,7 +90,9 @@ int sys_fork(unsigned int esp)
 
   /* Copy address space */
   if (vm_copy(&ctask->vmi, &parent->vmi)) {
+    free(ctask->mini_pcb);
     task_free(ctask);
+    task_final(ctask);
     return -1;
   }
 
@@ -98,11 +100,8 @@ int sys_fork(unsigned int esp)
   ctask->execname = parent->execname;
   sim_reg_process((void *)ctask->cr3, ctask->execname);
 
-  /* Atomically increment live children in case you are vying with another
-   * thread who is forking */
-  mutex_lock(&parent->lock);
-  parent->live_children++;
-  mutex_unlock(&parent->lock);
+  /* Add the child to it's parent task */
+  task_add_child(parent);
 
   /* Launch the child thread */
   sp = kstack_copy(cthread->kstack, curr_thr->kstack, esp);
@@ -122,7 +121,8 @@ int sys_thread_fork(unsigned int esp)
   if (!t) return -1;
   tid = t->tid;
 
-  task_add_thread(curr_tsk, t);
+  /* Add a task to the thread */
+  task_add_thread(curr_tsk);
 
   sp = kstack_copy(t->kstack, curr_thr->kstack, esp);
   pc = asm_child_finish_sys_thread_fork;
@@ -166,7 +166,7 @@ int sys_exec(char *execname, char *argvec[])
   stack = usr_stack_init(&curr_tsk->vmi, argcnt, argvec_k);
 
   /* Zero the status */
-  curr_tsk->mini_pcb->status = 0;
+  TASK_STATUS(curr_tsk) = 0;
 
   /* Free copied parameters*/
   for (i = 0; i < argcnt; ++i) free(argvec_k[i]);
@@ -185,7 +185,7 @@ int sys_exec(char *execname, char *argvec[])
 void sys_set_status(int status)
 {
   mutex_lock(&curr_tsk->lock);
-  curr_tsk->mini_pcb->status = status;
+  TASK_STATUS(curr_tsk) = status;
   mutex_unlock(&curr_tsk->lock);
   return;
 }
@@ -205,15 +205,15 @@ void sys_vanish(void)
   /* You are the last thread */ 
   if (0 == task->num_threads)
   {
-    /* You are not competing with any one */
+    /* You're the last thread, so there's no competition */
     mutex_unlock(lock);
 
-    /* Remove yourself from the task list, free your virtual memory and child
-     * your children  */
+    /* Destroy the task */
     task_free(task);
 
-    /* Enqueue your exit status, reap a sibiling, signal your parent */
-    task_t *parent = task_signal_parent(task);
+    /* Enqueue your exit status, delete your PCB and signal your parent */
+    task_t *parent = tasklist_find_and_lock_parent(task);
+    task_del_child(parent, task);
 
     /* Drop your parent's lock upon descheduling */
     lock = &parent->lock;
@@ -227,7 +227,7 @@ int sys_wait(int *status_ptr)
 {
   int tid, status;
   
-  tid = task_find_zombie(curr_tsk, &status);
+  tid = task_reap(curr_tsk, &status);
 
   /* You have no children to reap */
   if(tid < 0) return -1;
