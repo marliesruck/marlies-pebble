@@ -70,7 +70,7 @@ void init_exn_stack(ureg_t *state)
   void *arg = curr_thr->swexn.arg;
 
   /* Deregister old handler */
-  deregister(&curr_thr->swexn);
+  swexn_deregister(&curr_thr->swexn);
 
   /* Copy the execution state onto the exception stack */
   esp3 = (char *)(esp3) - sizeof(ureg_t) - sizeof(unsigned int);
@@ -96,7 +96,7 @@ void init_exn_stack(ureg_t *state)
  *
  *  @return Void.
  */
-void deregister(swexn_t *swexn)
+void swexn_deregister(swexn_t *swexn)
 {
   swexn->esp3 = NULL;
   swexn->eip = NULL;

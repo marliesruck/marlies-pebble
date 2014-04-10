@@ -26,13 +26,13 @@
  **/
 void half_dispatch(void *entry_point, void *sp);
 
-/** @brief Wrapper for dispatch
+/** @brief Wrapper for assembly dispatch function.
  *
  *  @param next Thread to dispatch.
  *
  *  @return Void.
  **/
-void dispatch_wrapper(thread_t *next);
+void dispatch(thread_t *next);
 
 /* @brief Switch between threads.
  * 
@@ -54,7 +54,7 @@ void dispatch_wrapper(thread_t *next);
  *
  *  @return Void.
  */
-void dispatch(void *prev_sp, void *prev_pc, void *next_sp, void *next_pc,
+void asm_dispatch(void *prev_sp, void *prev_pc, void *next_sp, void *next_pc,
                 unsigned int next_cr3, void *kstack_high);
 
 #endif /* __DISPATCH_H__ */

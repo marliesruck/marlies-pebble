@@ -229,7 +229,7 @@ void schedule_unprotected(void)
 
   /* Only switch if the next thread is different */
   if (next != curr_thr) {
-    dispatch_wrapper(next);
+    dispatch(next);
   }
 
   return;

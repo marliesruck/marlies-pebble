@@ -1,4 +1,4 @@
-/** @files dispatch_wrapper.c
+/** @files dispatch.c
  *
  *  @brief Defines C wrapper for the assembly routine dispatch().
  *
@@ -19,7 +19,7 @@
 /* x86 specific include */
 #include <asm.h>
 
-void dispatch_wrapper(thread_t *next)
+void dispatch(thread_t *next)
 {
   thread_t *prev;
   unsigned int cr3 = 0;
@@ -34,7 +34,7 @@ void dispatch_wrapper(thread_t *next)
   prev = curr_thr;
   curr_thr = next;
 
-  dispatch(&prev->sp, &prev->pc, next->sp, next->pc, cr3, 
+  asm_dispatch(&prev->sp, &prev->pc, next->sp, next->pc, cr3, 
            &next->kstack[KSTACK_SIZE]);
   return;
 }

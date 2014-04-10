@@ -12,8 +12,8 @@
 
 .extern set_esp0
 
-.global dispatch
-dispatch:
+.global asm_dispatch
+asm_dispatch:
   # Prologue
   push    %ebp
   mov     %esp, %ebp
