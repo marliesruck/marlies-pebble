@@ -35,9 +35,10 @@ typedef struct spin_lock spin_s;
 }
 
 /* Spinlock operations */
-void spin_init(spin_s *sp);
-void spin_lock(spin_s *sp);
-void spin_unlock(spin_s *sp);
+inline void spin_init(spin_s *sp);
+inline void spin_lock(spin_s *sp);
+inline void spin_unlock(spin_s *sp);
+inline void spin_unlock_and_block(spin_s *sp);
 
 
 #endif /* __SPIN_H__ */

@@ -50,7 +50,7 @@ int mutex_init(mutex_s *mp);
 void mutex_final(mutex_s *mp);
 void mutex_lock(mutex_s *mp);
 void mutex_unlock(mutex_s *mp);
-void mutex_unlock_raw(mutex_s *mp);
+void mutex_unlock_and_block(mutex_s *mp);
 
 #endif /* __MUTEX_H__ */
 

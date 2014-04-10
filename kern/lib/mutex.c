@@ -7,13 +7,17 @@
  *
  *  @bug No known bugs
  */
-#include <simics.h>
 
+/* Mutex includes */
 #include <mutex.h>
 
+/* Pebbles includes */
 #include <assert.h>
 #include <sched.h>
 #include <spin.h>
+
+/* x86 includes */
+#include <x86/asm.h>
 
 /** @enum unlock mode
 
@@ -21,8 +25,8 @@
  *         enabled or disabled
  **/
 enum unlock_mode {
-  ENABLED,
-  DISABLED,
+  NO_BLOCK,
+  BLOCK,
 };
 typedef enum unlock_mode unlock_mode_e;
 
@@ -69,16 +73,20 @@ void unlock(mutex_s *mp, unlock_mode_e mode)
     mp->owner = thr->tid;
 
     /* Unlock and awaken that guy */
+    disable_interrupts();
     spin_unlock(&mp->lock);
-    if(mode == ENABLED) sched_unblock(thr);
-    else rq_add(thr);
+    if(mode == BLOCK) rq_del(curr_thr);
+    rq_add(thr);
+    schedule_unprotected();
+    enable_interrupts();
   }
 
   /* No one wants the lock */
   else {
     mp->owner = -1;
     mp->state = MUTEX_UNLOCKED;
-    spin_unlock(&mp->lock);
+    if (mode == NO_BLOCK) spin_unlock(&mp->lock);
+    else spin_unlock_and_block(&mp->lock);
   }
 
   return;
@@ -151,7 +159,7 @@ void mutex_lock(mutex_s *mp)
     queue_enqueue(&mp->queue, &n);
 
     /* Unlock-and-block and deschedule */
-    sched_do_and_block(curr_thr, (sched_do_fn) spin_unlock, &mp->lock);
+    spin_unlock_and_block(&mp->lock);
 
     /* Clean-up your cll node */
     cll_final_node(&n);
@@ -167,7 +175,7 @@ void mutex_lock(mutex_s *mp)
   return;
 }
 
-/** @brief Unlock a mutex with interrupts enabled.
+/** @brief Unlock a mutex.
  *
  *  @param mp The mutex to unlock.
  *
@@ -175,19 +183,19 @@ void mutex_lock(mutex_s *mp)
  **/
 void mutex_unlock(mutex_s *mp)
 {
-  unlock(mp, ENABLED);
+  unlock(mp, NO_BLOCK);
   return;
 }
 
-/** @brief Unlock a mutex with interrupts disabled.
+/** @brief Atomically unlock a mutex and block the caller.
  *
  *  @param mp The mutex to unlock.
  *
  *  @return Void.
  **/
-void mutex_unlock_raw(mutex_s *mp)
+void mutex_unlock_and_block(mutex_s *mp)
 {
-  unlock(mp, DISABLED);
+  unlock(mp, BLOCK);
   return;
 }
 

@@ -296,7 +296,7 @@ void sys_vanish(void)
   }
 
   /* Drop whatever lock you hold and deschedule */
-  sched_do_and_block(curr_thr, (sched_do_fn) mutex_unlock_raw, lock);
+  mutex_unlock_and_block(lock);
   return;
 }
 

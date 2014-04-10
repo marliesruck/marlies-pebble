@@ -10,12 +10,15 @@
 
 #include <spin.h>
 
-/* Pebbles specific includes */
+/* Pebbles includes */
 #include <atomic.h>
 #include <sched.h>
 
-/* Libc specific includes */
+/* Libc includes */
 #include <assert.h>
+
+/* x86 includes */
+#include <x86/asm.h>
 
 
 /** @brief Initialize a spinlock.
@@ -52,10 +55,6 @@ inline void spin_lock(spin_s *sp)
 
 /** @brief Unlock a spinlock.
  *
- *  It is obviously possible to unlock a lock that you do not own; in the
- *  interest of keeping spinlocks as light as possible, we leave it to the
- *  caller to avoid doing this.
- *
  *  @param sp The spinlock to unlock.
  *
  *  @return Void.
@@ -65,6 +64,27 @@ inline void spin_unlock(spin_s *sp)
   assert(sp->owner == curr_thr->tid);
   sp->owner = -1;
   fetch_and_add(&(sp->turn), 1);
+  return;
+}
+
+/** @brief Atomically unlock a spinlock and block the caller.
+ *
+ *  @param sp The spinlock to unlock.
+ *
+ *  @return Void.
+ **/
+inline void spin_unlock_and_block(spin_s *sp)
+{
+  disable_interrupts();
+
+  /* Unlock the spinlock */
+  spin_unlock(sp);
+
+  /* Deschedule yourself */
+  rq_del(curr_thr);
+  schedule_unprotected();
+
+  enable_interrupts();
   return;
 }
 
