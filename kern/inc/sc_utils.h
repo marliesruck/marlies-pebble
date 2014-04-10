@@ -37,7 +37,7 @@ typedef struct swexn {
   void *arg;
 } swexn_t;
 
-void deregister(swexn_t *swexn);
+void swexn_deregister(swexn_t *swexn);
 void init_exn_stack(ureg_t *state);
 int validate_regs(ureg_t *regs);
 int validate_sp(void *sp);

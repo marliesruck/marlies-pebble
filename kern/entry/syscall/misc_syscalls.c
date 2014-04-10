@@ -119,7 +119,7 @@ int sys_swexn(void *esp3, swexn_handler_t eip, void *arg, ureg_t *newureg)
   }
   /* Or deregister old handler */
   else{
-    deregister(&curr_thr->swexn);
+    swexn_deregister(&curr_thr->swexn);
   }
 
   /* Install the registers and return to userland */

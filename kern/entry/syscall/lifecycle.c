@@ -96,6 +96,10 @@ int sys_fork(unsigned int esp)
     return -1;
   }
 
+  /* Register the parent's swexn with the child */
+  if(curr_thr->swexn.eip) 
+    cthread->swexn = curr_thr->swexn;
+
   /* Register the process with simics for debugging */
   ctask->execname = parent->execname;
   sim_reg_process((void *)ctask->cr3, ctask->execname);

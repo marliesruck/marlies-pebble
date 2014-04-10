@@ -61,11 +61,6 @@ thread_t *thread_init(task_t *task)
     return NULL;
   }
 
-  /* Atomically acquire TID */
-  mutex_lock(&tid_lock);
-  thread->tid = ++tid;
-  mutex_unlock(&tid_lock);
-
   /* Initialize other fields */
   mutex_init(&thread->lock);
   thread->state = THR_NASCENT;
@@ -79,7 +74,10 @@ thread_t *thread_init(task_t *task)
   cll_init_node(&thread->thrlist_entry, thread);
 
   /* No software exception handlers should be registered */
-  deregister(&thread->swexn); 
+  swexn_deregister(&thread->swexn); 
+
+  /* Add the thread to the thread list */
+  assert(!thrlist_add(thread));
     
   return thread;
 }
@@ -105,9 +103,6 @@ int thr_launch(thread_t *t, void *sp, void *pc)
   t->sp = sp;
   t->pc = pc;
 
-  /* Add the thread to the thread list */
-  assert(!thrlist_add(t));
-
   /* Unblock (also sets state to THR_RUNNABLE) */
   sched_unblock(t);
 
@@ -129,6 +124,10 @@ int thrlist_add(thread_t *t)
 {
   /* Lock, insert, unlock */
   mutex_lock(&thrlist_lock);
+
+  /* Atomically acquire TID */
+  t->tid = ++tid;
+
   cll_insert(thread_list.next, &t->thrlist_entry);
   mutex_unlock(&thrlist_lock);
 
