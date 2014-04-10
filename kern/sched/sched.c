@@ -54,7 +54,7 @@ void rq_add(thread_t *thr)
  * 
  *  @param thr The thread to make unrunnable.
  *
- *  @return 0 on success; a negative integer error code on failure.
+ *  @return Void.
  **/
 void rq_del(thread_t *thr)
 {
@@ -141,7 +141,7 @@ int sched_add_to_rq(thread_t *thr)
  *
  *  @param thr The thread to make runnable.
  *
- *  @return 0 on success; a negative integer error code on failure.
+ *  @return Void.
  **/
 void sched_unblock(thread_t *thr)
 {
@@ -158,7 +158,7 @@ void sched_unblock(thread_t *thr)
  *
  *  @param thr The thread to make unrunnable.
  *
- *  @return 0 on success; a negative integer error code on failure.
+ *  @return Void.
  **/
 void sched_block(thread_t *thr)
 {
@@ -176,7 +176,7 @@ void sched_block(thread_t *thr)
  *  @param thr The thread to make unrunnable.
  *  @param fn The function to execute before blocking.
  *
- *  @return 0 on success; a negative integer error code on failure.
+ *  @return Void.
  **/
 void sched_do_and_block(thread_t *thr, sched_do_fn func, void *args)
 {

@@ -30,6 +30,7 @@
 /* x86 includes */
 #include <x86/asm.h>
 
+
 /*************************************************************************
  *  Internal helper functions
  *************************************************************************/
@@ -38,11 +39,32 @@
 int asm_child_finish_sys_fork(void);
 int asm_child_finish_sys_thread_fork(void);
 
+/** @brief Copy the parent's kernel stack.
+ *
+ *  We only copy the top parent's kernel stack (just the stuff that the
+ *  INT pushed), because any data below that (return addresses, stored
+ *  EBPs, etc.) will not make sense on the child's kernel stack.  The
+ *  child's return-to-user-space functions (asm_child_finish_*(...)) use
+ *  the copied INT stuff to return to user-space.
+ *
+ *  @param dst A pointer to the child's kernel stack.
+ *  @param src A pointer to the parent's kernel stack.
+ *  @param esp The value of the parent's ESP.
+ *
+ *  @return The child's ESP.
+ **/
 void *kstack_copy(char *dst, char *src, unsigned int esp)
 {
-  /* Copy the parent's kstack */
-  unsigned int offset = esp - ((unsigned int) src);
-  size_t len = ((unsigned int) &src[KSTACK_SIZE]) - esp;
+  unsigned int offset;
+  size_t len;
+
+  /* Calculate the offset of ESP from the top of there parent's stack */
+  offset = esp - ((unsigned int) src);
+
+  /* Calculate how much we need to copy */
+  len = ((unsigned int) &src[KSTACK_SIZE]) - esp;
+
+  /* Do the actual copying */
   memcpy(&dst[offset], (void *)esp, len);
 
   return &dst[offset];
@@ -53,36 +75,36 @@ void *kstack_copy(char *dst, char *src, unsigned int esp)
  *  Life cycle system calls
  *************************************************************************/
 
-/* @brief Allocate memory for child's pcb
+/** @brief Fork a child task.
  *
- * This function is responsible for:
- * -Grab a tid (atomically)
- * -Store the tid/cr3 in the new pcb
+ *  Creates a new task with a copy the virtual memory of the parent for the
+ *  child task.  The parent will recieve the TID of the root thread in the
+ *  newly created task, and the child will recieve 0.  If the invoking task
+ *  has more than one thread, sys_fork(...) will fail.
  *
- * @bug For the sake of debugging I'm just using a global pcb2 declared in
- * process.h.  However, this is certainly a function we should study when
- * contemplating our locking strategy. We should probably add a state field to
- * our tcb in case the parent forks and them immediately waits on the child.  I
- * imagine the code might be reminiscent of thread_fork and setting the NASCENT
- * state
+ *  @param esp The value of ESP after the INT.
  *
- * @param child_cr3 Physical address of child's page directory
- * @return Address of malloc'd child pcb, -1 if out of memory, -2 if program is
- * mulithreaded
- */
+ *  @return On success, the child's TID to the parent and 0 to the child.
+ *  On failure, no new task is created and the parent recieves a negative
+ *  integer error code.
+ **/
 int sys_fork(unsigned int esp)
 {
   task_t *parent, *ctask;
   thread_t *cthread;
   void *sp, *pc;
-  int tid;
+  int tid, thr_count;
 
   parent = curr_tsk;
 
   /* Only single threaded tasks can fork */
-  if(curr_tsk->num_threads != 1)
+  mutex_lock(&curr_tsk->lock);
+  thr_count = parent->num_threads;
+  mutex_unlock(&curr_tsk->lock);
+  if(thr_count != 1)
     return -2;
 
+  /* Create the new task */
   cthread = task_init();
   if(!cthread) return -1;
   tid = cthread->tid; 
@@ -96,7 +118,9 @@ int sys_fork(unsigned int esp)
     return -1;
   }
 
-  /* Register the process with simics for debugging */
+  /* Register the process with simics for debugging
+   * TODO: is this a memory leak??
+   */
   ctask->execname = parent->execname;
   sim_reg_process((void *)ctask->cr3, ctask->execname);
 
@@ -111,6 +135,22 @@ int sys_fork(unsigned int esp)
   return tid;
 }
 
+/** @brief Fork a new thread in the current task.
+ *
+ *  The new thread shares the virtual address space of the invoking thread,
+ *  but has it's own set of registers, the values of which are initialized
+ *  to the same value as the parent's registers.  Any software exception
+ *  handler registered in the parent is NOT registered in the child.
+ *
+ *  Calls to sys_fork(...) or sys_exec(...) will fail in multi-threaded
+ *  tasks.
+ *
+ *  @param esp The value of ESP after the INT.
+ *
+ *  @return On success, the new thread's TID to the parent and 0 to the
+ *  child.  On failure, no new thread is created and the parent recieves a
+ *  negative integer error code.
+ **/
 int sys_thread_fork(unsigned int esp)
 {
   thread_t *t;
@@ -131,15 +171,29 @@ int sys_thread_fork(unsigned int esp)
   return tid;
 }
 
+/** @brief Execute a new executable.
+ *
+ *  TODO: comment
+ *
+ *  @param execname The name of the new executable.
+ *  @param argvec A NULL-terminated array of NULL-terminated string
+ *  arguments.
+ *
+ *  @return 0 on success; a negative integer error code on failure.
+ **/
 int sys_exec(char *execname, char *argvec[])
 {
   char *execname_k, **argvec_k;
   void *entry, *stack;
   simple_elf_t se;
   int argcnt, i;
+  int thr_count;
 
   /* Only single threaded tasks can exec */
-  if(curr_tsk->num_threads != 1)
+  mutex_lock(&curr_tsk->lock);
+  thr_count = curr_tsk->num_threads;
+  mutex_unlock(&curr_tsk->lock);
+  if(thr_count != 1)
     return -2;
 
   /* Copy the execname from the user */
@@ -162,8 +216,15 @@ int sys_exec(char *execname, char *argvec[])
   /* Destroy the old address space; setup the new */
   vm_final(&curr_tsk->vmi);
   entry = load_file(&curr_tsk->vmi, execname_k);
-  sim_reg_process(&curr_tsk->cr3, execname_k);
   stack = usr_stack_init(&curr_tsk->vmi, argcnt, argvec_k);
+  if (!entry || !stack) {
+    for (i = 0; i < argcnt; ++i) free(argvec_k[i]);
+    free(argvec_k);
+    free(execname_k);
+    return -1;
+  }
+
+  sim_reg_process(&curr_tsk->cr3, execname_k);
 
   /* Zero the status */
   TASK_STATUS(curr_tsk) = 0;
@@ -176,12 +237,18 @@ int sys_exec(char *execname, char *argvec[])
   curr_tsk->execname = execname_k;
   /* MEMORY LEAK */
 
-  /* Execute the new program */
+  /* Execute the new program (should not return) */
   half_dispatch(entry, stack);
-
+  assert(0);
   return 0;
 }
 
+/** @brief Set exit status of the current task.
+ *
+ *  @param status The new status.
+ *
+ *  @return Void.
+ **/
 void sys_set_status(int status)
 {
   mutex_lock(&curr_tsk->lock);
@@ -190,11 +257,20 @@ void sys_set_status(int status)
   return;
 }
 
+/** @brief Kill the currently running thread.
+ *
+ *  The invoking thread deletes itself from it's task and, if it is the
+ *  last thread in that task, deallocates as many of it's task's resources
+ *  as possible and deschedules itself (permanently).
+ *
+ *  @return Void.
+ **/
 void sys_vanish(void)
 {
   task_t *task = curr_tsk;
   mutex_s *lock = &task->lock;
 
+  /* Remove yourself from the thread list */
   assert( thrlist_del(curr_thr) == 0 );
 
   mutex_lock(lock);
@@ -208,10 +284,8 @@ void sys_vanish(void)
     /* You're the last thread, so there's no competition */
     mutex_unlock(lock);
 
-    /* Destroy the task */
+    /* Destroy the task, enqueue your status and signal your parent */
     task_free(task);
-
-    /* Enqueue your exit status, delete your PCB and signal your parent */
     task_t *parent = tasklist_find_and_lock_parent(task);
     task_del_child(parent, task);
 
@@ -219,22 +293,37 @@ void sys_vanish(void)
     lock = &parent->lock;
   }
 
+  /* Drop whatever lock you hold and deschedule */
   sched_do_and_block(curr_thr, (sched_do_fn) mutex_unlock_raw, lock);
   return;
 }
 
+/** @brief Attempt to reap the exit status of a dead child task.
+ *
+ *  If there are no live children and no not-yet-reaped dead children, the
+ *  invoking thread will return with an error code.  If there are live
+ *  children, but no dead and not-yet-reaped children, the invoking thread
+ *  will block until one of it's children dies.  If there are dead children
+ *  waiting to be reaped, and no other thread is already waiting to reap a
+ *  child, the invoking thread will return the TID if the child it reaped.
+ *  The child's exit status will be writen to status_ptr.
+ *
+ *  @param status_ptr A pointer to write the child's exit status to.
+ *
+ *  @return The child's TID on success, or a negative integer error code if
+ *  there are no children to be reaped.
+ **/
 int sys_wait(int *status_ptr)
 {
   int tid, status;
   
+  /* Attempt to reap a child */
   tid = task_reap(curr_tsk, &status);
 
   /* You have no children to reap */
   if(tid < 0) return -1;
  
-  /* Scribble to status
-   * TODO: what if this fails?
-   */
+  /* Scribble to status */
   if(status_ptr) {
     if (copy_to_user((char *)status_ptr, (char *)&status, sizeof(int)))
       return -1;
@@ -243,6 +332,12 @@ int sys_wait(int *status_ptr)
   return tid;
 }
 
+/** @brief Destroy the entire task of the invoking thread.
+ *
+ *  NOTE: unimplemented
+ *
+ *  @param status The task's exit status.
+ **/
 void sys_task_vanish(int status)
 {
   return;

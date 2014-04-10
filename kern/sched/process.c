@@ -329,7 +329,7 @@ mutex_s task_list_lock = MUTEX_INITIALIZER(task_list_lock);
  *
  *  @param t The task to add.
  *
- *  @return -1 on error, else 0.
+ *  @return Void.
  **/
 void tasklist_add(task_t *t)
 {
@@ -347,7 +347,7 @@ void tasklist_add(task_t *t)
  *
  *  @param t The task to delete.
  *
- *  @return -1 on error, else 0.
+ *  @return Void.
  **/
 void tasklist_del(task_t *t)
 {
