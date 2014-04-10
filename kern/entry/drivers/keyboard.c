@@ -13,8 +13,20 @@
 #include <interrupt_defines.h>
 #include <x86/asm.h>
 
+
+/** @var kbd_lock
+ *  @brief Serializes access to the keyboard input stream.
+ **/
 mutex_s kbd_lock = MUTEX_INITIALIZER(kbd_lock);
+
+/** @var kbd_wait
+ *  @brief Allows threads to wait on input.
+ **/
 cvar_s kbd_wait = CVAR_INITIALIZER(kbd_wait);
+
+/** @var kbd_state
+ *  @brief Indicates the state of the keyboard.
+ **/
 kbd_state_e kbd_state = KBD_AWAITING_NONE;
 
 
@@ -22,68 +34,49 @@ kbd_state_e kbd_state = KBD_AWAITING_NONE;
 /* External Interface                                                    */
 /*************************************************************************/
 
-/** @brief Returns the next character in the keyboard buffer.
+/** @brief Retrieves the next character in the keyboard buffer.
  *
- *  Search the keyboard's scancode buffer for a valid character-key press
- *  event; return the corresponding character.  If no such event is found,
- *  return -1.
+ *  If no character exists in the keyboard buffer, this function will block
+ *  until a character becomes available.  If any other thread is already
+ *  blocked waiting for input, the invoking thread will wait until those
+ *  threads have revieved input.
  *
- *  NOTE: This function does not block if there are no characters in the
- *  keyboard buffer
- *
- *  @return The next character in the keyboard buffer, or -1 if the
- *          keyboard buffer is currently empty.
+ *  @return The next character in the keyboard buffer.
  **/
-char getchar_buf;
 int kbd_getchar(void)
 {
-  kh_type k;
+  char ch;
 
   mutex_lock(&kbd_lock);
   kbd_state = KBD_AWAITING_CHAR;
 
-  while (__buffer_read(&k) == -1)
+  /* Grab a character */
+  while (!buffer_read(&ch))
+  {
+    /* Don't drop the mutex; it's your turn */
     cvar_wait(&kbd_wait, NULL);
+  }
 
   mutex_unlock(&kbd_lock);
-  return KH_GETCHAR(k);
+  return ch;
 }
 
-
-#include <console.h>
-#include <simics.h>
-char *getline_buf;
-int getline_size;
-int getline_count;
-
-int update_getline_globals(kh_type k)
-{
-  char ch;
-
-  ch = KH_GETCHAR(k);
-
-  /* Write the character to buf and the console */
-  getline_buf[getline_count] = ch;
-  putbyte(ch);
-
-  /* Inc/Decrement read count */
-  if (ch == '\b')
-    getline_count = (getline_count > 0)
-                    ? getline_count - 1
-                    : getline_count;
-  else
-    ++getline_count;
-
-  /* Let the caller know we can do no more */
-  if (getline_count >= getline_size || ch == '\n')
-    return 1;
-
-  return 0;
-}
-
+/** @brief Retrieves the next line typed at the keyboard.
+ *
+ *  If no line of input exist in the keyboard buffer, this function will
+ *  block until a line becomes available.  If any other thread is already
+ *  blocked waiting for input, the invoking thread will wait until those
+ *  threads have revieved input.
+ *
+ *  @param size The size of the user buffer.
+ *  @param buf A character buffer to copy data into.
+ *
+ *  @return The number of bytes copied into the buffer.
+ **/
 int kbd_getline(int size, char *buf)
 {
   int count;
+  char ch;
 
   mutex_lock(&kbd_lock);
   kbd_state = KBD_AWAITING_LINE;
@@ -93,12 +86,19 @@ int kbd_getline(int size, char *buf)
   getline_size = size;
   getline_count = 0;
 
-  /* Wait for characters */
+  /* Get any characters in the buffer */
+  while (!buffer_read(&ch)) {
+    if (update_getline_globals(ch)) {
+      mutex_unlock(&kbd_lock);
+      return getline_count;
+    }
+  }
+
+  /* Wait for characters, but don't drop the lock*/
   cvar_wait(&kbd_wait, NULL);
 
-  /* For returning */
+  /* Unlock and return the count */
   count = getline_count;
-
   mutex_unlock(&kbd_lock);
   return count;
 }
@@ -109,27 +109,29 @@ int kbd_getline(int size, char *buf)
  *  into the keyboard buffer.  This function is intended for use as a
  *  debugging tool.
  *
- *  @param scancode The scancode to write into the buffer
+ *  @param ch The character to write into the buffer.
  *
  *  @return Void.
  **/
-void kbd_putchar(kh_type k)
+void kbd_putchar(char ch)
 {
-  __buffer_write(k);
+  buffer_write(ch);
   return;
 }
 
 /** @brief Handles keyboard interrupts.
  *
- *  Simply read a scancode from the keyboard and write it into the keyboard
- *  buffer.  All post-processing is saved for later (i.e. not in the
- *  context of an interrupt).
+ *  Read a scancode from the keyboard, process it.  If someone is waiting
+ *  for a line of input, write the character into their buffer and signal
+ *  them if it is a newline or of their buffer is full.  Otherwise write
+ *  the character into the keyboard buffer and, if someone is waiting for a
+ *  character, signal them.
  *
  *  @return Void.
  **/
 void kbd_int_handler(void)
 {
-  char scancode;
+  char ch, scancode;
   kh_type k;
 
   /* Grab the scancode */
@@ -140,11 +142,12 @@ void kbd_int_handler(void)
 
   if (KH_HASDATA(k) && KH_ISMAKE(k))
   {
+    ch = KH_GETCHAR(k);
     switch (kbd_state)
     {
     /* Someone wants a line */
     case KBD_AWAITING_LINE:
-      if (update_getline_globals(k)) {
+      if (update_getline_globals(ch)) {
         kbd_state = KBD_AWAITING_NONE;
         cvar_signal_raw(&kbd_wait);
       }
@@ -152,7 +155,7 @@ void kbd_int_handler(void)
 
     /* Someone wants a character */
     case KBD_AWAITING_CHAR:
-      __buffer_write(k);
+      buffer_write(ch);
       kbd_state = KBD_AWAITING_NONE;
       cvar_signal_raw(&kbd_wait);
       break;
@@ -160,14 +163,13 @@ void kbd_int_handler(void)
     /* No one is waiting */
     case KBD_AWAITING_NONE:
     default:
-      __buffer_write(k);
+      buffer_write(ch);
       break;
     }
   }
 
   /* Ack the interrupt */
   outb(INT_CTL_PORT, INT_ACK_CURRENT);
-
   return;
 }
 
@@ -184,22 +186,23 @@ kbd_buffer buff = KBD_BUFFER_INITIALIZER();
  *  Write the specified scancode into the keyboard's buffer.  If there is
  *  no room in the keyboard buffer, overwrite the oldest scancode.
  *
- *  @param scancode The scancode to write into the buffer
+ *  @param ch The character to write into the buffer.
  *
  *  @return Void.
  **/
-static void __buffer_write(kh_type k)
+void buffer_write(char ch)
 {
   disable_interrupts();
 
-  // Write into the buffer
-  buff.buffer[buff.w] = k;
+  /* Write into the buffer */
+  buff.buffer[buff.w] = ch;
   buff.w = MODINC(buff.w);
 
-  // Increment read as needed
+  /* Increment read as needed */
   if (buff.count >= KBD_BUFFER_SIZE)
     buff.r = MODINC(buff.r);
 
+  /* Increment the buffer count */
   ++buff.count;
   enable_interrupts();
   return;
@@ -214,12 +217,12 @@ static void __buffer_write(kh_type k)
  *  NOTE: we disable interrupts to prevent the keyboard interrupt handler
  *  from writing while we read.
  *
- *  @param scancode Destination pointer for read scancode
+ *  @param ch Destination pointer for read character.
  *
- *  @return The number of lost entries since the last read, or -1 if the
- *          keyboard buffer is currently empty.
+ *  @return 0 if a character was written to chp; or a negative integer
+ *  error code if the buffer is empty
  **/
-static int __buffer_read(kh_type *kp)
+int buffer_read(char *chp)
 {
   disable_interrupts();
 
@@ -230,11 +233,45 @@ static int __buffer_read(kh_type *kp)
   }
 
   /* Read from the buffer */
-  *kp = buff.buffer[buff.r];
+  *chp = buff.buffer[buff.r];
   buff.r = MODINC(buff.r);
 
+  /* Decrement the count */
   --buff.count;
   enable_interrupts();
-  return buff.count;
+
+  return 0;
+}
+
+/** @brief Place a character into the getline global buffer.
+ *
+ *  We also update the getline count global as well.  When the global
+ *  buffer becomes full, return an error code.
+ *
+ *  @param k The kh_type to copy into the buffer.
+ *
+ *  @return 0 on success; a negative integer error code if the buffer is
+ *  full; and 1 when a newline is encountered.
+ **/
+#include <console.h>
+int update_getline_globals(char ch)
+{
+  /* Write the character to buf and the console */
+  getline_buf[getline_count] = ch;
+  putbyte(ch);
+
+  /* Inc/Decrement read count */
+  if (ch == '\b')
+    getline_count = (getline_count > 0)
+                    ? getline_count - 1
+                    : getline_count;
+  else
+    ++getline_count;
+
+  /* Let the caller know we can do no more */
+  if (getline_count >= getline_size) return -1;
+  if (ch == '\n') return 1;
+
+  return 0;
 }
 
