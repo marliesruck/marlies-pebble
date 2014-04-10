@@ -35,7 +35,7 @@ typedef enum kbd_state kbd_state_e;
 struct keyboard_buffer {
   int r, w;                       /* Read/write indicies */
   int count;                      /* Num elements in buffer */
-  kh_type buffer[KBD_BUFFER_SIZE];   /* The buffer itself */
+  char buffer[KBD_BUFFER_SIZE];   /* The buffer itself */
 };
 typedef struct keyboard_buffer kbd_buffer;
 
@@ -46,7 +46,7 @@ typedef struct keyboard_buffer kbd_buffer;
 #define KBD_BUFFER_INITIALIZER() {  \
   (int) 0, (int) 0,                 \
   (int) 0,                          \
-  (kh_type [KBD_BUFFER_SIZE]) {0}   \
+  (char [KBD_BUFFER_SIZE]) {0}      \
 }
 
 /** @brief Performs a wrapping increment.
@@ -60,9 +60,17 @@ typedef struct keyboard_buffer kbd_buffer;
 #define MODINC(i) (((i) + 1) % KBD_BUFFER_SIZE)
 
 /* Read and write from the scancode buffer */
-static void __buffer_write(kh_type k);
-static int __buffer_read(kh_type *kp);
+void buffer_write(char ch);
+int buffer_read(char *chp);
+
+/* Globals for retrieving a line of input */
+char *getline_buf;
+int getline_size;
+int getline_count;
+
+/* Write to the getline global buffer */
+int update_getline_globals(char ch);
 
 
-#endif
+#endif /* __KEYBOARD_INTERNAL_H__ */
 

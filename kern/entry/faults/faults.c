@@ -20,10 +20,13 @@
 #include <string.h>   /* FOR DEBUGGING */
 
 /* x86 specific includes */
+#include <x86/asm.h>
 #include <x86/cr.h>
 #include <x86/idt.h>
 
-/* TESTS THAT SHOULD FAIL */
+/* TESTS THAT SHOULD FAIL
+ * TODO: remove this
+ */
 char *fail[] = {
   "remove_pages_test2",
   "wild_test1",
@@ -307,13 +310,15 @@ int int_gen_prot(ureg_t *ureg)
  *
  *  @return 0 if the kernel handles the fault, else -1.
  **/
+extern volatile int kernel_is_running;
 int int_page_fault(ureg_t *ureg)
 {
   void *cr2;
   int retval;
 
-  /* Grab the faulting cr2ess and page info */
+  /* Grab the faulting address and re-enable interrupts */
   cr2 = (void *)get_cr2();
+  if (kernel_is_running) enable_interrupts();
 
   /* Try to handle the fault */
   if ((retval = pg_page_fault_handler(cr2)))
