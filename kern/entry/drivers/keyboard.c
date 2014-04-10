@@ -75,7 +75,7 @@ int kbd_getchar(void)
  **/
 int kbd_getline(int size, char *buf)
 {
-  int count;
+  int count, ret;
   char ch;
 
   mutex_lock(&kbd_lock);
@@ -87,8 +87,15 @@ int kbd_getline(int size, char *buf)
   getline_count = 0;
 
   /* Get any characters in the buffer */
-  while (!buffer_read(&ch)) {
-    if (update_getline_globals(ch)) {
+  while (!buffer_read(&ch))
+  {
+    /* Write characters into the buffer */
+    disable_interrupts();
+    ret = update_getline_globals(ch);
+    enable_interrupts();
+
+    /* Return if we run out of space or hit a newline */
+    if (ret) {
       mutex_unlock(&kbd_lock);
       return getline_count;
     }

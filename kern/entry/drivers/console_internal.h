@@ -150,19 +150,21 @@ typedef struct console console_s;
     for (c = 0; c < CONSOLE_WIDTH; ++c)   \
 
 /* Translate between offsets and coordinates */
-static inline int coords2offset(int row, int col);
-static inline void offset2coords(int off, int *row, int *col);
+int coords2offset(int row, int col);
+void offset2coords(int off, int *row, int *col);
 
 /* Move the hardware cursor to the specified offset */
-static inline void set_crtc(int off);
+void set_crtc(int off);
 
 /* Scroll the console by the specified number of lines */
-static inline void scroll_console(int lines);
+void scroll_console(int lines);
 
 /* Increment the cursor n spaces, scrolling as needed */
-static int inc_cursor(int n);
+int inc_cursor(int n);
 
 /* Scroll the console 1 line; set the cursor to column 0 */
-static inline void newline(void);
+void newline(void);
+int set_cursor_raw(int row, int col);
+
 
 #endif /* __CONSOLE_INTERNAL_H__ */

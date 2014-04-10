@@ -10,11 +10,17 @@
 #include "console_internal.h"
 #include "cursor.h"
 
+#include <mutex.h>
 #include <stddef.h>
 #include <string.h>
 #include <video_defines.h>
 #include <x86/asm.h>
 
+
+/** @var console_lock
+ *  @brief Serializes access to the console.
+ **/
+mutex_s console_lock = MUTEX_INITIALIZER(console_lock);
 
 /* The logical cursor */
 cursor_s cursor = CRS_INITIALIZER(CONSOLE_HEIGHT, CONSOLE_WIDTH);
@@ -80,8 +86,14 @@ char get_char(int row, int col)
  **/
 int set_term_color(int color)
 {
+  /* Check we were given a valid color */
   if (!valid_color(color)) return -1;
+
+  /* Change the color */
+  mutex_lock(&console_lock);
   console.color = color;
+  mutex_unlock(&console_lock);
+
   return 0;
 }
 
@@ -103,31 +115,24 @@ void get_term_color(int *color)
 
 /** @brief Sets the position of the cursor to the position (row, col).
  *
- *  Subsequent calls to putbyte(s) should cause the console output to begin
- *  at the new position. If the cursor is currently hidden, a call to
- *  set_cursor() does not show the cursor.
+ *  This function is a protected version of set_cursor_raw(...); see that
+ *  for details.
  *
  *  @param row The new row for the cursor.
  *  @param col The new column for the cursor.
-
+ *
  *  @return 0 on success, or integer error code less than 0 if cursor
  *          location is invalid.
  **/
 int set_cursor(int row, int col)
 {
-  unsigned short off;
+  int ret;
 
-  if (!valid_row(row)) return -1;
-  else if (!valid_col(col)) return -1;
+  mutex_lock(&console_lock);
+  ret = set_cursor_raw(row, col);
+  mutex_unlock(&console_lock);
 
-  /* Only move the hardware cursor if it's visible */
-  off = coords2offset(row, col);
-  if (crs_isvisible(&cursor))
-    set_crtc(off);
-
-  crs_set_offset(&cursor, off);
-
-  return 0;
+  return ret;
 }
 
 /** @brief Writes the current position of the cursor into the arguments row
@@ -143,7 +148,9 @@ int set_cursor(int row, int col)
  **/
 void get_cursor(int *row, int *col)
 {
+  mutex_lock(&console_lock);
   crs_get_coords(&cursor, row, col);
+  mutex_unlock(&console_lock);
   return;
 }
 
@@ -192,7 +199,7 @@ void clear_console(void)
   int r, c;
   console_foreach(r,c)
     console.array[r][c] = PACK_CHAR_COLOR(' ', console.color);
-  set_cursor(0,0);
+  set_cursor_raw(0,0);
   return;
 }
 
@@ -216,22 +223,22 @@ int putbyte(char ch)
 
   if (!valid_char(ch) && !valid_ctrl(ch)) return ch;
 
-  get_cursor(&row, &col);
+  crs_get_coords(&cursor, &row, &col);
   get_term_color(&color);
 
   switch (ch)
   {
   case '\n':  /* Newline */
-    if (set_cursor(row+1, 0)) newline();
+    if (set_cursor_raw(row+1, 0)) newline();
     break;
   case '\r':  /* Carriage return */
-    set_cursor(row, 0);
+    set_cursor_raw(row, 0);
     break;
   case '\b':  /* Backspace */
     if (col > 0) {
       col = col-1;
       draw_char(row, col, ' ', color);
-      set_cursor(row, col);
+      set_cursor_raw(row, col);
     }
     break;
   default:    /* "Regular" characters */
@@ -267,11 +274,14 @@ void putbytes(const char *s, int len)
   if (s == NULL) return;
   else if (len < 0) return;
 
+  /* Validate input string */
   for (i = 0; i < len; ++i)
     if (!valid_char(s[i]) && !valid_ctrl(s[i])) return;
 
-  /* FIXME: slow... */
+  /* Write to the console */
+  mutex_lock(&console_lock);
   for (i = 0; i < len; ++i) putbyte(s[i]);
+  mutex_unlock(&console_lock);
 
   return;
 }
@@ -281,6 +291,35 @@ void putbytes(const char *s, int len)
 /* Internal helper functions                                             */
 /*************************************************************************/
 
+/** @brief Sets the position of the cursor to the position (row, col).
+ *
+ *  Subsequent calls to putbyte(s) should cause the console output to begin
+ *  at the new position. If the cursor is currently hidden, a call to
+ *  set_cursor() does not show the cursor.
+ *
+ *  @param row The new row for the cursor.
+ *  @param col The new column for the cursor.
+ *
+ *  @return 0 on success, or integer error code less than 0 if cursor
+ *          location is invalid.
+ **/
+int set_cursor_raw(int row, int col)
+{
+  unsigned short off;
+
+  if (!valid_row(row)) return -1;
+  else if (!valid_col(col)) return -1;
+
+  /* Only move the hardware cursor if it's visible */
+  off = coords2offset(row, col);
+  if (crs_isvisible(&cursor))
+    set_crtc(off);
+
+  crs_set_offset(&cursor, off);
+
+  return 0;
+}
+
 /** @brief Translates a coordinate position into an offset position.
  *
  *  @param row The row portion of the position to translate
@@ -288,7 +327,7 @@ void putbytes(const char *s, int len)
  *
  *  @return The equivalent offset position.
  **/
-static inline int coords2offset(int row, int col)
+int coords2offset(int row, int col)
 {
   return row*CONSOLE_WIDTH + col;
 }
@@ -301,7 +340,7 @@ static inline int coords2offset(int row, int col)
  *
  *  @return Void.
  **/
-static inline void offset2coords(int off, int *row, int *col)
+void offset2coords(int off, int *row, int *col)
 {
   *row = off/CONSOLE_WIDTH;
   *col = off - ((*row)*CONSOLE_WIDTH);
@@ -314,7 +353,7 @@ static inline void offset2coords(int off, int *row, int *col)
  *
  *  @return Void.
  **/
-static inline void set_crtc(int off)
+void set_crtc(int off)
 {
   outb(CRTC_IDX_REG, CRTC_CURSOR_LSB_IDX);
   outb(CRTC_DATA_REG, off & 0xFF);
@@ -331,7 +370,7 @@ static inline void set_crtc(int off)
  *
  *  @return Void.
  **/
-static int inc_cursor(int n)
+int inc_cursor(int n)
 {
   int old_r, old_c, new_r, new_c;
 
@@ -340,7 +379,7 @@ static int inc_cursor(int n)
   new_c = (old_c + n) % CONSOLE_WIDTH;
   new_r = old_r + (old_c + n) / CONSOLE_WIDTH;
 
-  return set_cursor(new_r, new_c);
+  return set_cursor_raw(new_r, new_c);
 }
 
 /** @brief Scroll the console.
@@ -352,7 +391,7 @@ static int inc_cursor(int n)
  *
  *  @return Void.
  **/
-static void scroll_console(int lines)
+void scroll_console(int lines)
 {
   int r, c;
 
@@ -380,12 +419,12 @@ static void scroll_console(int lines)
  *
  *  @return Void.
  **/
-static void newline(void)
+void newline(void)
 {
   int row, col;
   crs_get_coords(&cursor, &row, &col);
   scroll_console(1);
-  set_cursor(CONSOLE_HEIGHT-1, 0);
+  set_cursor_raw(CONSOLE_HEIGHT-1, 0);
   return;
 }
 
