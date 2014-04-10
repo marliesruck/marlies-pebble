@@ -8,6 +8,7 @@
 #ifndef __UTIL_H__
 #define __UTIL_H__
 
+#define INT32_MAX ((2 << 31) - 1)
 
 #define CEILING(val,align)  \
   ( ((unsigned int) (val) + (align) - 1) & ~((align) - 1))

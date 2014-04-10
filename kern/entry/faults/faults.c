@@ -83,7 +83,8 @@ void fault_wrapper(handler f)
         should_fail = 1;
     }
     lprintf("Error:\nFaulting address 0x%x\nFaulting instruction: 0x%x\n"
-            "Faulting task: %s", ureg->cr2, ureg->eip,curr_tsk->execname);
+            "Faulting task: %s\nFaulting thread: %d", ureg->cr2, ureg->eip,
+            curr_tsk->execname, curr_thr->tid);
 
     if(!should_fail)
       MAGIC_BREAK;

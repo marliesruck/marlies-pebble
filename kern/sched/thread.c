@@ -20,6 +20,7 @@
 #include <sched.h>
 #include <sc_utils.h>
 #include <thread.h>
+#include <util.h>
 #include <vm.h>
 
 /* Libc specific includes */
@@ -27,17 +28,14 @@
 #include <malloc.h>
 #include <stdlib.h>
 
-
-/* Atomically acquire a tid */
-static int tid = 0;
-static mutex_s tid_lock = MUTEX_INITIALIZER(tid_lock); 
-
 /** @var thread_list 
  *  @brief The list of threads.
  **/
 static cll_list thread_list = CLL_LIST_INITIALIZER(thread_list);
 static mutex_s thrlist_lock = MUTEX_INITIALIZER(thrlist_lock);
 
+/* For traversing the global thread list */
+static cll_list *rover = NULL;
 
 /* @brief Initialize a thread.
  *
@@ -112,10 +110,14 @@ int thr_launch(thread_t *t, void *sp, void *pc)
 
 
 /*************************************************************************
- *  Thread List Functions
+ *  Thread List Functions - 1)
  *************************************************************************/
 
-/** @brief Add a thread to the thread list.
+/** @brief Add a thread to the thread list and acquire a TID.
+ *
+ *  This function does an ordered insertion into the global thread list and
+ *  assigns the thread the lowest available tid.  The rover points to the last
+ *  inserted node.
  *
  *  @param t The thread to add.
  *
@@ -123,13 +125,58 @@ int thr_launch(thread_t *t, void *sp, void *pc)
  **/
 int thrlist_add(thread_t *t)
 {
+  cll_node *n;
+  thread_t *curr;
+
+  /* Avoid aggressive reuse of TIDs by keeping track of the last one assigned
+   * and always incrementing */
+  static int tid = 0;
+
   /* Lock, insert, unlock */
   mutex_lock(&thrlist_lock);
 
-  /* Atomically acquire TID */
-  t->tid = ++tid;
+  /* You are the only thread */
+  if(cll_empty(&thread_list)){
+    tid = 0;
+    t->tid = ++tid;
+    cll_insert(thread_list.next, &t->thrlist_entry);
+    rover = (cll_list *)thread_list.next;
+    mutex_unlock(&thrlist_lock);
+    return 0;
+  }
 
-  cll_insert(thread_list.next, &t->thrlist_entry);
+  /* Search for the lowest unused tid */
+  cll_foreach(rover, n){
+    /* We've reached the head of the list */
+    if(n == &thread_list) break;
+    curr = cll_entry(thread_t *, n);
+    /* Gap found */
+    if((curr->tid - tid) > 1) break;
+    else tid = curr->tid;
+  }
+
+  /* We've rolled over, let's start recycling */
+  if(tid == INT32_MAX){
+    tid = 0;
+    cll_foreach(&thread_list, n){
+      /* We're back where we started */
+      if(n == rover){
+        mutex_unlock(&thrlist_lock);
+        return -1;
+      }
+      curr = cll_entry(thread_t *, n);
+      /* Gap found */
+      if((curr->tid - tid) > 1) break;
+      else tid = curr->tid;
+    }
+  }
+
+  t->tid = ++tid;
+  cll_insert(n, &t->thrlist_entry);
+
+  /* Update the rover */
+  rover = (cll_list *)n->prev;
+
   mutex_unlock(&thrlist_lock);
 
   return 0;
@@ -145,7 +192,13 @@ int thrlist_del(thread_t *t)
 {
   /* Lock, extract, unlock */
   mutex_lock(&thrlist_lock);
+
+  /* Update the rover */
+  if(&t->thrlist_entry == rover){
+    rover = rover->prev;
+  }
   assert(cll_extract(&thread_list, &t->thrlist_entry));
+
   mutex_unlock(&thrlist_lock);
   return 0;
 }
