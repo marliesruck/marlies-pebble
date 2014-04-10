@@ -37,6 +37,16 @@ enum thread_state {
 };
 typedef enum thread_state thr_state_e;
 
+/** @enum thread_deschedule
+ *  @brief Flag indicating whether the thread was descheduled by a call to
+ *  sys_deschedule(...)
+ **/
+enum thread_deschedule {
+  THR_DESCHED,
+  THR_NOT_DESCHED,
+};
+typedef enum thread_deschedule thr_desched_e;
+
 struct thread {
   struct task *task_info;
   cll_node rq_entry; /* Embedded list traversal struct for the runnable queue */
@@ -45,6 +55,7 @@ struct thread {
   thr_state_e state;
   mutex_s lock;
   int tid;
+  thr_desched_e desched;
   void *sp;
   void *pc;
   swexn_t swexn;

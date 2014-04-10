@@ -67,6 +67,7 @@ thread_t *thread_init(task_t *task)
   thread->task_info = task;
   thread->sp = NULL;
   thread->pc = NULL;
+  thread->desched = THR_NOT_DESCHED;
 
   /* Embedded list traversal */
   cll_init_node(&thread->rq_entry, thread);

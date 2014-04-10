@@ -8,14 +8,20 @@
  *  @status done
  */
 
+#include <assert.h>
 #include <simics.h>
 #include <syscall.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <report.h>
+#include <thread.h>
 
 
 #define DELAY (16*1024)
+
+int parent, child;
+int p_reject, c_reject;
+
 
 static volatile int no_opt = 0;
 
@@ -28,45 +34,53 @@ void slow()
   for (i = 0; i < DELAY; i += bar()) foo();
 }
 
-int main()
+void *child_fn(void *args)
 {
-  int parent, child;
-  int reject;
+  assert(parent);
 
-  reject = 0;
-  parent = gettid();
-  child = fork();
+  lprintf("child running...");
 
-  /* Parent */
-  if (child) {
-    lprintf("parent running...");
+  while (1) {
+    p_reject = 1;
+    lprintf("c: p_reject = %d", p_reject);
+    lprintf("c: make_runnable(parent)");
+    make_runnable(parent);
 
-    while (1) {
-      lprintf("p: descheduling(&reject)");
-      deschedule(&reject);
-      lprintf("p: awake!");
+    lprintf("c: descheduling(&c_reject=%d)", c_reject);
+    c_reject = 0;
+    while (!c_reject)
+      lprintf("c: deschedule(*c_reject=%d) = %d", c_reject, deschedule(&c_reject));
+    lprintf("c: awake!");
 
-      lprintf("p: make_runnable(child)");
-      make_runnable(child);
-
-      slow();
-    }
+    slow();
   }
 
-  /* Child */
-  else {
-    lprintf("child running...");
+  return NULL;
+}
 
-    while (1) {
-      lprintf("c: make_runnable(parent)");
-      make_runnable(parent);
+int main()
+{
+  thr_init(PAGE_SIZE);
 
-      lprintf("c: descheduling(&reject)");
-      deschedule(&reject);
-      lprintf("c: awake!");
+  parent = gettid();
+  child = thr_create(child_fn, NULL);
+  assert(child);
 
-      slow();
-    }
+  lprintf("parent running...");
+
+  while (1) {
+    lprintf("p: descheduling(&p_reject=%d)", p_reject);
+    p_reject = 0;
+    while (!p_reject)
+      lprintf("p: deschedule(*p_reject=%d) = %d", p_reject, deschedule(&p_reject));
+    lprintf("p: awake!");
+
+    c_reject = 1;
+    lprintf("p: c_reject = %d", c_reject);
+    lprintf("p: make_runnable(child)");
+    make_runnable(child);
+
+    slow();
   }
 
   exit(1);
