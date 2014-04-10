@@ -26,10 +26,10 @@
 #define CHILD_PDE ( (void *)tomes[PG_TBL_ENTRIES - 2] )
 
 /*************************************************************************
- *  Rename this
+ *  Internal helper functions
  *************************************************************************/
 
-/*  @brief Creates a new memory region.
+/** @brief Creates a new memory region.
  *
  *  The starting address, va_start, is rounded down to a page boundary to
  *  determine the actual starting address for the allocation.  Furthermore,
