@@ -128,8 +128,8 @@ int thrlist_add(thread_t *t)
   cll_node *n;
   thread_t *curr;
 
-  /* Avoid aggressive reuse of TIDs by keeping track of the last one assigned
-   * and always incrementing */
+  /* Avoid aggressive reuse of TIDs by keeping track of the 
+   * last one assigned */
   static int tid = 0;
 
   /* Lock, insert, unlock */
