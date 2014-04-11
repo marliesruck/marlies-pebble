@@ -48,7 +48,7 @@ inline void spin_lock(spin_s *sp)
 {
   int turn;
   turn = fetch_and_add(&(sp->ticket), 1);
-  while (sp->turn != turn) continue;
+  while (sp->turn != turn) sched_find(sp->owner);
   sp->owner = curr_thr->tid;
   return;
 }
