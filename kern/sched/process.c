@@ -205,13 +205,11 @@ void task_free(task_t *task)
    * themselves to your dead children list */
   tasklist_del(task);
 
-  /* Acquire and release your lock in case your child grabbed your task lock
-   * before you removed yourself from the task list */
-  mutex_lock(&task->lock);
-  mutex_unlock(&task->lock);
-
   /* Free your virtual memory */
   vm_final(&task->vmi);
+
+  /* Free your mutex */
+  mutex_final(&task->lock);
 
   /* Free your kids' resources */
   while(!queue_empty(&task->dead_children)){
@@ -352,10 +350,14 @@ void tasklist_add(task_t *t)
 void tasklist_del(task_t *t)
 {
   assert(t);
-
-  /* Lock, delete, unlock */
   mutex_lock(&task_list_lock);
+
   assert(cll_extract(&task_list, &TASK_LIST_ENTRY(t)));
+
+  /* Let anyone holding your lock go */
+  mutex_lock(&t->lock);
+  mutex_unlock(&t->lock);
+
   mutex_unlock(&task_list_lock);
   return;
 }

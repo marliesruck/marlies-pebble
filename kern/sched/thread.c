@@ -50,7 +50,7 @@ thread_t *thread_init(task_t *task)
 
   /* Allocate the thread structure */
   thread_t *thread = malloc(sizeof(thread_t));
-  if(!thread) return NULL;
+  if (!thread) return NULL;
 
   /* Allocate the kernel stack */
   thread->kstack = smemalign(KSTACK_ALIGN, KSTACK_SIZE);
@@ -91,6 +91,7 @@ thread_t *thread_init(task_t *task)
  **/
 void thr_free(thread_t *t)
 {
+  mutex_final(&t->lock);
   sfree(t->kstack, PAGE_SIZE);
   free(t);
   return;
@@ -136,7 +137,7 @@ int thrlist_add(thread_t *t)
   mutex_lock(&thrlist_lock);
 
   /* You are the only thread */
-  if(cll_empty(&thread_list)){
+  if (cll_empty(&thread_list)){
     tid = 0;
     t->tid = ++tid;
     cll_insert(thread_list.next, &t->thrlist_entry);
@@ -148,25 +149,25 @@ int thrlist_add(thread_t *t)
   /* Search for the lowest unused tid */
   cll_foreach(rover, n){
     /* We've reached the head of the list */
-    if(n == &thread_list) break;
+    if (n == &thread_list) break;
     curr = cll_entry(thread_t *, n);
     /* Gap found */
-    if((curr->tid - tid) > 1) break;
+    if ((curr->tid - tid) > 1) break;
     else tid = curr->tid;
   }
 
   /* We've rolled over, let's start recycling */
-  if(tid == INT32_MAX){
+  if (tid == INT32_MAX){
     tid = 0;
     cll_foreach(&thread_list, n){
       /* We're back where we started */
-      if(n == rover){
+      if (n == rover){
         mutex_unlock(&thrlist_lock);
         return -1;
       }
       curr = cll_entry(thread_t *, n);
       /* Gap found */
-      if((curr->tid - tid) > 1) break;
+      if ((curr->tid - tid) > 1) break;
       else tid = curr->tid;
     }
   }
@@ -194,10 +195,16 @@ int thrlist_del(thread_t *t)
   mutex_lock(&thrlist_lock);
 
   /* Update the rover */
-  if(&t->thrlist_entry == rover){
+  if (&t->thrlist_entry == rover){
     rover = rover->prev;
   }
+  
+  /* Remove the thread */
   assert(cll_extract(&thread_list, &t->thrlist_entry));
+
+  /* Clear thread lock hack */
+  mutex_lock(&t->lock);
+  mutex_unlock(&t->lock);
 
   mutex_unlock(&thrlist_lock);
   return 0;
@@ -209,23 +216,28 @@ int thrlist_del(thread_t *t)
  *
  *  @return A pointer to the thread, or NULL if not found.
  **/
-thread_t *thrlist_find(int tid)
+thread_t *thrlist_find_and_lock(int tid)
 {
   cll_node *n;
   thread_t *t;
 
   t = NULL;
+  mutex_lock(&thrlist_lock);
 
   /* Iteratively search the thread list */
-  mutex_lock(&thrlist_lock);
   cll_foreach(&thread_list, n) {
     t = cll_entry(thread_t *,n);
     if (t->tid == tid) break;
   }
-  mutex_unlock(&thrlist_lock);
 
   /* We didn't find it */
-  if (n == &thread_list) return NULL;
+  if (t->tid != tid) {
+    mutex_unlock(&thrlist_lock);
+    return NULL;
+  }
+
+  mutex_lock(&t->lock);
+  mutex_unlock(&thrlist_lock);
 
   return t;
 }

@@ -36,9 +36,9 @@ int main()
   if(!fork()) exec(args[0], args);
   while(wait(NULL) >= 0);
 
-  args[0] = "cooperative_terminate";
-  if(!fork()) exec(args[0], args);
-  while(wait(NULL) >= 0);
+//  args[0] = "cooperative_terminate";
+//  if(!fork()) exec(args[0], args);
+//  while(wait(NULL) >= 0);
 
   args[0] = "coolness_terminate";
   if(!fork()) exec(args[0], args);

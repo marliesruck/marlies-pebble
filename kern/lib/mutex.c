@@ -129,6 +129,7 @@ void mutex_final(mutex_s *mp)
   assert(mp);
   assert(queue_empty(&mp->queue));
   assert(mp->state != MUTEX_LOCKED);
+  assert(mp->owner == -1);
   return;
 }
 

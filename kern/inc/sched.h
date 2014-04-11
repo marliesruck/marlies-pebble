@@ -10,12 +10,8 @@
 #ifndef __SCHED_H__
 #define __SCHED_H__
 
-#include <queue.h>
 #include <thread.h>
 
-
-/* The "do" part of sched_do_and_block(...) */
-typedef void (*sched_do_fn)(void *args);
 
 /* Currently running thread/task */
 thread_t *curr_thr;
@@ -32,7 +28,7 @@ int sched_add_to_rq(thread_t *thr);
 /* Runqueue manipulation */
 void rq_add(thread_t *thr);
 void rq_del(thread_t *thr);
-thread_t *rq_rotate(void);
+int rq_rotate(thread_t *thr);
 thread_t *rq_find(int tid);
 
 

@@ -10,6 +10,7 @@
 #include <sched.h>
 
 /* Pebble specific includes */
+#include <cllist.h>
 #include <dispatch.h>
 
 /* Libc specific includes */
@@ -20,18 +21,23 @@
 #include <asm.h>
 
 /** @var runnable
- *  @brief The queue of runnable threads.
+ *  @brief The list of runnable threads.
  **/
-queue_s runnable = QUEUE_INITIALIZER(runnable);
+cll_list runnable = CLL_LIST_INITIALIZER(runnable);
 
 
 /*************************************************************************
  *  Runqueue manipulation
  *************************************************************************/
 
-/** @brief Make a thread eligible for CPU time.
+/** @brief Retrieve the head of the run queue.
  *
- *  This operation is not atomic.
+ *  @return The head of the runqueue.
+ **/
+#define RQ_HEAD   \
+  ( (thread_t *)runnable.next->data )
+
+/** @brief Make a thread eligible for CPU time.
  *
  *  @param n The node to add to the runnable queue.
  *  @param thr The thread to make runnable.
@@ -41,7 +47,7 @@ queue_s runnable = QUEUE_INITIALIZER(runnable);
 void rq_add(thread_t *thr)
 {
   assert(thr->state != THR_RUNNABLE);
-  queue_enqueue(&runnable, &thr->rq_entry);
+  cll_insert(runnable.next, &thr->rq_entry);
   thr->state = THR_RUNNABLE;
 
   return;
@@ -49,9 +55,6 @@ void rq_add(thread_t *thr)
 
 /** @brief Make a thread ineligible for CPU time.
  *
- *  This function uses the linked list API instead of the queue API,
- *  because the queue API does not allow extraction of arbitrary nodes.
- * 
  *  @param thr The thread to make unrunnable.
  *
  *  @return Void.
@@ -65,32 +68,24 @@ void rq_del(thread_t *thr)
   return;
 }
 
-/** @brief Move the head of the run queue to the back.
+/** @brief Move a runnable thread to the back of the run queue.
  *
- *  @return A pointer to the TCB of the rotated thread, or NULL if the
- *  queue is empty.
+ *  @return 0 on success, or a negative integer error code on failure.
  **/
-thread_t *rq_rotate(void)
+int rq_rotate(thread_t *thr)
 {
-  queue_node_s *q;
-  thread_t *thr;
-
   /* Return NULL for an empty run queue */
-  if (queue_empty(&runnable)) return NULL;
+  if (queue_empty(&runnable)) return -1;
 
   /* Move the head to the back of the queue */
-  q = queue_dequeue(&runnable);
-  thr = queue_entry(thread_t *, q);
   assert(thr->state == THR_RUNNABLE);
-  queue_enqueue(&runnable, q);
+  assert(cll_extract(&runnable, &thr->rq_entry));
+  cll_insert(&runnable, &thr->rq_entry);
 
-  return thr;
+  return 0;
 }
 
 /** @brief Search the runqueue for a particular TID.
- *
- *  This function uses the linked list API instead of the queue API,
- *  because the queue API does not allow searching.
  * 
  *  @param tid The TID of the target thread.
  *
@@ -102,7 +97,7 @@ thread_t *rq_find(int tid)
   cll_node *n;
 
   cll_foreach(&runnable, n) {
-    thr = queue_entry(thread_t *, n);
+    thr = cll_entry(thread_t *, n);
     assert(thr->state == THR_RUNNABLE);
     if (thr->tid == tid) return thr;
   }
@@ -127,7 +122,7 @@ int sched_add_to_rq(thread_t *thr)
 {
   /* Don't malloc a node, instead use the embedded list traversal structure */
 
-  /* Lock, enqueue, unlock */
+  /* Lock, insert, unlock */
   disable_interrupts();
   rq_add(thr);
   enable_interrupts();
@@ -171,25 +166,6 @@ void sched_block(thread_t *thr)
   return;
 }
 
-/** @brief Atomically execute a caller-specified function and block.
- *
- *  @param thr The thread to make unrunnable.
- *  @param fn The function to execute before blocking.
- *
- *  @return Void.
- **/
-void sched_do_and_block(thread_t *thr, sched_do_fn func, void *args)
-{
-  disable_interrupts();
-
-  func(args);
-  rq_del(thr);
-  schedule_unprotected();
-
-  enable_interrupts();
-  return;
-}
-
 /** @brief Defer execution of the invoking thread in favor of another thread
  * specified by tid.
  *
@@ -211,7 +187,12 @@ int sched_find(int tid)
     return -1;
   }
 
-  schedule_unprotected();
+  /* Move the yielder to the back */
+  assert( !rq_rotate(curr_thr) );
+
+  /* Dispatch the target (if it's not the yielder) */
+  if (thr->tid != curr_thr->tid) dispatch(thr);
+
   enable_interrupts();
   return 0;
 }
@@ -225,12 +206,12 @@ void schedule_unprotected(void)
   thread_t *next;
 
   /* The runnable queue should never be empty */
-  assert( next = rq_rotate() );
+  next = RQ_HEAD;
+  assert( !rq_rotate(next) );
 
   /* Only switch if the next thread is different */
-  if (next != curr_thr) {
+  if (next->tid != curr_thr->tid)
     dispatch(next);
-  }
 
   return;
 }

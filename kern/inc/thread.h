@@ -71,7 +71,7 @@ int thr_launch(thread_t *t, void *sp, void *pc);
 /* Thread list manipulation */
 int thrlist_add(thread_t *t);
 int thrlist_del(thread_t *t);
-thread_t *thrlist_find(int tid);
+thread_t *thrlist_find_and_lock(int tid);
 
 #endif /* __THREAD_H__ */
 

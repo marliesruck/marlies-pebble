@@ -105,8 +105,7 @@ int sys_make_runnable(int tid)
   thread_t *thr;
 
   /* Find and lock the target */
-  thr = thrlist_find(tid);
-  mutex_lock(&thr->lock);
+  thr = thrlist_find_and_lock(tid);
 
   /* The target must exist and be runnable */
   if (!thr || thr->state == THR_RUNNABLE || thr->desched != THR_DESCHED)
