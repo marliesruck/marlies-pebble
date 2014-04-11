@@ -175,7 +175,9 @@ int sys_thread_fork(unsigned int esp)
 
 /** @brief Execute a new executable.
  *
- *  TODO: comment
+ *  Memory for copying user execname and argvec is dynamically allocated,
+ *  so there is specific limit on their size.  The request will fail if the
+ *  kernel does not have resources.
  *
  *  @param execname The name of the new executable.
  *  @param argvec A NULL-terminated array of NULL-terminated string

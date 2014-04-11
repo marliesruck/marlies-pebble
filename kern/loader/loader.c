@@ -156,14 +156,6 @@ void *load_file(vm_info_s *vmi, const char* filename)
     if(0 > getbytes(filename, se.e_txtoff, se.e_txtlen, (void *)se.e_txtstart))
       return NULL;
 
-   /* Debug code: No one should touch the PTE permissions between here */
-   unsigned int attrs;
-   vm_get_attrs(vmi,(void *) se.e_txtstart, &attrs);
-   if(!(attrs & PG_TBL_WRITABLE)){
-     lprintf("Page table not writeable for task: %s", curr_tsk->execname);
-     MAGIC_BREAK;
-   }
-
     /* Load rodata */
    if(0 > getbytes(filename, se.e_rodatoff, se.e_rodatlen, 
           (void *)se.e_rodatstart)){

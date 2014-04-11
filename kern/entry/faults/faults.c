@@ -24,17 +24,6 @@
 #include <x86/cr.h>
 #include <x86/idt.h>
 
-/* TESTS THAT SHOULD FAIL
- * TODO: remove this
- */
-char *fail[] = {
-  "remove_pages_test2",
-  "wild_test1",
-  "swexn_stands_for_swextensible",
-  "swexn_uninstall_test",
-  "mem_permissions",
-};
-
 /* @brief Pointer to a kernel handler.
  *
  * Let the kernel attempt to silently handle the fault. If it fails, the kernel
@@ -75,22 +64,9 @@ void fault_wrapper(handler f)
       init_exn_stack(ureg);
     }
 
-    /* TODO: ELIMINATE before submitting 
-     * Avoid false negatives */
-    int i;
-    int should_fail = 0;
-    int num_tests = sizeof(fail)/sizeof(char*);
-    for(i = 0; i < num_tests; i++){
-      /* This thread should be killed */
-      if(!strcmp(curr_tsk->execname, fail[i]))
-        should_fail = 1;
-    }
     lprintf("Error:\nFaulting address 0x%x\nFaulting instruction: 0x%x\n"
             "Faulting task: %s\nFaulting thread: %d", ureg->cr2, ureg->eip,
             curr_tsk->execname, curr_thr->tid);
-
-    if(!should_fail)
-      MAGIC_BREAK;
 
     /* You were killed by the kernel */
     slaughter();

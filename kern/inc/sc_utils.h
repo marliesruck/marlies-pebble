@@ -179,8 +179,6 @@ asm_\scname:
 
 /** @brief Wraps a n-ary system call handler.
  *
- *  TODO: We need to validate the parameters, no just blindly copy them.
- *
  *  @param scname The name of the system call.
  *
  *  @return Whatever the system call returns.

@@ -81,11 +81,8 @@ int sys_readfile(char *filename, char *buf, int count, int offset)
   buf_k = malloc(count * sizeof(char));
   if (!buf_k) return -1;
 
-  /* Copy user arguments
-   * TODO: validate file?
-   */
-  if ((copy_from_user(&filename_k, filename, strlen(filename) + 1))
-      /*|| (validate_file(&se, filename_k) < 0) */)
+  /* Copy user arguments */
+  if (copy_from_user(&filename_k, filename, strlen(filename) + 1))
   {
     free(buf_k);
     free(filename_k);
